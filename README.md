@@ -1,1 +1,1 @@
-# ms-thesis
+/Users/andrei/Org/Thesis.org
