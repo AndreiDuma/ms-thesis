@@ -1,0 +1,444 @@
+* Thesis notes
+
+** TODOs
+- [ ] Add all references here to the .bib file
+
+
+** Assembly
+
+We'll be using the AT&T syntax of the x86-64 ISA. The host OS will be
+Linux.
+
+*** References
+- Jonathan Bartlett, /Learn to Program with Assembly/, 2021
+- Brown University, [[https://cs.brown.edu/courses/cs033/docs/guides/x64_cheatsheet.pdf][x64 Cheat Sheet]], 2019
+- Linux system calls: [[https://man7.org/linux/man-pages/man2/syscalls.2.html][man 2 syscalls]]
+  - Another list: [[https://www.chromium.org/chromium-os/developer-library/reference/linux-constants/syscalls/][ChromiumOS Linux System Call Table]]
+- glibc [[https://www.gnu.org/software/libc/documentation.html][documentation]]
+
+*** Registers
+- General-purpose:
+  - %rax, %rbx, %rcx, %rdc ("computational" registers)
+    - Accumulator/base/counter/data
+    - Sub-registers: %rax, %eax, %ax, %ah, %al
+  - %rsi, %rdi, %rbp, %rsp ("pointer" registers)
+    - Source index/destination index/base pointer/stack pointer
+    - No byte access for %rsi and %rdi
+  - %r8, %r9 ... %r15 (new 64-bit ISA registers)
+- Special-purpose:
+  - %rip (instruction pointer)
+  - %eflags:
+    - ZF (zero flag)
+    - CF (carry flag)
+    - OF (overflow flag)
+    - SF (sign flag)
+  
+*** Literals
+- Decimal: $10
+- Binary: $0b1010
+- Hexadecimal: $0x0A
+- Characters: $'A'
+- Strings: "abcd,\n,\t,\\,\0"
+
+*** Instructions
+- movq, movl, movw, movb (quadword, long/double-word, word, byte)
+- addq, subq, mulq, divq
+- adcq (add with carry)
+- incq, decq
+- imul, idiv (signed variants of mult & div)
+- rol, ror (rotate register by number of bits)
+- shl, shr (shift bits)
+- xchg (exchange values of operands)
+- bswap (reverse order of bytes in operand)
+- neg (two's complement negation)
+- not, and, or, xor (bitwise operators)
+- lzcnt, bsf, bsr (bit scanning)
+- clc, setc, cld, setd, lahf, sahf (manage status flags)
+- jmp (unconditional jump)
+- cmp x y: set flags according to "y - x"
+- test x y: set flags according to "y & x"
+- [[https://www.felixcloutier.com/x86/jcc][jXX]] (condition jump based on flags):
+  - jz, jnz, jc, jnc (zero, carry)
+  - je, jne
+  - ja, jae, jb, jbe (use unsigned comparison: above, below)
+    - ~ja x y~ means "jump if x < y"
+  - jg, jge, jl, jle (use signed comparison: greater, less)
+- [[https://www.felixcloutier.com/x86/cmovcc][cmoveXX]] (conditional move)
+- loopX: decrement %rcx and jump to label if result is not zero
+  - equivalent to ~dec %rcx; jnz LABEL~ which is /faster/;
+  - loopeq, loopneq: jump if previous comparison resulted in an
+    (in)equality
+- movs, cmps, scas (work with blocks of memory)
+- leaq (load effective address):
+  - Address = Value(BaseReg,IndexReg,Multiplier)
+- push, pop (stack manipulation)
+- enter, leave (creating and removing stack frames)
+- call, ret (call / return from function)
+- syscall
+
+*** Directives
+- .equ CONSTANT, 5
+- .include "file.s": useful for shared constant definitions
+- .incbin "binary-file.png"
+
+**** Sections
+- .section (.text | .data | .rodata | .bss)
+  - .text = .section .text
+  - .data = .section . data
+  - .rodata contains data that cannot be modified
+  - .bss contains uninitialized data
+  
+**** Global / local values
+- .globl symbol/CONSTANT
+  - .global is a synonim
+- .lcomm NAME: create local label NAME and place it in .bss
+  - .comm: like .lcomm, but merge all locations with same name
+- .external documents symbols that are meant to come from another
+  module; all symbols are by default external in GNU Assembler.
+
+**** Reserving space
+- (.quad | .double | .word | .byte) 2, 3, 4 ...
+  - .byte, .2byte, .4byte, .8byte
+- .ascii "Some string.\0"
+  - .string is identical to .ascii, but appends a '\0' at the end
+  - .asciz is a synonim for .string
+- .skip NUMBYTES [, INITVAL]
+  - synonims: .space, .zero
+
+**** Alignment directives
+- .balign aligns the next address to the given multiple
+  - second argument (by default 0) sets the spacing value
+- .p2align: like .balign, but uses bits to specify alignment
+- .align: not recommended
+
+*** System calls
+Syscall number goes to %rax.
+
+**** Argument registers
+- %rdi
+- %rsi
+- %rdx
+- %r10
+- %r8
+- %r9
+  
+**** List of syscalls
+- 0x01 /   1: write (fd buf count -- count-written)
+- 0x09 /   9: mmap (memory mapping / allocation)
+- 0x0b /  11: munmap (return memory allocated with mmap)
+- 0x0c /  12: brk (allocate memory by moving the program break)
+- 0x3c /  60: exit (exit-code --)
+- 0xc9 / 201: unix time (time-ptr -- same-time-ptr)
+
+*** System V ABI calling convention
+**** Preserved registers
+- %rbp
+- %rbx
+- %r12, %r13, %r14, %r15
+
+**** Parameter registers
+- %rdi
+- %rsi
+- %rdx
+- %rcx
+- %r8
+- %r9
+
+**** Return values
+Put return value into %rax.
+
+**** Stack registers
+- %rbp: points to beginning of current stack frame;
+  - local values are referenced as offsets to %rbp.
+- %rsp: points to top of the stack;
+  - moved by pushes, pops and function calls.
+
+**** Setting up a stack frame
+1. Save %rbp (push it on the stack);
+   - now %rsp points to value of %rbp;
+2. Set %rbp to %rsp;
+   - now %rbp points to its own value on the stack;
+3. Subtract from %rsp enough memory for local variables;
+   - each variable will be referenced as offset from %rbp.
+#+begin_src asm
+	  ## Start of function
+	  pushq	%rbp	
+	  movq %rsp, %rbp
+	  subq $NUMBYTES, %rsp
+	  ## OR JUST:
+	  enter %NUMBYTES, $0
+
+	  ## End of function
+	  movq %rpb, %rsp
+	  popq %rbp
+	  ## OR JUST:
+	  leave
+#+end_src
+
+*** C library
+Useful functions:
+- main: called by _start, which is setup by libc
+- fopen, fclose, fprintf, fscanf
+  - need to set %rax to 0 if no floating-point args are given
+- standard streams FILE pointers: stdin, stdout, stderr
+- malloc, free
+- dlopen, dlym: open shared library and get symbol references
+
+*** Virtual memory
+**** Process memory layout
+From higher to lower addresses:
+- UNMAPPED MEMORY and kernel shared memory (inaccessible)
+- the stack
+- UNMAPPED MEMORY
+- dynamically loaded libraries
+- UNMAPPED MEMORY
+- the heap
+- UNMAPPED MEMORY
+- .bss (uninitialized data)
+- .data (global program data)
+- .rodata (read-only data)
+- .text (the program itself)
+- reserved kernel memory (inaccessible)
+
+*** Debugging with GDB
+- file FILENAME: load binary program into debugger
+- run [r]
+- break *_start [b]: set breakpoint at address _start
+- disassemble [disas]
+- info:
+  - info registers [i r]
+  - info break [i b]
+  - info frame [i frame]
+  - info proc all/mappings/... [i proc ...]
+- backtrace [bt]
+- printing:
+  - print $rax
+  - print/d, print/x, print/t, print/c, print/f
+- stepi [si]
+- jump *0x403EC2
+
+*** Linux tools
+- strip: remove debugging information from executable
+- ldd: print shared object dependencies (dynamic libraries)
+- objdump: inspect object files
+  - option -x (--all-headers) displays all header info
+  - option -R (--dynamic-reloc) prints the dynamic relocation entries
+- gcc
+  - option -static: link objects statically
+  - option -shared: create a shared library (.so object)
+  - option -lLIB: search for library LIB
+  - option -no-pie: seems required to get around some PIE errors
+- ld: the Linux loader
+  - env var LD_LIBRARY_PATH: additional directories to search
+    libraries in
+  - env var LD_PRELOAD: load symbols from this library /before/
+    searching in shared libraries requested by the executable
+- ldconfig: configures dynamic linker run-time bindings
+
+
+** Forth
+
+*** References
+- Stack Overflow:
+  - [[https://stackoverflow.com/questions/9882326/memory-management-in-forth][Memory management in Forth]]
+- SF: Leo Brodie, /Starting Forth/, 1981
+- TF: Leo Brodie, /Thinking Forth/, 2004
+- TIL: R. G. Loeliger, /Threaded Interpretive Languages/, 1981
+- FCILP: R. Berindeanu, A. Matekovits, 1991
+- FS: the [[https://forth-standard.org/standard/words][Forth Standard]].
+- [[http://git.annexia.org/?p=jonesforth.git;a=blob;f=jonesforth.S][JonesForth]]: a Forth written in assembly.
+  - Related and interesting [[https://news.ycombinator.com/item?id=31368212][HN post]] linking to many resources.
+- [[https://muforth.dev/readme/][muforth]]: a Forth compiler written in C; lots of explanations.
+- [[https://github.com/zevv/zForth][zForth]]: Forth written in C; interesting.
+- [[https://factorcode.org][Factor]], a Forth-inspired concatenative language.
+
+*** Wisdom
+**** /Starting Forth/ (Brodie 1981)
+- Code reuse = DRY = "factoring definitions" (p. 202)
+  #+begin_quote
+  It is not enough to break a problem into small pieces. The object is
+  to isolate words /that can be reused/.
+  #+end_quote
+- Words should destroy their own parameters. (p. 203)
+- Convention: use tick-prefixed words for /vectored execution/
+  pointers (p. 218).
+- In forth variables and constants are "alive". "Executing" a variable
+  runs code that pushes its address on the stack. "Executing" a
+  constant runs code that pushes its value on the stack (p. 222).
+
+**** /Threaded Interpretive Languages/ (Loeliger 1981)
+- Assembly -- TIL -- higher-order languages (p. 6):
+  #+begin_quote
+  TIL coding ease is somewhere between that of a higher-order language
+  and an assembly language - more difficult than the former and easier
+  than the latter.
+  #+end_quote
+- (No) type resolution (p. 8):
+  #+begin_quote
+  All operators will presume operands of a given type. [...] This
+  places the burden of data type resolution squarely on the
+  programmer. What could be simpler?
+  #+end_quote
+
+**** /Forth: Concept Informatic și Limbaj de Programare/
+- Forth este un /compreter/ (compiler-interpreter) (p. 12)
+- "[...] premisa implementării cu un efort de aprox. 3 luni/om a
+  sursei FORTH pe orice suport hardware dorit" (p. 13)
+- "FORTH compilează «slab», transformând doar numele comenzilor în
+  adrese, ceea ce permite refacerea formatului sursă original fără
+  nicio dificultate” (p. 13)
+
+*** Important words
+- Define new word: : /NEW/ ... ;
+
+- Stack:
+  - Manipulation: DUP ?DUP SWAP OVER ROT DROP
+  - Printing: . .S U.R U. D. UD.
+
+- Arithmetic:
+  - Unary: ABS NEGATE 1+ 1- 2+ 2- 2* 2/
+  - Binary: + - * / */ MOD /MOD */MOD
+- Logic: OR AND NOT
+- Comparison: = < <= > >= 0= 0< 0> MIN MAX
+
+- Conditions: IF [... ELSE] ... THEN
+
+- Looping:
+  - Definite loops: DO ... LOOP, +LOOP
+    - Break with LEAVE
+  - Indefinite loops:
+    BEGIN ... f UNTIL (infinite loop: BEGIN ... 0 UNTIL)
+    BEGIN ... f WHILE ... REPEAT
+
+- Return stack: >R R> I I' J
+
+- Variables: VARIABLE name
+- Constants: n CONSTANT name
+
+- Memory:
+  - Access: @ ? ! +!
+  - Allocation: ALLOT , C,
+  - New name, no 'allot': CREATE
+  - Multi-byte operations: FILL ERASE DUMP
+  - Byte-level access: C! C@
+  - Dictionary search: ' [']
+  - Execution: EXECUTE EXIT QUIT
+  - Moving: MOVE CMOVE
+
+- Dictionary:
+  - Searching: ' [']
+  - "Defining words": VARIABLE CONSTANT CREATE :
+
+- Pad: PAD
+
+- Parameter stack: 'S .S
+
+I/O:
+- Input buffer: >IN
+- Characters: EMIT KEY
+- Strings: TYPE EXPECT WORD
+- Conversion: NUMBER
+
+Extending the compiler:
+- Run-time behavior: DOES>
+- Immediate words: IMMEDIATE
+- Turn compilation on/off: [ ]
+- Compile immediate word as if not immediate: [COMPILE]
+
+- String literals: ." (then finish string at first '"')
+- Comments: '(' (then finish comment at first ')')
+- Aborting: ABORT ABORT"
+
+- Other:
+  - PAGE QUIT
+  - BASE
+  - 2VARIABLE 2CONSTANT 2! 2@
+
+*** Examples
+**** The "guessing" game
+#+begin_src forth
+  : GUESS
+    OVER 2DUP
+    = IF ." CORRECT!" DROP DROP DROP
+      ELSE < IF ." TOO LOW"
+	     ELSE ." TOO HIGH"
+	     THEN THEN ;
+#+end_src
+
+The same in Scheme:
+#+begin_src scheme
+  (define (make-game)
+    (let ((number (random 100)))
+      (lambda (guess)
+	(cond ((= guess number) "CORRECT!")
+	      ((< guess number) "TOO LOW")
+	      (else "TOO HIGH")))))
+  (define guess (make-game))
+#+end_src
+
+The same in CL:
+#+begin_src lisp
+  (let ((number (random 100)))
+    (defun guess (guess)
+      (cond ((= guess number) "CORRECT!")
+	    ((< guess number) "TOO LOW")
+	    (t "TOO HIGH"))))
+#+end_src
+
+**** Calculate ax^2 + bx + c
+We calculate x(ax + b) + c
+#+begin_src forth
+  : QUADR   ( a b c x -- y )
+    >R SWAP ROT  ( c b a | x )
+    I * +        ( c ax+b | x )
+    R> * + ;
+#+end_src
+
+**** Calculate compound interest
+#+begin_src forth
+  : COMPOUND   ( start rate -- )
+    100 +  SWAP
+    21 1 DO
+      OVER 100 */  CR
+      ." YEAR " I 2 U.R 3 SPACES
+      ." BALANCE " DUP .
+    LOOP ;
+#+end_src
+
+**** Tic-Tac-Toe
+#+begin_src forth
+  CREATE BOARD 10 ALLOT
+
+  : CELL  ( n -- adr ) BOARD + ;
+  : .CELL ( n -- )     SPACE  CELL C@ EMIT  SPACE ;
+  : !CELL ( c n -- )   CELL C! ;
+  : |     ( -- )       124 EMIT ;
+  : DISPLAY   ( -- )
+    CR  1 .CELL | 2 .CELL | 3 .CELL  CR
+	4 .CELL | 5 .CELL | 6 .CELL  CR
+	7 .CELL | 8 .CELL | 9 .CELL  ;
+
+  : RESET!   ( -- )
+    BOARD 10 32 FILL  ( fill with spaces )
+    DISPLAY ;
+  : X!   ( n -- )
+    88 SWAP !CELL  ( write 'X' )
+    DISPLAY ;
+  : O!   ( n -- )
+    79 SWAP !CELL  ( write 'O' )
+    DISPLAY ;
+#+end_src
+
+**** Switching to interpreter state
+#+begin_src forth
+  : EMIT-Q   [ CHAR Q ]  LITERAL  EMIT ;
+  : EMIT-Q   [CHAR] Q  EMIT ;	\ equivalent
+#+end_src
+
+
+** Scheme
+
+*** References
+- The [[https://standards.scheme.org/unofficial/errata-corrected-r7rs.pdf][R7RS]] standard.
+- [[http://canonical.org/~kragen/sw/urscheme/][UrScheme]]: lots of interesting ideas and further references.
+
