@@ -1,0 +1,22 @@
+* Setup instructions for Linux VM
+
+** Recipe
+
+- Download the Debian 12 [[https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-amd64.qcow2][.qcow2 image]] from [[https://www.debian.org/distrib/][here]].
+
+- Create a UTM image with:
+  - architecture x86_64;
+  - 4GB memory;
+  - IDE drive with /disk image/ set to .qcow2 image above;
+  - a VirtFS shared directory.
+
+- Inside running Debian:
+  - Create user with UID/GID corresponding to host:
+    #+begin_src sh
+      adduser --uid 501 --gid 20 andrei
+    #+end_src
+  - Mount VirtFS share in =/etc/fstab=:
+    #+begin_src
+      mkdir -p /media/share
+      share   /media/share    9p      trans=virtio,version=9p2000.L,rw,_netdev,nofail 0       0
+    #+end_src
