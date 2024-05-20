@@ -1,0 +1,42 @@
+@Article{kogge82,
+  author =	 "Peter M. Kogge",
+  title =	 "An Architectural Trail to Threaded-Code Systems",
+  journal =	 ieeecomputer,
+  year =	 1982,
+  pages =	 "22--32",
+  month =	 mar,
+  annote =	 "Explains the design of (a classical implementation
+                  of) Forth, starting with threaded code, then adding
+                  the parameter stack, constants, variables, control
+                  structures, dictionary, outer interpreter and
+                  compiler."
+}
+
+@InProceedings{ertl02,
+  author =	 {M. Anton Ertl},
+  title =	 {Threaded Code Variations and Optimizations (Extended
+                  Version)},
+  booktitle =	 {Forth-Tagung 2002},
+  year =	 2002,
+  address =	 {Garmisch-Partenkirchen},
+  url =
+                  {https://www.complang.tuwien.ac.at/papers/ertl02.ps.gz},
+  abstract =	 {Forth has been traditionally implemented as indirect
+                  threaded code, where the code for non-primitives is
+                  the code-field address of the word. To get the
+                  maximum benefit from combining sequences of
+                  primitives into superinstructions, the code produced
+                  for a non-primitive should be a primitive followed
+                  by a parameter (e.g., \code{lit} \emph{addr} for
+                  variables). This paper takes a look at the steps
+                  from a traditional threaded-code implementation to
+                  superinstructions, and at the size and speed effects
+                  of the various steps.\comment{It also compares these
+                  variants of Gforth to various other Forth
+                  implementations on contemporary machines.} The use
+                  of superinstructions gives speedups of up to a
+                  factor of 2 on large benchmarks on processors with
+                  branch target buffers, but requires more space for
+                  the primitives and the optimization tables, and also
+                  a little more space for the threaded code.}
+}
