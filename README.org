@@ -18,7 +18,7 @@ Linux.
 
 *** Registers
 - General-purpose:
-  - %rax, %rbx, %rcx, %rdc ("computational" registers)
+  - %rax, %rbx, %rcx, %rdx ("computational" registers)
     - Accumulator/base/counter/data
     - Sub-registers: %rax, %eax, %ax, %ah, %al
   - %rsi, %rdi, %rbp, %rsp ("pointer" registers)
@@ -236,7 +236,41 @@ From higher to lower addresses:
 - ldconfig: configures dynamic linker run-time bindings
 
 
-** Forth
+** Forth in Assembly
+
+*** Implementation steps
+- We're looking for "that set of code and routines necessary to
+  achieve a self-generating language" (til81)
+- Segment the (virtual) memory for:
+  - Stacks
+  - Input buffer (?)
+  - System variables
+  - The language itself (code)
+- Assess the required system calls / libraries.
+- Allocate the registers and design the inner interpreter.
+- Consider a machine code subroutine calling convention: "all
+  subroutines must preserve all registers except those used to return
+  parameters and must always preserve the instruction register".
+- Distinguish syntactically between machine code subroutines (callable from other
+  machine code such as primitives) and keyword routines (that exist at
+  the Forth language level). We'll prepend machine code subroutines
+  with the character '_'.
+
+*** Register allocation
+- PSP: RBP
+- RSP: RBX
+- IP:  R15
+- W:   R12, R13, R14 (working registers)
+
+*** I/O routines
+- _lf: print a newline character (LF).
+- _key: read a character from STDIN and return it in RAX.
+- _echo: print a character (ASCII code in RAX) to STDOUT.
+- _token: read a token (no longer than TOKEN_MAX_LENGTH) from STDIN,
+  storing it in a buffer.
+
+  
+** Forth the Language
 
 *** References
 - Stack Overflow:

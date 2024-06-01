@@ -1,0 +1,87 @@
+#+title: From Assembly Forth to Lisp (and Back)
+#+subtitle: A Journey through the Imperative, Concatenative and Functional Realms
+#+date: September 2024
+#+author: Andrei Dorian Duma
+#+email: andrei-dorian.duma@s.unibuc.ro
+#+language: en
+#+select_tags: export
+#+exclude_tags: noexport
+#+creator: Emacs 29.2 (Org mode 9.6.15)
+
+#+bibliography: references.bib
+#+cite_export:
+
+#+options: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline
+#+options: author:nil broken-links:nil c:nil creator:nil
+#+options: d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t num:t
+#+options: p:nil pri:nil prop:nil stat:t tags:t tasks:t tex:t
+#+options: timestamp:t title:t toc:nil todo:t |:t
+
+#+latex_class: article
+#+latex_class_options: [a4paper]
+#+latex_header:
+#+latex_header_extra:
+#+description:
+#+keywords:
+#+subtitle:
+#+latex_engraved_theme:
+#+latex_compiler: pdflatex
+# --- Nice author line ---
+#+latex_header: \usepackage{authblk}
+#+latex_header: \author[1]{Andrei Dorian Duma\thanks{andrei-dorian.duma@s.unibuc.ro}}
+#+latex_header: \affil[1]{Master of Distributed Systems}
+
+
+#+begin_abstract
+In this thesis we explore the process of implementing a high-level
+programming language, beginning with only a limited set of
+foundational elements: the =x86_64= architecture, several simple Linux
+system calls, the GNU Assembler and shell. We are interested in how
+the level of abstraction is progressively increased by defining
+higher-level linguistic constructs in terms of more primitive
+ones. The approach will be pedagogical, favoring implementation
+choices that are clear and understandable.
+
+Our final goal is implementing a usable high-level language in the
+LISP family, which we will call /quectoLISP/ (following the tradition
+of prefixing names of small languages with SI submultiples). We
+accomplish this in three stages. First, we write (in assembly) a
+threaded interpreter for /quectoFORTH/, a small language inheriting
+from Chuck Moore's Forth. Then, using this interpreter, we implement a
+simple /quectoLISP/ interpreter providing the most useful language
+features. Finally, we write a /quectoLISP/ compiler in /quectoLISP/
+itself, running it in the stage-two interpreter. This compiler emits
+=x86_64= assembly and becomes self-hosted, being able to compile
+itself.
+#+end_abstract
+\clearpage
+
+#+toc: headlines 2
+\clearpage
+
+
+* Introduction
+
+** Our Objectives
+
+** An Incremental Approach
+
+
+* Stage 1: A Forth Interpreter in Assembly
+
+** Inheriting from JonesFORTH and History
+
+** High-level System Design
+
+** The Inner Interpreter and Other Primitives
+
+** The Outer Interpreter and Other Constructs
+
+
+* Stage 2: A LISP Interpreter in Forth
+
+
+* Stage 3: A LISP Compiler in LISP
+
+
+* Conclusion
