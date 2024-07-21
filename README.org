@@ -4,6 +4,149 @@
 - [ ] Add all references here to the .bib file
 
 
+** What?!
+
+*** What am I trying to accomplish with this thesis?
+1. *Learning*: I want to have an overview of how programming languages
+   are implemented /from first principles/. I want to know the
+   low-level language of the modern processors, so I'll use =x86-64=
+   assembly on a 64-bit machine. I want to see how a high-level
+   language is implemented, and arguably the highest-level language is
+   LISP, thanks to its meta-programming facilities. Implementing a
+   LISP compiler in assembly would be difficult, but that's why we
+   /incrementally/ increase the level of abstraction. So writing a
+   LISP interpreter first makes sense, and that is good, because it
+   will also teach me some other stuff. But writing a LISP interpreter
+   in assembly is still maybe too big of a jump, so I'd like something
+   in between to bridge the gap. So I'll write a FORTH interpreter in
+   assembly and the LISP interpreter in FORTH. LISP is ultimate power
+   and abstraction. FORTH is a supercharged assembly that hides the
+   irrelevant details of hardware and gives enough linguistic
+   abstraction power to implement the next stage. Also both LISP and
+   FORTH have rich histories and philosophies which I'd love to
+   explore.
+
+   Interfacing with hardware I/O etc. wouldn't teach me much about
+   language implementation, so I'll have Linux provide me virtual
+   memory and hardware abstraction behind a few simple syscalls.
+
+   Writing assembly by hand involves quite a lot of boilerplate, so
+   why not use an assembler with some macro capabilities to ease my
+   job? I'll use the GNU assembler, =as=.
+
+   And everything will of course be glued together with some shell
+   scripts.
+
+   So I'll learn assembly, assembler directives and macros, memory
+   layout and intepreter design for a FORTH, enough FORTH to write a
+   the non-trivial program which is the LISP interpreter, a bit of
+   language design for my choice of LISP, the design of an interpreter
+   for a restricted LISP that is still powerful enough to write a
+   compiler, then how to write a compiler, how to integrate a runtime
+   (written in FORTH or in assembly?) etc. Lots of things!
+
+2. *An academic thesis*: Although learning is nice, I also have to
+   produce a document of academic quality in less than three
+   months. While working on this project my focus can be anywhere
+   between full conformity to academic expectations at the expense of
+   a personal journey, and complete disregard for standards in the
+   name of self-expression and self-actualization. I think neither
+   extreme is ideal.
+
+   At the minimum I'll follow the guidelines for content structuring,
+   document type-setting, literature citations etc. The writing cannot
+   be too informal, but I'd rather avoid sounding unnecessarily
+   pedantic as well. The style I like to read and write is relaxed,
+   straight to the point, occasionally witty, honest rather than
+   self-important.
+
+   Another choice is between going deep and going fast. If I lose
+   myself in the details, I won't finish in time. If I rush it, I
+   won't get what I want out of this project. Walking the line means
+   making good plans and setting tight schedules, all while being
+   disciplined enough to respect them.
+
+3. *An educational material*: If this by this project I learn much
+   myself and if I succeed in explaining my process satisfactorily,
+   then the result should be useful for other people as well. That
+   would be nice!
+
+   Ghuloum's (2006) tutorial paper about incremental compiler
+   construction serves as an example here.
+
+4. *Pure pleasure*? The first three goals are rather future
+   oriented. They don't take into account the now, the interest, the
+   flow of curiosity. It looks like there's a contradiction between
+   present pleasure and planning for the future, but is it? What
+   /would/ actually happen if I prioritized the fun, the pleasant, the
+   momentary interest?
+
+   Chaos and disorganization could ensue. Or the fun I'd have could
+   give me lots of energy, pushing me forward in a state of flow and
+   enthusiasm. Or something in between.
+
+*** What are the main sources of inspiration for this thesis?
+- Abdulaziz Ghuloum, /An Incremental Approach to Compiler
+  Construction/ (2006). This is the paper that gave me the idea of
+  working towards a pedagogical (and learning) goal. The paper shows
+  the process of building a Scheme compiler in Scheme, splitting the
+  work in 24 steps, each of them quite understandable. I'd like to
+  follow the idea of /presenting a path through the development of an
+  increasingly sophisticated programming environment/, in my case from
+  programming the processor in the assembly language, having nothing
+  at my disposal but a few primitive system calls, to being able to
+  program the computer in a high-level language, with first-class
+  closures, macros etc.
+
+- Terrence W. Pratt, /Programming Languages: Design and
+  Implementation/ (1975). This book discusses and compares aspects of
+  programming languages, covering syntax, semantics, execution models,
+  simulation vs translation etc. It should be useful for justifying
+  the /reason/ for going "upwards" from assembly, determining what
+  FORTH & LISP bring to the table etc.
+
+- Michael L. Scott, /Programming Language Pragmatics/ (2016). Big book
+  exploring roughly the same concept space as Pratt's. Much more
+  modern, much more detailed. Excellent resource, I'd say, but also
+  very large. I'd love to have time for it.
+
+**** Implementing FORTH
+- R. G. Loeliger, /Threaded Interpretive Languages/ (1981). Detailed
+  tutorial book on how to build a FORTH. Gives an architectural
+  overview and also lists code routines for both primitives (in Z80
+  assembly) and secondaries. Excellent for getting the overall picture
+  and also for ideas about useful FORTH words to
+  implement. Unfortunately it doesn't assume an underlying operating
+  system, so it doesn't suit my approach directly. Also it uses an
+  archaic instruction set.
+
+- Richard WM Jones, /JONESFORTH. A sometimes minimal FORTH compiler
+  and tutorial/ (2010, [[https://rwmj.wordpress.com/2010/08/07/jonesforth-git-repository/][blog post]]). Inspired from [[https://github.com/albertvanderhorst/ciforth][ciforth]] and [[https://home.hccnet.nl/a.w.m.van.der.horst/lina.html][lina]].
+
+  [[https://news.ycombinator.com/item?id=13506152][Comments on HN]] about JonesFORTH.
+
+- David Smith, /SmithForth. A Forth for x86-64 personal computers/
+  (2022, [[https://dacvs.neocities.org/SF/][web page]]). Also targets Linux, but /does not/ use an
+  assembler. It's implemented in two source files: =SForth.dmp=
+  "contains a primitive Forth system in 1000 hand-written bytes of
+  annotated machine code", and =system.fs= "contains 1000 lines of
+  system Forth to complete a standard Forth system".
+
+  [[https://www.youtube.com/playlist?list=PLZCIHSjpQ12wX5m6q4dQNQcmmjq9oF3or][Video explanations]] from its author. [[https://www.youtube.com/watch?v=XH6jDiKxod8&list=PLZCIHSjpQ12woLj0sjsnqDH8yVuXwTy3p][Another video series]], from the
+  same author, about "Handmade Linux x86 executables". Awesome.
+
+
+**** Implementing a LISP interpreter
+- Hal Abelson, Jerry Sussman, Julie Sussman, /Structure and
+  Interpretation of Computer Programs/ (1996). Shows how to implement
+  a Scheme interpreter in Scheme. Should be useful for implementing a
+  LISP in FORTH as well. And I want to finish reading it anyway.
+
+- Various links related to writing a LISP in FORTH:
+  - Mark Probst's [[https://github.com/schani/forthlisp][schani/forthlisp]] (and [[https://news.ycombinator.com/item?id=26882117][HN discussion]])
+  - [[https://home.hccnet.nl/a.w.m.van.der.horst/forthlectureH.html][Implementing Lisp in Forth]] by Albert van der Horst ([[https://home.hccnet.nl/a.w.m.van.der.horst/forthlectures.html][other]] lectures)
+
+
 ** Assembly
 
 We'll be using the AT&T syntax of the x86-64 ISA. The host OS will be
