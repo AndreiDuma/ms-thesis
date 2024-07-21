@@ -1,0 +1,9 @@
+[submodule "resources/milliForth"]
+	path = resources/milliForth
+	url = ../ms-thesis/resources/milliForth
+[submodule "resources/sectorlisp"]
+	path = resources/sectorlisp
+	url = ../ms-thesis/resources/sectorlisp/
+[submodule "resources/sectorforth"]
+	path = resources/sectorforth
+	url = ../ms-thesis/resources/sectorforth
