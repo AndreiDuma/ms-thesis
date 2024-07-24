@@ -20,8 +20,8 @@
 #+STARTUP: logdrawer
 
 #+LATEX_CLASS: article
-#+LATEX_CLASS_OPTIONS: [a4paper]
-#+LATEX_HEADER:
+#+LATEX_CLASS_OPTIONS: [a4paper,8pt]
+#+LATEX_HEADER: \usepackage[margin=1in]{geometry}
 #+LATEX_HEADER_EXTRA:
 #+DESCRIPTION:
 #+KEYWORDS:
@@ -36,7 +36,7 @@
 # Additional options are set in `.dir-locals.el`.
 
 
-#+BEGIN_ABSTRACT
+#+begin_abstract
 In this thesis we explore the process of implementing a high-level
 programming language, beginning with only a limited set of
 foundational elements: the =x86_64= architecture, several simple Linux
@@ -57,7 +57,7 @@ features. Finally, we write a /quectoLISP/ compiler in /quectoLISP/
 itself, running it in the stage-two interpreter. This compiler emits
 =x86_64= assembly and becomes self-hosted, being able to compile
 itself.
-#+END_ABSTRACT
+#+end_abstract
 \clearpage
 
 #+TOC: headlines 2
@@ -124,71 +124,44 @@ Why this approach?
 |        12 | brk          | =0x0C= | =unsigned long brk= | –                 | –              |
 |        60 | exit         | =0x3C= | =int error_code=    | –                 | –              |
 
-#+CAPTION: Attempt to write machine code in tables.
-|---------------------------+----------------------------------------------------------------------------------------|
-| ~7F 45 4C 46 ·· ·· ·· ··~ | ~e_ident[EI_MAG]~: ELF magic number.                                                   |
-| ~·· ·· ·· ·· 02 ·· ·· ··~ | ~e_ident[EI_CLASS]~: =1= → 32-bit, =2= → 64-bit.                                       |
-| ~·· ·· ·· ·· ·· 01 ·· ··~ | ~e_ident[EI_DATA]~: =1= → little-endian, =2= → big-endian.                             |
-| ~·· ·· ·· ·· ·· ·· 01 ··~ | ~e_ident[EI_VERSION]~: ELF header version; must be =1=.                                |
-| ~·· ·· ·· ·· ·· ·· ·· 00~ | ~e_ident[EI_OSABI]~: Target OS ABI; should be =0=.                                     |
-|---------------------------+----------------------------------------------------------------------------------------|
-| ~00~                      | ~e_ident[EI_ABIVERSION]~: ABI version; =0= for Linux.                                  |
-| ~·· 00 00 00 00 00 00 00~ | ~e_ident[EI_PAD]~: Padding; unused; should be =0=.                                     |
-|---------------------------+----------------------------------------------------------------------------------------|
-| ~02 00~                   | ~e_type~: Object file type; =2= → executable.                                          |
-| ~·· ·· 3E 00~             | ~e_machine~: Instruction set architecture (=0x03= → =x86=, =0x3E= → =x86-64=).         |
-| ~·· ·· ·· ·· 01 00 00 00~ | ~e_version~: ELF identification version; must be =1=.                                  |
-|---------------------------+----------------------------------------------------------------------------------------|
-| ~78 00 40 00 00 00 00 00~ | ~e_entry~: Memory address of entry point (where process starts).                       |
-| ~40 00 00 00 00 00 00 00~ | ~e_phoff~: File offset where program headers begin (=0x34= → 32-bit, =0x40= → 64-bit). |
-| ~00 00 00 00 00 00 00 00~ | ~e_shoff~: File offset where section headers begin.                                    |
-| ~00 00 00 00              | ~e_flags~: 0 for the =x86-64= architecture.                                            |
-| ~·· ·· ·· ·· 40 00~       | ~e_ehsize~: Size of this header (=0x34= → 32-bit, =0x40= → 64-bit).                    |
-| ~·· ·· ·· ·· ·· ·· 38 00~ | ~e_phentsize~: Size of each program header (=0x20= → 32-bit, =0x38= → 64-bit).         |
-| ~01 00~                   | ~e_phnum~: Number of program headers.                                                  |
-| ~·· ·· 40 00~             | ~e_shentsize~: Size of each section header (=0x28= → 32-bit, =0x40= → 64-bit).         |
-| ~·· ·· ·· ·· 00 00~       | ~e_shnum~: Number of section headers.                                                  |
-| ~·· ·· ·· ·· ·· ·· 00 00~ | ~e_shstrndx~: Index of section header containing section names.                        |
+#+CAPTION: ELF header for an =x86-64= Linux executable.
+|---------------------------+----------------------------------------------------------------------------------|
+| ~7F 45 4C 46 ·· ·· ·· ··~ | ~e_ident[EI_MAG]~: ELF magic number.                                             |
+| ~·· ·· ·· ·· 02 ·· ·· ··~ | ~e_ident[EI_CLASS]~: =1= → 32-bit, _=2= → 64-bit_.                               |
+| ~·· ·· ·· ·· ·· 01 ·· ··~ | ~e_ident[EI_DATA]~: _=1= → little-endian_, =2= → big-endian.                     |
+| ~·· ·· ·· ·· ·· ·· 01 ··~ | ~e_ident[EI_VERSION]~: ELF header version; must be =1=.                          |
+| ~·· ·· ·· ·· ·· ·· ·· 00~ | ~e_ident[EI_OSABI]~: Target OS ABI; =ELFOSABI_NONE= (=0=) is fine for Linux.     |
+|---------------------------+----------------------------------------------------------------------------------|
+| ~00 ·· ·· ·· ·· ·· ·· ··~ | ~e_ident[EI_ABIVERSION]~: ABI version; should be =0= for Linux.                  |
+| ~·· 00 00 00 00 00 00 00~ | ~e_ident[EI_PAD]~: Padding; unused; should be =0=.                               |
+|---------------------------+----------------------------------------------------------------------------------|
+| ~02 00 ·· ·· ·· ·· ·· ··~ | ~e_type~: Object file type; =2= → executable.                                    |
+| ~·· ·· 3E 00 ·· ·· ·· ··~ | ~e_machine~: Instruction set architecture; =0x03= → =x86=, _=0x3E= → =x86-64=_.  |
+| ~·· ·· ·· ·· 01 00 00 00~ | ~e_version~: ELF identification version; must be =1=.                            |
+|---------------------------+----------------------------------------------------------------------------------|
+| ~78 00 40 00 00 00 00 00~ | ~e_entry~: Memory address of entry point (where process starts).                 |
+| ~40 00 00 00 00 00 00 00~ | ~e_phoff~: File offset of program headers; =0x34= → =32-bit=, _=0x40= → 64-bit_. |
+| ~00 00 00 00 00 00 00 00~ | ~e_shoff~: File offset section headers.                                          |
+|---------------------------+----------------------------------------------------------------------------------|
+| ~00 00 00 00 ·· ·· ·· ··~ | ~e_flags~: 0 for the =x86-64= architecture.                                      |
+| ~·· ·· ·· ·· 40 00 ·· ··~ | ~e_ehsize~: Size of this header; =0x34= → 32-bit, _=0x40= → 64-bit_.             |
+| ~·· ·· ·· ·· ·· ·· 38 00~ | ~e_phentsize~: Size of each program header; =0x20= → 32-bit, _=0x38= → 64-bit_.  |
+|---------------------------+----------------------------------------------------------------------------------|
+| ~01 00 ·· ·· ·· ·· ·· ··~ | ~e_phnum~: Number of program headers.                                            |
+| ~·· ·· 40 00 ·· ·· ·· ··~ | ~e_shentsize~: Size of each section header; =0x28= → 32-bit, _=0x40= → 64-bit_.  |
+| ~·· ·· ·· ·· 00 00 ·· ··~ | ~e_shnum~: Number of section headers.                                            |
+| ~·· ·· ·· ·· ·· ·· 00 00~ | ~e_shstrndx~: Index of section header containing section names.                  |
+|---------------------------+----------------------------------------------------------------------------------|
 
-#+begin_src
-  # Linux will run a computing job given the name of an executable
-  # file. An executable file contains machine code for the processor and
-  # information for the operating system about the layout of the file
-  # and the dimensions of the job. Working without the usual development
-  # tools, we write this information by hand.
-
-  7F 45 4C 46               # e_ident[EI_MAG]: ELF magic number
-	      02            # e_ident[EI_CLASS]: 1: 32-bit, 2: 64-bit
-		 01         # e_ident[EI_DATA]: 1: little-endian, 2: big-endian
-		    01      # e_ident[EI_VERSION]: ELF header version; must be 1
-		       00   # e_ident[EI_OSABI]: Target OS ABI; should be 0
-  00                        # e_ident[EI_ABIVERSION]: ABI version; 0 is ok for Linux
-     00 00 00 00 00 00 00   # e_ident[EI_PAD]: unused, should be 0
-  02 00                     # e_type: object file type; 2: executable
-	3E 00               # e_machine: instruction set architecture; 3: x86, 3E: amd64
-	      01 00 00 00   # e_version: ELF identification version; must be 1
-  78 00 40 00 00 00 00 00   # e_entry: memory address of entry point (where process starts)
-  40 00 00 00 00 00 00 00   # e_phoff: file offset where program headers begin (34: 32-bit, 40: 64)
-  00 00 00 00 00 00 00 00   # e_shoff: file offset where section headers begin
-  00 00 00 00               # e_flags: 0 for x86
-	      40 00         # e_ehsize: size of this header (34: 32-bit, 40: 64-bit)
-		    38 00   # e_phentsize: size of each program header (20: 32-bit, 38: 64-bit)
-  01 00                     # e_phnum: number of program headers
-	40 00               # e_shentsize: size of each section header (28: 32-bit, 40: 64-bit)
-	      00 00         # e_shnum: number of section headers
-		    00 00   # e_shstrndx: index of section header containing section names
-
-  # ============= ELF PROGRAM HEADER
-
-  01 00 00 00               # p_type: segment type; 1: loadable
-	      07 00 00 00   # p_flags: segment-dependent flags (1: X, 2: W, 4: R)
-  00 00 00 00 00 00 00 00   # p_offset: file offset where segment begins
-  00 00 40 00 00 00 00 00   # p_vaddr: virtual address of segment in memory (amd64: 00400000)
-  00 00 00 00 00 00 00 00   # p_paddr: physical address of segment, unspecified by 386 supplement
-  02 1E 01 00 00 00 00 00   # p_filesz: size in bytes of the segment in the file image (see make.sh)
-  00 00 C0 7F 00 00 00 00   # p_memsz: (>= filesz) size in bytes of the segment in memory
-  00 10 00 00 00 00 00 00   # p_align: 1000 for x86
-#+end_src
+#+CAPTION: ELF Program Header.
+| ~01 00 00 00 ·· ·· ·· ··~ | ~p_type~: Segment type; =1= → loadable.                                  |
+| ~·· ·· ·· ·· 07 00 00 00~ | ~p_flags~: Segment-dependent flags (1: X, 2: W, 4: R)                    |
+| ~00 00 00 00 00 00 00 00~ | ~p_offset~: File offset where segment begins                             |
+| ~00 00 40 00 00 00 00 00~ | ~p_vaddr~: Virtual address of segment in memory (amd64: 00400000)        |
+| ~00 00 00 00 00 00 00 00~ | ~p_paddr~: Physical address of segment, unspecified by 386 supplement    |
+| ~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size in bytes of the segment in the file image (see make.sh) |
+| ~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: (>= filesz) Size in bytes of the segment in memory            |
+| ~00 10 00 00 00 00 00 00~ | ~p_align~: 1000 for x86                                                  |
 
 *** Useful Prefixes
 | Prefix                | Hex |
