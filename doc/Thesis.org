@@ -60,18 +60,12 @@ itself.
 #+end_abstract
 \clearpage
 
-#+TOC: headlines 2
-\clearpage
+# Don't show TOC for now.
+# #+TOC: headlines 2
+# \clearpage
 
 
-* Introduction
-
-#+CAPTION: A table with line wrapping inside a cell.
-+------+-----------------+
-| Bla. | This            |
-|      | is a            |
-|      | test.           |
-+------+-----------------+
+* Introduction :noexport:
 
 ** Our Objectives
 
@@ -96,12 +90,31 @@ Why this approach?
 
 * Stage 1: A Forth Interpreter in Machine Code
 
+** The =x86-64= Architecture
 
-** TODO Useful stuff
+#+CAPTION: Instruction prefixes.
+#+LABEL: tbl:instruction-prefixes
+| Prefix                | Hex |
+|-----------------------+-----|
+| REPNE/REPNZ           | F2  |
+| REP, REPE/REPZ        | F3  |
+| Operand-size override | 66  |
+| Address-size override | 67  |
 
-*** Linux Syscalls
-#+CAPTION: Calling convention in 64-bit Linux.
-#+LABEL:   tbl:syscall-calling-convention
+#+CAPTION: Useful =x86-64= instructions.
+#+LABEL: tbl:instructions
+| Mnemonic | Opcode (hex) |
+|----------+--------------|
+| CALL     | =E8=         |
+|          | =FF=         |
+
+
+** The Linux Environment
+
+*** Linux System Calls
+
+#+CAPTION: Calling convention for Linux system calls under =x86-64=.
+#+LABEL: tbl:syscall-calling-convention
 |------------+---------------------------------------------------------------------|
 | *Register* | *Usage*                                                             |
 |------------+---------------------------------------------------------------------|
@@ -115,16 +128,20 @@ Why this approach?
 | R9         | Sixth argument to the syscall.                                      |
 |------------+---------------------------------------------------------------------|
 
-#+CAPTION: Linux system calls used in the Forth implementation.
-#+LABEL:   tbl:syscalls
-| *syscall* | *name*       | *%rax* | *%rdi*              | *%rsi*            | *%rdx*         |
-|-----------+--------------+--------+---------------------+-------------------+----------------|
-|         0 | read         | =0x00= | =unsigned int fd=   | =char *buf=       | =size_t count= |
-|         1 | write        | =0x01= | =unsigned int fd=   | =const char *buf= | =size_t count= |
-|        12 | brk          | =0x0C= | =unsigned long brk= | –                 | –              |
-|        60 | exit         | =0x3C= | =int error_code=    | –                 | –              |
+#+CAPTION: Linux system calls used in this Forth implementation.
+#+LABEL: tbl:syscalls
+| *Syscall* | *Name* | *RAX*  | *RDI*               | *RSI*             | *RDX*          |
+|-----------+--------+--------+---------------------+-------------------+----------------|
+|         0 | read   | =0x00= | =unsigned int fd=   | =char *buf=       | =size_t count= |
+|         1 | write  | =0x01= | =unsigned int fd=   | =const char *buf= | =size_t count= |
+|        12 | brk    | =0x0C= | =unsigned long brk= | –                 | –              |
+|        60 | exit   | =0x3C= | =int error_code=    | –                 | –              |
 
-#+CAPTION: ELF header for an =x86-64= Linux executable.
+
+*** ELF: The _E_​xecutable _F_​ile _F_​ormat
+
+#+CAPTION: ELF file header for an =x86-64= Linux executable.
+#+LABEL: tbl:elf-file-header
 |---------------------------+----------------------------------------------------------------------------------|
 | ~7F 45 4C 46 ·· ·· ·· ··~ | ~e_ident[EI_MAG]~: ELF magic number.                                             |
 | ~·· ·· ·· ·· 02 ·· ·· ··~ | ~e_ident[EI_CLASS]~: =1= → 32-bit, _=2= → 64-bit_.                               |
@@ -147,35 +164,35 @@ Why this approach?
 | ~·· ·· ·· ·· 40 00 ·· ··~ | ~e_ehsize~: Size of this header; =0x34= → 32-bit, _=0x40= → 64-bit_.             |
 | ~·· ·· ·· ·· ·· ·· 38 00~ | ~e_phentsize~: Size of each program header; =0x20= → 32-bit, _=0x38= → 64-bit_.  |
 |---------------------------+----------------------------------------------------------------------------------|
-| ~01 00 ·· ·· ·· ·· ·· ··~ | ~e_phnum~: Number of program headers.                                            |
+| ~01 00 ·· ·· ·· ·· ·· ··~ | ~e_phnum~: Number of program headers; here =1=.                                  |
 | ~·· ·· 40 00 ·· ·· ·· ··~ | ~e_shentsize~: Size of each section header; =0x28= → 32-bit, _=0x40= → 64-bit_.  |
-| ~·· ·· ·· ·· 00 00 ·· ··~ | ~e_shnum~: Number of section headers.                                            |
-| ~·· ·· ·· ·· ·· ·· 00 00~ | ~e_shstrndx~: Index of section header containing section names.                  |
+| ~·· ·· ·· ·· 00 00 ·· ··~ | ~e_shnum~: Number of section headers; here =0=.                                  |
+| ~·· ·· ·· ·· ·· ·· 00 00~ | ~e_shstrndx~: Index of section header containing section names; doesn't apply.   |
 |---------------------------+----------------------------------------------------------------------------------|
 
-#+CAPTION: ELF Program Header.
-| ~01 00 00 00 ·· ·· ·· ··~ | ~p_type~: Segment type; =1= → loadable.                                  |
-| ~·· ·· ·· ·· 07 00 00 00~ | ~p_flags~: Segment-dependent flags (1: X, 2: W, 4: R)                    |
-| ~00 00 00 00 00 00 00 00~ | ~p_offset~: File offset where segment begins                             |
-| ~00 00 40 00 00 00 00 00~ | ~p_vaddr~: Virtual address of segment in memory (amd64: 00400000)        |
-| ~00 00 00 00 00 00 00 00~ | ~p_paddr~: Physical address of segment, unspecified by 386 supplement    |
-| ~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size in bytes of the segment in the file image (see make.sh) |
-| ~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: (>= filesz) Size in bytes of the segment in memory            |
-| ~00 10 00 00 00 00 00 00~ | ~p_align~: 1000 for x86                                                  |
+#+CAPTION: ELF program header.
+#+LABEL: tbl:elf-program-header
+|---------------------------+---------------------------------------------------------------------------|
+| ~01 00 00 00 ·· ·· ·· ··~ | ~p_type~: Segment type; =1= → loadable.                                   |
+| ~·· ·· ·· ·· 07 00 00 00~ | ~p_flags~: Segment-wise permissions (1 → execute, 2 → write, 4 → read).   |
+| ~00 00 00 00 00 00 00 00~ | ~p_offset~: File offset where segment begins.                             |
+| ~00 00 40 00 00 00 00 00~ | ~p_vaddr~: Virtual address of segment in memory (=x86-64=: =0x00400000=). |
+| ~00 00 00 00 00 00 00 00~ | ~p_paddr~: Only used on systems where physical address is relevant.       |
+| ~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size in bytes of the segment in the file image.               |
+| ~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size in bytes of the segment in memory (>= =p_filesz=).        |
+| ~00 10 00 00 00 00 00 00~ | ~p_align~: =0x1000= (4096) for =x86-64=.                                  |
+|---------------------------+---------------------------------------------------------------------------|
 
-*** Useful Prefixes
-| Prefix                | Hex |
-|-----------------------+-----|
-| REPNE/REPNZ           | F2  |
-| REP, REPE/REPZ        | F3  |
-| Operand-size override | 66  |
-| Address-size override | 67  |
 
-*** Useful x86-64 Instructions
-| Mnemonic | Opcode (hex) |
-|----------+--------------|
-| CALL     | =E8=         |
-|          | =FF=         |
+* Notes
+
+:LOGBOOK:
+- Note taken on [2024-07-21 Sun 15:34] \\
+  As per article [[https://fev.al/posts/work-journal/]["Use a work journal"]], I'll try to keep all
+  thesis-related notes here, writing down my thoughts as often as
+  possible. Hopefully this will act as a cache and as an organizational
+  tool.
+:END:
 
 *** Useful Sections in the Intel Manual
 Volume 2:
@@ -191,21 +208,4 @@ Volume 2:
   - B.2.1 General Purpose Instruction Formats and Encodings for 64-Bit
     Mode
 
-* Stage 2: A LISP Interpreter in Forth
 
-
-* Stage 3: A LISP Compiler in LISP
-
-
-* Conclusion
-
-
-* Notes
-
-:LOGBOOK:
-- Note taken on [2024-07-21 Sun 15:34] \\
-  As per article [[https://fev.al/posts/work-journal/]["Use a work journal"]], I'll try to keep all
-  thesis-related notes here, writing down my thoughts as often as
-  possible. Hopefully this will act as a cache and as an organizational
-  tool.
-:END:
