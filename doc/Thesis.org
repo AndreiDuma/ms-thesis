@@ -33,32 +33,34 @@
 #+LATEX_HEADER: \author[1]{Andrei Dorian Duma\thanks{andrei-dorian.duma@s.unibuc.ro}}
 #+LATEX_HEADER: \affil[1]{Master of Distributed Systems}
 
+#+MACRO: t \texttt{  }
+
 # Additional options are set in `.dir-locals.el`.
 
+# Don't show abstract for now.
+# #+begin_abstract
+# In this thesis we explore the process of implementing a high-level
+# programming language, beginning with only a limited set of
+# foundational elements: the =x86_64= architecture, several simple Linux
+# system calls, the GNU Assembler and the shell. We are interested in
+# how the level of abstraction is progressively increased by defining
+# higher-level linguistic constructs in terms of more primitive
+# ones. The approach will be pedagogical, favoring implementation
+# choices that are clear and understandable.
 
-#+begin_abstract
-In this thesis we explore the process of implementing a high-level
-programming language, beginning with only a limited set of
-foundational elements: the =x86_64= architecture, several simple Linux
-system calls, the GNU Assembler and the shell. We are interested in
-how the level of abstraction is progressively increased by defining
-higher-level linguistic constructs in terms of more primitive
-ones. The approach will be pedagogical, favoring implementation
-choices that are clear and understandable.
-
-Our final goal is implementing a usable high-level language in the
-LISP family, which we will call /quectoLISP/ (following the tradition
-of prefixing names of small languages with SI submultiples). We
-accomplish this in three stages. First, we write (in assembly) a
-threaded interpreter for /quectoFORTH/, a small language inheriting
-from Chuck Moore's Forth. Then, using this interpreter, we implement a
-simple /quectoLISP/ interpreter providing the most useful language
-features. Finally, we write a /quectoLISP/ compiler in /quectoLISP/
-itself, running it in the stage-two interpreter. This compiler emits
-=x86_64= assembly and becomes self-hosted, being able to compile
-itself.
-#+end_abstract
-\clearpage
+# Our final goal is implementing a usable high-level language in the
+# LISP family, which we will call /quectoLISP/ (following the tradition
+# of prefixing names of small languages with SI submultiples). We
+# accomplish this in three stages. First, we write (in assembly) a
+# threaded interpreter for /quectoFORTH/, a small language inheriting
+# from Chuck Moore's Forth. Then, using this interpreter, we implement a
+# simple /quectoLISP/ interpreter providing the most useful language
+# features. Finally, we write a /quectoLISP/ compiler in /quectoLISP/
+# itself, running it in the stage-two interpreter. This compiler emits
+# =x86_64= assembly and becomes self-hosted, being able to compile
+# itself.
+# #+end_abstract
+# \clearpage
 
 # Don't show TOC for now.
 # #+TOC: headlines 2
@@ -90,7 +92,7 @@ Why this approach?
 
 * Stage 1: A Forth Interpreter in Machine Code
 
-** The =x86-64= Architecture
+** The =x86-64= Architecture :noexport:
 
 #+CAPTION: Instruction prefixes.
 #+LABEL: tbl:instruction-prefixes
@@ -109,7 +111,7 @@ Why this approach?
 |          | =FF=         |
 
 
-** The Linux Environment
+** The Linux Environment :noexport:
 
 *** Linux System Calls
 
@@ -172,27 +174,73 @@ Why this approach?
 
 #+CAPTION: ELF program header.
 #+LABEL: tbl:elf-program-header
-|---------------------------+---------------------------------------------------------------------------|
-| ~01 00 00 00 ·· ·· ·· ··~ | ~p_type~: Segment type; =1= → loadable.                                   |
-| ~·· ·· ·· ·· 07 00 00 00~ | ~p_flags~: Segment-wise permissions (1 → execute, 2 → write, 4 → read).   |
-| ~00 00 00 00 00 00 00 00~ | ~p_offset~: File offset where segment begins.                             |
-| ~00 00 40 00 00 00 00 00~ | ~p_vaddr~: Virtual address of segment in memory (=x86-64=: =0x00400000=). |
-| ~00 00 00 00 00 00 00 00~ | ~p_paddr~: Only used on systems where physical address is relevant.       |
-| ~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size in bytes of the segment in the file image.               |
-| ~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size in bytes of the segment in memory (>= =p_filesz=).        |
-| ~00 10 00 00 00 00 00 00~ | ~p_align~: =0x1000= (4096) for =x86-64=.                                  |
-|---------------------------+---------------------------------------------------------------------------|
+|---------------------------+------------------------------------------------------------------------------|
+| ~01 00 00 00 ·· ·· ·· ··~ | ~p_type~: Segment type; =1= → loadable.                                      |
+| ~·· ·· ·· ·· 07 00 00 00~ | ~p_flags~: Segment-wise permissions; _1 → execute_, _2 → write_, _4 → read_. |
+| ~00 00 00 00 00 00 00 00~ | ~p_offset~: Offset of segment in file; we load the whole file, so =0=.       |
+| ~00 00 40 00 00 00 00 00~ | ~p_vaddr~: Virtual address of segment in memory; =0x400000= on =x86-64=.     |
+| ~00 00 00 00 00 00 00 00~ | ~p_paddr~: Only used on systems where physical address is relevant.          |
+| ~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size of the segment in the file image (=TODO=).                  |
+| ~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size of the segment in memory (>= =p_filesz=).                    |
+| ~00 10 00 00 00 00 00 00~ | ~p_align~: Align segment to =x86-64= page size (4096 or =0x1000=).           |
+|---------------------------+------------------------------------------------------------------------------|
+
+
+** The Actual Machine Code
+
+| MACHINE CODE     | INTENTION              | INSTRUCTION    | OPCODE   | ModR/M | SIB | NOTES                                                |
+| ~BE B2 00 40 00~ | rsi(input)  = 004000__ | mov r32, imm32 | B8+rd id |        |     | INPUT@RSI ← 0x004000B2;  # Global variable INPUT.    |
+| ~BF 30 00 00 10~ | rdi(output) = 10000030 | mov r32, imm32 | B8+rd id |        |     | OUTPUT@RDI <- 0x10000030;  # Global variable OUTPUT. |
+
+
+| Addr. | Notes                        | Instruction    | Opcode   | ModR/M | SIB | Machine code     | ~78~ |
+|-------+------------------------------+----------------+----------+--------+-----+------------------+------|
+|       | /# Global variable INPUT./   |                |          |        |     |                  |      |
+| ~78~  | *~INPUT@RSI ← 0x004000B2;~*  | MOV r32, imm32 | B8+rd id |        |     | ~BE B2 00 40 00~ | ~7D~ |
+|       | /# Global variable OUTPUT./  |                |          |        |     |                  |      |
+| ~7D~  | *~OUTPUT@RDI ← 0x10000030;~* | MOV r32, imm32 | B8+rd id |        |     | ~BF 30 00 00 10~ | ~82~ |
+| ~82~  |                              |                |          |        |     |                  |      |
+
+|  & | Pseudocode                                       | Intention               | Instruction    | Opcode      | ModR/M     | SIB | Machine code     | &    |
+|----+--------------------------------------------------+-------------------------+----------------+-------------+------------+-----+------------------+------|
+| 82 | ~_beg:~                                          |                         |                |             |            |     |                  | ~82~ |
+|    | {{{t}}} /# Loop the binary interpreter./         |                         |                |             |            |     |                  |      |
+| 82 | {{{t}}} ~call (bi).~                             | call (bi)               | CALL rel32     |             |            |     | ~E8 02 00 00 00~ | ~87~ |
+| 87 | {{{t}}} ~goto _beg.~                             | jump bi                 | JMP rel8       | EB cb       |            |     | ~EB F9~          | ~89~ |
+| 89 | ~(bi):~                                          |                         |                |             |            |     |                  | ~89~ |
+| 89 | {{{t}}} ~chr@AL ← next byte at input@RSI;~       | al = [rsi++]            | LODS m8        | AC          |            |     | ~AC~             |      |
+| 8A | {{{t}}} ~if chr@AL = 99:~ /# This is a command./ | cmp al, 99(command)     | CMP al, imm8   | 3C ib       |            |     | ~3C 99~          |      |
+| 8C | {{{t}}} ~goto _command.~                         | jump _command if ==     | JE rel8        | 74 cb       |            |     | ~74 02~          | ~8E~ |
+| 8E | {{{t}}} ~copy chr to output@RDI;~                | [rdi++] = al (xmit)     | STOS m8        | AA          |            |     | ~AA~             |      |
+| 8F | {{{t}}} ~return.~                                | return                  | RET            | C3          |            |     | ~C3~             |      |
+| 90 | ~_command:~                                      |                         |                |             |            |     |                  | ~90~ |
+|    | {{{t}}} /# Global variable LATEST./              |                         |                |             |            |     |                  |      |
+| 90 | {{{t}}} ~LATEST@RDX ← 0x10000028;~               | rdx = Latest            | MOV r32, imm32 | B8+rd id    |            |     | ~BA 28 00 00 10~ |      |
+| 95 | {{{t}}} ~arg ← next byte from input;~            | al = [rsi++] (argument) | LODS m8        | AC          |            |     | ~AC~             |      |
+| 96 | {{{t}}} ~if arg matches x00xxxxx:~               | al & 60(graphic)?       | TEST al, imm8  | A8 ib       |            |     | ~A8 60~          |      |
+| 98 | {{{t}}} {{{t}}} ~goto Head.~                     | jump Head if zero       | JZ rel8        | 74 cb       |            |     | ~74 31~          | ~9A~ |
+|    | {{{t}}} /# Latest dictionary entry./             |                         |                |             |            |     |                  |      |
+| 9A | {{{t}}} ~entry@RBX ← *LATEST;~                   | rbx = [rdx]             | MOV r64, r/m64 | REX.W 8B /r | 00 011 010 |     | ~48 8B 1A~       |      |
+| 9D | ~_find1:~                                        |                         |                |             |            |     |                  | ~9D~ |
+| 9D | {{{t}}} ~save arg on the stack;~                 | push al                 | PUSH r64       | 50+rd       |            |     | ~50~             |      |
+| 9E | {{{t}}} ~arg &= 0111111;~                        | al &= 7F                | AND al, imm8   | 24 ib       |            |     | ~24 7F~          |      |
+| A0 | {{{t}}} ~if arg = first char in entry's name:~   | cmp al, [rbx+11]        | CMP r8, r/m8   | REX 3A /r   | 01 000 011 |     | ~3A 43 11~       |      |
+| A3 | {{{t}}} {{{t}}} ~restore arg@AL;~                | pop al                  | POP r64        | 58+rd       |            |     | ~58~             |      |
+| A4 | {{{t}}} {{{t}}} ~goto _match.~                   | jump _match if ==       | JE rel8        | 74 cb       |            |     | ~74 06~          | ~A6~ |
+|    | {{{t}}} /# Follow through entry's link field./   |                         |                |             |            |     |                  |      |
+| A6 | {{{t}}} ~entry ← *(entry + 8);~                  | rbx = [rbx+8]           | MOV r64, r/m64 | REX.W 8B /r | 01 011 011 |     | ~48 8B 5B 08~    |      |
+|    | {{{t}}} /# Loop; try to match previous/          |                         |                |             |            |     |                  |      |
+|    | {{{t}}} /# dictionary entry./                    |                         |                |             |            |     |                  |      |
+| AA | {{{t}}} ~goto _find1.~                           | jump _find1             | JMP rel8       | EB cb       |            |     | ~EB F1~          | ~AC~ |
+| AC | ~_match:~                                        |                         |                |             |            |     |                  | ~AC~ |
+| AC | {{{t}}} ~if arg matches 0xxxxxx:~                | al & 80(exec) ?         | TEST al, imm8  | A8 ib       |            |     | ~A8 80~          |      |
+|    | {{{t}}} {{{t}}} /# Compile./                     |                         |                |             |            |     |                  |      |
+| AE | {{{t}}} {{{t}}} ~goto COMPL.~                    | jump COMPL if zero      | JZ rel8        | 74 cb       |            |     | ~74 09~          | ~AE~ |
+|    | {{{t}}} /# Execute (jump to entry's code)./      |                         |                |             |            |     |                  |      |
+| B0 | {{{t}}} ~goto _entry.~                           | jump [rbx] (exec)       | JMP r/m64      | REX FF /4   | 00 100 011 |     | ~FF 23~          | ~B2~ |
 
 
 * Notes
-
-:LOGBOOK:
-- Note taken on [2024-07-21 Sun 15:34] \\
-  As per article [[https://fev.al/posts/work-journal/]["Use a work journal"]], I'll try to keep all
-  thesis-related notes here, writing down my thoughts as often as
-  possible. Hopefully this will act as a cache and as an organizational
-  tool.
-:END:
 
 *** Useful Sections in the Intel Manual
 Volume 2:
@@ -207,5 +255,3 @@ Volume 2:
   - B.1.4.7 Condition Test (tttn) Field
   - B.2.1 General Purpose Instruction Formats and Encodings for 64-Bit
     Mode
-
-
