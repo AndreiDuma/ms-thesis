@@ -200,12 +200,13 @@ Why this approach?
 |---------------------------+------------------------------------------------------------------------------|
 
 
-** The Actual Machine Code
+** Implementing FORTH
 :LOGBOOK:
 - Note taken on [2024-07-27 Sat 13:49] \\
   Maybe collect all global variables in one place?
 :END:
 
+*** Done :noexport:
 #+CAPTION: Global variables =INPUT= and =OUTPUT=.
 #+LABEL: tbl:input-output
 #+ATTR_LATEX: :align l|ll|l|l
@@ -263,6 +264,39 @@ Why this approach?
 | {{{i(1)}}} /# Execute: jump to entry's code./ |                |             | ~B0~ |                                    |                         |
 | {{{i(1)}}} ~goto _entry.~                     | JMP r/m64      | REX FF /4   |    | ~FF 23~​{{{modrm(00,100,011)}}}       | jump [rbx] (exec)       |
 |                                             |                |             | ~B2~ |                                    |                         |
+
+*** Interpreter Subroutines
+
+#+CAPTION: =COMPL=, The FORTH compiler.
+#+LABEL: tbl:binary-interpreter
+#+ATTR_LATEX: :align l|ll|l|lH
+| *Pseudocode*                                                                        | *Instruction*   | *Opcode*   | *&*  | *Machine code*           | *Intention*                                          |
+|-----------------------------------------------------------------------------------+---------------+----------+----+------------------------+----------------------------------------------------|
+| /# Compile subroutine _COMPL_/.                                                     | /N/A/           | /N/A/      | ~B2~ | ~99 05~ _~43 4F 4D 50 4C~_ | COMPL Forth's COMPILE, B9 ( ebx=xt -- )            |
+|                                                                                   |               |          |    |                        |                                                    |
+| /# Generate a CALL instruction to output:/                                          |               |          |    |                        |                                                    |
+| /# – instruction: CALL r/m64/                                                       |               |          |    |                        |                                                    |
+| /# – opcode: FF /2/                                                                  |               |          |    |                        |                                                    |
+| /#/                                                                                 |               |          |    |                        |                                                    |
+| /# Thus we generate machine code as follows:/                                       |               |          |    |                        |                                                    |
+| /#/ {{{i(1)}}} ~FF 14~​{{{modrm(00,010,100)}}} ~25~​{{{sib(00,100,101)}}} _~??~ ~??~ ~??~ ~??~_ |               |          |    |                        |                                                    |
+|                                                                                   |               |          |    |                        |                                                    |
+| /# 1. Write opcode of CALL (0x99)./                                                 |               |          |    |                        |                                                    |
+| ~op@AL ← 0xFF;~                                                                     | MOV r8, imm8  | B0+rb ib | ~B9~ | ~B0~ /FF/                  | compile: call r/m64 (FF /2, 00 010 100, 00 100 101 |
+| ~[output@RDI++] ← op@AL;~                                                           | STOS m8       | AA       |    | ~AA~                     |                                                    |
+| /# 2. Write ModR/M byte (0x14)./                                                    |               |          |    |                        |                                                    |
+| ~modrm@AL ← 0x14;~                                                                  | MOV r8, imm8  | B0+rb ib |    | ~B0~ /14/                  | al = _                                             |
+| ~[output@RDI++] ← op@AL;~                                                           | STOS m8       | AA       |    | ~AA~                     |                                                    |
+| /# 3. Write SIB byte (0x25)./                                                       |               |          |    |                        |                                                    |
+| ~sib@AL ← 0x25;~                                                                    | MOV r8, imm8  | B0+rb ib |    | ~B0~ /25/                  | [rdi++] = al                                       |
+| ~[output@RDI++] ← op@AL;~                                                           | STOS m8       | AA       |    | ~AA~                     |                                                    |
+| /# 4. Write 4-byte code address./                                                   |               |          |    |                        |                                                    |
+| ~code@EAX ← entry@EBX;~                                                             | XCHG EAX, r32 | 90+rd    |    | ~93~                     | eax = ebx                                          |
+| ~[output@RDI++4] ← op@EAX;~                                                         | STOS m32      | AB       |    | ~AB~                     | [rdi(++4)] = eax                                   |
+|                                                                                   |               |          |    |                        |                                                    |
+| ~return.~                                                                           | RET           | C3       |    | ~C3~                     | return                                             |
+|                                                                                   |               |          | ~9C~ |                        |                                                    |
+
 
 * Notes
 
