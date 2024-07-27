@@ -28,14 +28,28 @@
 #+SUBTITLE:
 #+LATEX_ENGRAVED_THEME:
 #+LATEX_COMPILER: pdflatex
+
 # --- Nice author line ---
 #+LATEX_HEADER: \usepackage{authblk}
 #+LATEX_HEADER: \author[1]{Andrei Dorian Duma\thanks{andrei-dorian.duma@s.unibuc.ro}}
 #+LATEX_HEADER: \affil[1]{Master of Distributed Systems}
 
-#+MACRO: t \texttt{  }
+# --- Allow hiding table columns in the LaTeX export
+#+LATEX_HEADER: \usepackage{array}
+#+LATEX_HEADER: \newcolumntype{H}{>{\setbox0=\hbox\bgroup}c<{\egroup}@{}}
+
+# --- Indentation helper macro.
+#+MACRO: t   \hspace{1em}
+#+MACRO: i (eval (format "\\hspace{%sem}" $1))
+#+MACRO: c (eval (format "\\hspace{%sem}$2" $1))
+
+# --- ModR/M and SIB helper macros.
+#+MACRO: modrm   $^{\text{\tiny ModR/M}}_{\text{\tiny $1·$2·$3}}$
+#+MACRO:   sib   $^{\text{\tiny    SIB}}_{\text{\tiny $1·$2·$3}}$
+#+MACRO: displ   $_{\text{\tiny $1}}_$
 
 # Additional options are set in `.dir-locals.el`.
+
 
 # Don't show abstract for now.
 # #+begin_abstract
@@ -187,58 +201,68 @@ Why this approach?
 
 
 ** The Actual Machine Code
+:LOGBOOK:
+- Note taken on [2024-07-27 Sat 13:49] \\
+  Maybe collect all global variables in one place?
+:END:
 
-| MACHINE CODE     | INTENTION              | INSTRUCTION    | OPCODE   | ModR/M | SIB | NOTES                                                |
-| ~BE B2 00 40 00~ | rsi(input)  = 004000__ | mov r32, imm32 | B8+rd id |        |     | INPUT@RSI ← 0x004000B2;  # Global variable INPUT.    |
-| ~BF 30 00 00 10~ | rdi(output) = 10000030 | mov r32, imm32 | B8+rd id |        |     | OUTPUT@RDI <- 0x10000030;  # Global variable OUTPUT. |
+#+CAPTION: Global variables =INPUT= and =OUTPUT=.
+#+LABEL: tbl:input-output
+#+ATTR_LATEX: :align l|ll|l|l
+| *Pseudocode*                           | *Instruction*    | *Opcode*   | *&*  | *Machine code*     |
+|--------------------------------------+----------------+----------+----+------------------|
+| {{{i(0)}}} /# Global variable INPUT./  |                |          |    |                  |
+| {{{i(0)}}} ~INPUT@RSI ← 0x004000B2;~   | MOV r32, imm32 | B8+rd id | ~78~ | ~BE~ /~B2 00 40 00~/ |
+| {{{i(0)}}} /# Global variable OUTPUT./ |                |          |    |                  |
+| {{{i(0)}}} ~OUTPUT@RDI ← 0x10000030;~  | MOV r32, imm32 | B8+rd id | ~7D~ | ~BF~ /~30 00 00 10~/ |
+|                                      |                |          | ~82~ |                  |
 
-
-| Addr. | Notes                        | Instruction    | Opcode   | ModR/M | SIB | Machine code     | ~78~ |
-|-------+------------------------------+----------------+----------+--------+-----+------------------+------|
-|       | /# Global variable INPUT./   |                |          |        |     |                  |      |
-| ~78~  | *~INPUT@RSI ← 0x004000B2;~*  | MOV r32, imm32 | B8+rd id |        |     | ~BE B2 00 40 00~ | ~7D~ |
-|       | /# Global variable OUTPUT./  |                |          |        |     |                  |      |
-| ~7D~  | *~OUTPUT@RDI ← 0x10000030;~* | MOV r32, imm32 | B8+rd id |        |     | ~BF 30 00 00 10~ | ~82~ |
-| ~82~  |                              |                |          |        |     |                  |      |
-
-|  & | Pseudocode                                       | Intention               | Instruction    | Opcode      | ModR/M     | SIB | Machine code     | &    |
-|----+--------------------------------------------------+-------------------------+----------------+-------------+------------+-----+------------------+------|
-| 82 | ~_beg:~                                          |                         |                |             |            |     |                  | ~82~ |
-|    | {{{t}}} /# Loop the binary interpreter./         |                         |                |             |            |     |                  |      |
-| 82 | {{{t}}} ~call (bi).~                             | call (bi)               | CALL rel32     |             |            |     | ~E8 02 00 00 00~ | ~87~ |
-| 87 | {{{t}}} ~goto _beg.~                             | jump bi                 | JMP rel8       | EB cb       |            |     | ~EB F9~          | ~89~ |
-| 89 | ~(bi):~                                          |                         |                |             |            |     |                  | ~89~ |
-| 89 | {{{t}}} ~chr@AL ← next byte at input@RSI;~       | al = [rsi++]            | LODS m8        | AC          |            |     | ~AC~             |      |
-| 8A | {{{t}}} ~if chr@AL = 99:~ /# This is a command./ | cmp al, 99(command)     | CMP al, imm8   | 3C ib       |            |     | ~3C 99~          |      |
-| 8C | {{{t}}} ~goto _command.~                         | jump _command if ==     | JE rel8        | 74 cb       |            |     | ~74 02~          | ~8E~ |
-| 8E | {{{t}}} ~copy chr to output@RDI;~                | [rdi++] = al (xmit)     | STOS m8        | AA          |            |     | ~AA~             |      |
-| 8F | {{{t}}} ~return.~                                | return                  | RET            | C3          |            |     | ~C3~             |      |
-| 90 | ~_command:~                                      |                         |                |             |            |     |                  | ~90~ |
-|    | {{{t}}} /# Global variable LATEST./              |                         |                |             |            |     |                  |      |
-| 90 | {{{t}}} ~LATEST@RDX ← 0x10000028;~               | rdx = Latest            | MOV r32, imm32 | B8+rd id    |            |     | ~BA 28 00 00 10~ |      |
-| 95 | {{{t}}} ~arg ← next byte from input;~            | al = [rsi++] (argument) | LODS m8        | AC          |            |     | ~AC~             |      |
-| 96 | {{{t}}} ~if arg matches x00xxxxx:~               | al & 60(graphic)?       | TEST al, imm8  | A8 ib       |            |     | ~A8 60~          |      |
-| 98 | {{{t}}} {{{t}}} ~goto Head.~                     | jump Head if zero       | JZ rel8        | 74 cb       |            |     | ~74 31~          | ~9A~ |
-|    | {{{t}}} /# Latest dictionary entry./             |                         |                |             |            |     |                  |      |
-| 9A | {{{t}}} ~entry@RBX ← *LATEST;~                   | rbx = [rdx]             | MOV r64, r/m64 | REX.W 8B /r | 00 011 010 |     | ~48 8B 1A~       |      |
-| 9D | ~_find1:~                                        |                         |                |             |            |     |                  | ~9D~ |
-| 9D | {{{t}}} ~save arg on the stack;~                 | push al                 | PUSH r64       | 50+rd       |            |     | ~50~             |      |
-| 9E | {{{t}}} ~arg &= 0111111;~                        | al &= 7F                | AND al, imm8   | 24 ib       |            |     | ~24 7F~          |      |
-| A0 | {{{t}}} ~if arg = first char in entry's name:~   | cmp al, [rbx+11]        | CMP r8, r/m8   | REX 3A /r   | 01 000 011 |     | ~3A 43 11~       |      |
-| A3 | {{{t}}} {{{t}}} ~restore arg@AL;~                | pop al                  | POP r64        | 58+rd       |            |     | ~58~             |      |
-| A4 | {{{t}}} {{{t}}} ~goto _match.~                   | jump _match if ==       | JE rel8        | 74 cb       |            |     | ~74 06~          | ~A6~ |
-|    | {{{t}}} /# Follow through entry's link field./   |                         |                |             |            |     |                  |      |
-| A6 | {{{t}}} ~entry ← *(entry + 8);~                  | rbx = [rbx+8]           | MOV r64, r/m64 | REX.W 8B /r | 01 011 011 |     | ~48 8B 5B 08~    |      |
-|    | {{{t}}} /# Loop; try to match previous/          |                         |                |             |            |     |                  |      |
-|    | {{{t}}} /# dictionary entry./                    |                         |                |             |            |     |                  |      |
-| AA | {{{t}}} ~goto _find1.~                           | jump _find1             | JMP rel8       | EB cb       |            |     | ~EB F1~          | ~AC~ |
-| AC | ~_match:~                                        |                         |                |             |            |     |                  | ~AC~ |
-| AC | {{{t}}} ~if arg matches 0xxxxxx:~                | al & 80(exec) ?         | TEST al, imm8  | A8 ib       |            |     | ~A8 80~          |      |
-|    | {{{t}}} {{{t}}} /# Compile./                     |                         |                |             |            |     |                  |      |
-| AE | {{{t}}} {{{t}}} ~goto COMPL.~                    | jump COMPL if zero      | JZ rel8        | 74 cb       |            |     | ~74 09~          | ~AE~ |
-|    | {{{t}}} /# Execute (jump to entry's code)./      |                         |                |             |            |     |                  |      |
-| B0 | {{{t}}} ~goto _entry.~                           | jump [rbx] (exec)       | JMP r/m64      | REX FF /4   | 00 100 011 |     | ~FF 23~          | ~B2~ |
-
+#+CAPTION: The binary interpreter routine and loop.
+#+LABEL: tbl:binary-interpreter
+#+ATTR_LATEX: :align l|ll|l|lH
+| *Pseudocode*                                  | *Instruction*    | *Opcode*      | *&*  | *Machine code*                       | *Intention*               |
+|---------------------------------------------+----------------+-------------+----+------------------------------------+-------------------------|
+| ~_bi:~                                        |                |             | ~82~ |                                    |                         |
+| {{{i(1)}}} /# Loop the binary interpreter./   |                |             |    |                                    |                         |
+| {{{i(1)}}} ~call bi().~                       | CALL rel32     | E8 cb[fn:1] |    | ~E8~ _~02 00 00 00~_​{{{displ(89-87)}}} | call (bi)               |
+| {{{i(1)}}} ~goto _bi.~                        | JMP rel8       | EB cb       | ~87~ | ~EB~ _~F9~_​{{{displ(82-89)}}}          | jump bi                 |
+| ~bi():~                                       |                |             | ~89~ |                                    |                         |
+| {{{i(1)}}} /# Get next byte from input./      |                |             |    |                                    |                         |
+| {{{i(1)}}} ~chr@AL ← [input@RSI++];~          | LODS m8        | AC          |    | ~AC~                                 | al = [rsi++]            |
+| {{{i(1)}}} /# Does it start a command?/       |                |             |    |                                    |                         |
+| {{{i(1)}}} ~if chr@AL = 0x99:~                | CMP AL, imm8   | 3C ib       |    | ~3C~ /~99~/                            | cmp al, 99(command)     |
+| {{{i(2)}}}     ~goto _command.~               | JE rel8        | 74 cb       |    | ~74~ _~02~_​{{{displ(90-8E)}}}          | jump _command if ==     |
+| {{{i(1)}}} ~[output@RDI++] <- chr@AL;~        | STOS m8        | AA          | ~8E~ | ~AA~                                 | [rdi++] = al (xmit)     |
+| {{{i(1)}}} ~return.~                          | RET            | C3          |    | ~C3~                                 | return                  |
+| ~_command:~                                   |                |             | ~90~ |                                    |                         |
+| {{{i(1)}}} /# Global variable LATEST./        |                |             |    |                                    |                         |
+| {{{i(1)}}} ~LATEST@RDX ← 0x10000028;~         | MOV r32, imm32 | B8+rd id    |    | ~BA~ /~28 00 00 10~/                   | rdx = Latest            |
+| {{{i(1)}}} /# Parse command argument./        |                |             |    |                                    |                         |
+| {{{i(1)}}} ~arg@AL ← [intput@RSI++];~         | LODSB[fn:2]    | AC          |    | ~AC~                                 | al = [rsi++] (argument) |
+| {{{i(1)}}} ~if arg & x11xxxxx = 0:~           | TEST AL, imm8  | A8 ib       |    | ~A8~ /~60~/                            | al & 60(graphic)?       |
+| {{{i(1)}}}     ~goto Head.~                   | JZ rel8        | 74 cb       |    | ~74~ _~31~_​{{{displ(CB-9A)}}}          | jump Head if zero       |
+| {{{i(1)}}} /# Latest dictionary entry./       |                |             | ~9A~ |                                    |                         |
+| {{{i(1)}}} ~entry@RBX ← *LATEST;~             | MOV r64, r/m64 | REX.W 8B /r |    | ~48 8B 1A~​{{{modrm(00,011,010)}}}    | rbx = [rdx]             |
+| ~_find1:~                                     |                |             | ~9D~ |                                    |                         |
+| {{{i(1)}}} ~save arg@AL on the stack;~        | PUSH r64       | 50+rd       |    | ~50~                                 | push al                 |
+| {{{i(1)}}} ~arg &= 0111111;~                  | AND AL, imm8   | 24 ib       |    | ~24 7F~                              | al &= 7F                |
+| {{{i(1)}}} ~if arg = [entry + 11]:~           | CMP r8, r/m8   | REX 3A /r   |    | ~3A 43 11~​{{{modrm(00,010,001)}}}    | cmp al, [rbx+11]        |
+| {{{i(2)}}}     /# If arg = first char in/     |                |             |    |                                    |                         |
+| {{{i(2)}}}     /# entry's name./              |                |             |    |                                    |                         |
+| {{{i(2)}}}     ~restore arg@AL;~              | POP r64        | 58+rd       |    | ~58~                                 | pop al                  |
+| {{{i(2)}}}     ~goto _match.~                 | JE rel8        | 74 cb       |    | ~74~ ~06~​{{{displ(AC-A6)}}}            | jump _match if ==       |
+| {{{i(1)}}} /# Follow entry's link pointer./   |                |             | ~A6~ |                                    |                         |
+| {{{i(1)}}} ~entry ← [entry + 8];~             | MOV r64, r/m64 | REX.W 8B /r |    | ~48 8B 5B~​{{{modrm(01,011,011)}}} ~08~ | rbx = [rbx+8]           |
+| {{{i(1)}}} /# Loop; try to match previous/    |                |             |    |                                    |                         |
+| {{{i(1)}}} /# dictionary entry./              |                |             |    |                                    |                         |
+| {{{i(1)}}} ~goto _find1.~                     | JMP rel8       | EB cb       |    | ~EB~ _~F1~_​{{{displ(9D-AC)}}}          | jump _find1             |
+| ~_match:~                                     |                |             | ~AC~ |                                    |                         |
+| {{{i(1)}}} ~if arg & 1xxxxxx = 0:~            | TEST AL, imm8  | A8 ib       |    | ~A8~ /~80~/                            | al & 80(exec) ?         |
+| {{{i(2)}}}     /# Compile./                   |                |             |    |                                    |                         |
+| {{{i(2)}}}     ~goto COMPL.~                  | JZ rel8        | 74 cb       |    | ~74~ _~09~_​{{{displ(B9-B0)}}}          | jump COMPL if zero      |
+| {{{i(1)}}} /# Execute: jump to entry's code./ |                |             | ~B0~ |                                    |                         |
+| {{{i(1)}}} ~goto _entry.~                     | JMP r/m64      | REX FF /4   |    | ~FF 23~​{{{modrm(00,100,011)}}}       | jump [rbx] (exec)       |
+|                                             |                |             | ~B2~ |                                    |                         |
 
 * Notes
 
@@ -255,3 +279,17 @@ Volume 2:
   - B.1.4.7 Condition Test (tttn) Field
   - B.2.1 General Purpose Instruction Formats and Encodings for 64-Bit
     Mode
+
+*** Maybe consider porting to RISC-V?
+The Wikipedia [[https://en.wikipedia.org/wiki/RISC-V][article]] states that "RISC-V encourages academic usage"
+and that "the simplicity of the integer subset permits basic student
+exercises". This is probably the ideal ISA to target after
+=x86-64=. All work done for x86 could be relegated to an appendix so
+that it's not wasted.
+
+* Footnotes
+
+[fn:1] SmithForth misses the opcode here.
+
+[fn:2] SmithForth uses instruction =LODS m8= with same opcode. We
+prefer the less confusing =LODSB=.
