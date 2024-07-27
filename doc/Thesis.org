@@ -40,8 +40,9 @@
 
 # --- Indentation helper macro.
 #+MACRO: t   \hspace{1em}
-#+MACRO: i (eval (format "\\hspace{%sem}" $1))
-#+MACRO: c (eval (format "\\hspace{%sem}$2" $1))
+#+MACRO: i   (eval (format "\\hspace{%sem}" $1))
+#+MACRO: c   (eval (format "\\hspace{%s}" $1))
+#+MACRO: d   (eval (format "\\hphantom{\\texttt{%s}}" (make-string (string-to-number $1) ?. )))
 
 # --- ModR/M and SIB helper macros.
 #+MACRO: modrm   $^{\text{\tiny ModR/M}}_{\text{\tiny $1·$2·$3}}$
@@ -265,7 +266,7 @@ Why this approach?
 | {{{i(1)}}} ~goto _entry.~                     | JMP r/m64      | REX FF /4   |    | ~FF 23~​{{{modrm(00,100,011)}}}       | jump [rbx] (exec)       |
 |                                             |                |             | ~B2~ |                                    |                         |
 
-*** Interpreter Subroutines
+*** Interpreter Subroutines :noexport:
 
 #+CAPTION: =COMPL=, The FORTH compiler.
 #+LABEL: tbl:binary-interpreter
@@ -294,8 +295,44 @@ Why this approach?
 | ~code@EAX ← entry@EBX;~                                                             | XCHG EAX, r32 | 90+rd    |    | ~93~                     | eax = ebx                                          |
 | ~[output@RDI++4] ← op@EAX;~                                                         | STOS m32      | AB       |    | ~AB~                     | [rdi(++4)] = eax                                   |
 |                                                                                   |               |          |    |                        |                                                    |
-| ~return.~                                                                           | RET           | C3       |    | ~C3~                     | return                                             |
-|                                                                                   |               |          | ~9C~ |                        |                                                    |
+| ~return.~  /# From binary interpreter./                                               | RET           | C3       |    | ~C3~                     | return                                             |
+|                                                                                   |               |          | ~C5~ |                        |                                                    |
+
+*** WIP
+
+| *Pseudocode*                                                | *Instruction*     | *Opcode*         | *&*  | *Machine code*                       | *Intention*     |
+|-----------------------------------------------------------+-----------------+----------------+----+------------------------------------+---------------|
+| /# Compile subroutine _Head_/.                              | /N/A/             | /N/A/            | ~C5~ | ~99 04~ _~48 65 61 64~_                | Head          |
+| # ( al=flag rdx=Latest rsi=addr -- rdx=Latest rsi=addr' ) |                 |                |    |                                    |               |
+|                                                           |                 |                |    |                                    |               |
+| /# Advance OUTPUT to a 16-bit aligned address./             |                 |                |    |                                    |               |
+| ~OUTPUT@RDI += 0x0F;~                                       | ADD r/m64, imm8 | REX.W 83 /0 ib | ~CB~ | ~48 83 C7~​{{{modrm(11,000,111)}}} ~0F~ | rdi += 0F     |
+| ~OUTPUT@RDI &= 0xF0;~                                       | AND r/m64, imm8 | REX.W 83 /4 ib |    | ~48 83 E7~​{{{modrm(11,100,111)}}} ~F0~ | rdi &= F0     |
+| /# Fill the new dictionary entry:/                          |                 |                |    |                                    |               |
+|                                                           |                 |                |    |                                    |               |
+| /# 1. Set the _link field_ and update LATEST./                |                 |                |    |                                    |               |
+| ~latest@RCX ← [LATEST@RDX];~                                | MOV r64, r/m64  | REX.W 8B /r    |    | ~48 8B 0A~​{{{modrm(00,001,010)}}}    | rcx = [rdx]   |
+| ~[OUTPUT@RDI+8] ← latest@RCX;~                              | MOV r/m64, r64  | REX.W 89 /r    |    | ~48 89 4F~​{{{modrm(01,001,111)}}} ~08~ | [rdi+8] = rcx |
+| ~[LATEST@RDX] <- OUTPUT@RDI;~                               | MOV r/m64, r64  | REX.W 89 /r    |    | ~48 89 3A~​{{{modrm(00,111,010)}}}    | [rdx] = rdi   |
+|                                                           |                 |                |    |                                    |               |
+| /# 2. Set the _flag+length field_./                           |                 |                |    |                                    |               |
+| ~OUTPUT@RDI += 0x10;~                                       | ADD r/m64, imm8 | REX.W 83 /0 ib |    | ~48 83 C7~​{{{modrm(11,000,111)}}} ~10~ | rdi += 10     |
+| ~[OUTPUT@RDI++] ← flag@AL;~                                 | STOS m8         | AA             |    | ~AA~                                 | [rdi++] = al  |
+|                                                           |                 |                |    |                                    |               |
+| /# 3. Extract name length from flag/                        |                 |                |    |                                    |               |
+| /# \hphantom{...} and copy _name field_./                     |                 |                |    |                                    |               |
+| ~flag@ECX ← flag@AL;~                                       | XCHG EAX, r32   | 90+rd          |    | ~91~                                 | ecx = eax     |
+| ~length@ECX <- flag@ECX & 0x1F;~                            | AND r/m32, imm8 | 83 /4 ib       |    | ~83 E1~​{{{modrm(11,100,001)}}} ~1F~    | ecx &= 1F     |
+| ~copy length@ECX bytes from INPUT@RSI~                      |                 |                |    |                                    |               |
+| {{{d(5)}}}     ~to OUTPUT@RDI;~                             | REP movs m8, m8 | F3 A4          |    | ~F3 A4~                              | copy Name     |
+|                                                           |                 |                |    |                                    |               |
+| /# 4. Make _code field_ point to the machine code/            |                 |                |    |                                    |               |
+| /# that follows in the input stream./                       |                 |                |    |                                    |               |
+| ~code@RCX ← [LATEST];~                                      | MOV r64, r/m64  | REX.W 8B /r    |    | ~48 8B 0A~​{{{modrm(00,001,010)}}}    | rcx = [rdx]   |
+| ~[code@RCX] ← INPUT;~                                       | MOV r/m64, r64  | REX.W 89 /r    |    | ~48 89 39~​{{{modrm(00,111,001)}}}    | [rcx] = rdi   |
+| ~return;~  /# From binary interpreter./                       | RET             | C3             |    | ~C3~                                 | return        |
+|                                                           |                 |                |    |                                    |               |
+
 
 
 * Notes
