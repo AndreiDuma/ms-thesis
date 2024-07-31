@@ -291,7 +291,7 @@ C3                      # return                    ret                 C3					 
 41 57 57 41 56 56       # push r15, rdi, r14, rsi   push r64            REX 50+rd				  Push 16 registers  | R15 | RDI |
 41 55 55 41 54 54       # push r13, rbp, r12, rsp   push r64            REX 50+rd				    so that they're  | R14 | RSI |
 41 53 53 41 52 52       # push r11, rbx, r10, rdx   push r64            REX 50+rd				    displayed like:  | ... | ... |
-41 51 51 41 50 50       # push r9 , rcx, r8 , rax   push r64            REX 50+rd				  	    	   | R8  | RAX |
+41 51 51 41 50 50       # push r9 , rcx, r8 , rax   push r64            REX 50+rd				    	      	     | R8  | RAX |
 48 8B F4                # rsi = rsp                 mov r64, r/m64      REX.W 8B /r     11 110 100		  addr@RSI <- RSP;
 BA 80 00 00 00          # rdx = u                   mov r32, imm32      B8+rd id 	       			  u@RDX <- 0x80;
 99 54                   # Call TYPE		    	     		      					  Call TYPE(addr, u);  # Print top 16 quads on stack.
