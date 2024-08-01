@@ -659,93 +659,127 @@ Why this approach?
 
 **** [                                                             :noexport:
 
-#+CAPTION: Subroutine ~[~ TODO.
+#+CAPTION: Subroutine ~'['~ changes Forth's ~STATE~ to interpreting.
 #+LABEL: tbl:forth:lbracket
 #+ATTR_LATEX: :align l|ll|lH
-| *Pseudocode*                    | *Instruction* | *Opcode* | *Machine code*                                                                    | *Intention*          |
-|---------------------------------+---------------+----------+-----------------------------------------------------------------------------------+----------------------|
-| /# Define immediate:/ _~[~_     | /N/A/         | /N/A/    | {{{define(81,5B)}}}                                                               | define [             |
-| /# In/Out:    ~( -​- )~/         |               |          |                                                                                   |                      |
-| /#/                             |               |          |                                                                                   |                      |
-| /# *TODO*​/                      |               |          |                                                                                   |                      |
-|                                 |               |          |                                                                                   |                      |
-| /# Set interpreting (0) state./ |               |          |                                                                                   |                      |
-| ~push 0;~                       | PUSH /imm8/   | 6A /ib/  | ~6A~ /~00~/                                                                       | push 0(Interpreting) |
-| ~[STATE] ← pop;~                | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]          |
-| ~return.~                       | RET           | C3       | ~C3~                                                                              | return               |
+| *Pseudocode*                      | *Instruction* | *Opcode* | *Machine code*                                                                    | *Intention*          |
+|-----------------------------------+---------------+----------+-----------------------------------------------------------------------------------+----------------------|
+| /# Define immediate:/ _~[~_       | /N/A/         | /N/A/    | {{{define(81,5B)}}}                                                               | define [             |
+| /# In/Out:    ~( -​- )~/           |               |          |                                                                                   |                      |
+| /#/                               |               |          |                                                                                   |                      |
+| /# Switch to interpreting state./ |               |          |                                                                                   |                      |
+|                                   |               |          |                                                                                   |                      |
+| /# Set STATE to 0./               |               |          |                                                                                   |                      |
+| ~push 0;~                         | PUSH /imm8/   | 6A /ib/  | ~6A~ /~00~/                                                                       | push 0(Interpreting) |
+| ~[STATE] ← pop;~                  | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]          |
+| ~return.~                         | RET           | C3       | ~C3~                                                                              | return               |
 
 **** ]
 
-#+CAPTION: Subroutine ~]~ TODO.
+#+CAPTION: Subroutine ~']'~ changes Forth's ~STATE~ to compiling.
 #+LABEL: tbl:forth:rbracket
 #+ATTR_LATEX: :align l|ll|lH
-| *Pseudocode*                 | *Instruction* | *Opcode* | *Machine code*                                                                    | *Intention*       |
-|------------------------------+---------------+----------+-----------------------------------------------------------------------------------+-------------------|
-| /# Define:/ _~[~_            | /N/A/         | /N/A/    | {{{define(01,5D)}}}                                                               | define ]          |
-| /# In/Out: ~( -​- )~/         |               |          |                                                                                   |                   |
-| /#/                          |               |          |                                                                                   |                   |
-| /# *TODO*​/                   |               |          |                                                                                   |                   |
-|                              |               |          |                                                                                   |                   |
-| /# Set compiling (1) state./ |               |          |                                                                                   |                   |
-| ~push 1;~                    | PUSH /imm8/   | 6A /ib/  | ~6A~ /~01~/                                                                       | push 1(Compiling) |
-| ~[STATE] ← pop;~             | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]       |
-| ~return.~                    | RET           | C3       | ~C3~                                                                              | return            |
+| *Pseudocode*                   | *Instruction* | *Opcode* | *Machine code*                                                                    | *Intention*       |
+|--------------------------------+---------------+----------+-----------------------------------------------------------------------------------+-------------------|
+| /# Define:/ _~]~_              | /N/A/         | /N/A/    | {{{define(01,5D)}}}                                                               | define ]          |
+| /# In/Out: ~( -​- )~/           |               |          |                                                                                   |                   |
+| /#/                            |               |          |                                                                                   |                   |
+| /# Switch to compiling state./ |               |          |                                                                                   |                   |
+|                                |               |          |                                                                                   |                   |
+| /# Set STATE to 1./            |               |          |                                                                                   |                   |
+| ~push 1;~                      | PUSH /imm8/   | 6A /ib/  | ~6A~ /~01~/                                                                       | push 1(Compiling) |
+| ~[STATE] ← pop;~               | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]       |
+| ~return.~                      | RET           | C3       | ~C3~                                                                              | return            |
 
 **** \
 
-#+CAPTION: Subroutine ~\~ TODO.
+#+CAPTION: Subroutine ~'\'~ implements line comments.
 #+LABEL: tbl:forth:backslash
 #+ATTR_LATEX: :align l|ll|lH
-| *Pseudocode*                     | *Instruction*  | *Opcode*    | *Machine code*                                                                       | *Intention* |
-|----------------------------------+----------------+-------------+--------------------------------------------------------------------------------------+-------------|
-| /# Define immediate:/ _~\~_      | /N/A/          | /N/A/       | {{{define(81,5C)}}}                                                                  | define \    |
-| /# In/Out: ~( "ccc<eol>" -​- )~/  |                |             |                                                                                      |             |
-| /#/                              |                |             |                                                                                      |             |
-| /# *TODO*​/                       |                |             |                                                                                      |             |
-|                                  |                |             |                                                                                      |             |
-| ~RAX ← [#IN];~                   | MOV r64, r/m64 | REX.W 8B /r | ~48 8B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(00 00 00 10)}}} | rax = [#IN] |
-| ~[>IN] ← RAX;~                   | MOV r/m64, r64 | REX.W 89 /r | ~48 89~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(10 00 00 10)}}} | [>IN] = rax |
-| ~return.~                        | RET            | C3          | ~C3~                                                                                 | return      |
+| *Pseudocode*                    | *Instruction*  | *Opcode*    | *Machine code*                                                                       | *Intention* |
+|---------------------------------+----------------+-------------+--------------------------------------------------------------------------------------+-------------|
+| /# Define immediate:/ _~\~_     | /N/A/          | /N/A/       | {{{define(81,5C)}}}                                                                  | define \    |
+| /# In/Out: ~( "ccc<eol>" -​- )~/ |                |             |                                                                                      |             |
+| /#/                             |                |             |                                                                                      |             |
+| /# Consumes all characters/     |                |             |                                                                                      |             |
+| /# left on the current line./   |                |             |                                                                                      |             |
+|                                 |                |             |                                                                                      |             |
+| ~RAX ← [#IN];~                  | MOV r64, r/m64 | REX.W 8B /r | ~48 8B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(00 00 00 10)}}} | rax = [#IN] |
+| ~[>IN] ← RAX;~                  | MOV r/m64, r64 | REX.W 89 /r | ~48 89~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(10 00 00 10)}}} | [>IN] = rax |
+| ~return.~                       | RET            | C3          | ~C3~                                                                                 | return      |
 
 **** (
 
-#+CAPTION: Subroutine ~(~ TODO.
+#+CAPTION: Subroutine ~'('~ implements inline comments (ending with a corresponding ~')'~).
 #+LABEL: tbl:forth:lparen
 #+ATTR_LATEX: :align l|ll|lH
-| *Pseudocode*                        | *Instruction*  | *Opcode*   | *Machine code*      | *Intention*                                                                 |
-|-------------------------------------+----------------+------------+---------------------+-----------------------------------------------------------------------------|
-| /# Define immediate:/ _~(~_         | /N/A/          | /N/A/      | {{{define(81,28)}}} | define (                                                                    |
-| /# In/Out: ~( "ccc<rparen>" -​- )~/  |                |            |                     |                                                                             |
-| /#/                                 |                |            |                     |                                                                             |
-| /# *TODO*​/                          |                |            |                     |                                                                             |
-|                                     |                |            |                     |                                                                             |
-| ~low@CL ← ')';~                     | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~29~/         |                                                                             |
-| ~high@DL ← ')' + 1;~                | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~2A~/         | (cl, dl) = (RP, RP+1)                                                       |
-| ~PARSE();~  /# Compiled call./      | /N/A/          | /N/A/      | {{{compile(50,P)}}} | Call PARSE            Forth 2012 implies comment ends at rparen or newline. |
-| ~return.~                           | RET            | C3         | ~C3~                | return                                                                      |
+| *Pseudocode*                               | *Instruction*  | *Opcode*   | *Machine code*      | *Intention*                                                                 |
+|--------------------------------------------+----------------+------------+---------------------+-----------------------------------------------------------------------------|
+| /# Define immediate:/ _~(~_                | /N/A/          | /N/A/      | {{{define(81,28)}}} | define (                                                                    |
+| /# In/Out: ~( "ccc<rparen>" -​- )~/         |                |            |                     |                                                                             |
+| /#/                                        |                |            |                     |                                                                             |
+| /# Consume characters until a ')' occurs./ |                |            |                     |                                                                             |
+|                                            |                |            |                     |                                                                             |
+| ~low@CL ← ')';~                            | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~29~/         |                                                                             |
+| ~high@DL ← ')' + 1;~                       | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~2A~/         | (cl, dl) = (RP, RP+1)                                                       |
+| ~PARSE();~  /# Compiled call./             | /N/A/          | /N/A/      | {{{compile(50,P)}}} | Call PARSE            Forth 2012 implies comment ends at rparen or newline. |
+| ~return.~                                  | RET            | C3         | ~C3~                | return                                                                      |
 
 **** :
 
-#+CAPTION: Subroutine ~:~ TODO.
+#+CAPTION: Subroutine ~:~ (colon) begins compiling a word after setting up its dictionary entry.
 #+LABEL: tbl:forth:colon
 #+ATTR_LATEX: :align l|ll|lH
 | *Pseudocode*                              | *Instruction*     | *Opcode*          | *Machine code*                            | *Intention*                            |
 |-------------------------------------------+-------------------+-------------------+-------------------------------------------+----------------------------------------|
-| /# Define:/ _~:~_ ~(colon)~               | ---               | ---               | {{{define(01,3A)}}}                       | define :                               |
+| /# Define:/ _~':'~_                       | ---               | ---               | {{{define(01,3A)}}}                       | define :                               |
 | /# In/Out: ~( "<spaces>ccc<space>" -​- )~/ |                   |                   |                                           |                                        |
 | /#/                                       |                   |                   |                                           |                                        |
 | /# *TODO*​/                                |                   |                   |                                           |                                        |
 |                                           |                   |                   |                                           |                                        |
+| /# TODO./                                 |                   |                   |                                           |                                        |
 | ~pname();~  /# Compiled call./            | ---               | ---               | {{{compile(70,p)}}}                       | Call pname  (See Forth 2012 Table 2.1) |
 | ~RSI ← RBP;~                              | MOV r/m64, r64    | REX.W 89 /r       | ~48 89~ {{{modrm(EE,11,101,110)}}}        | rsi = rbp                              |
 | ~RDX ← LATEST;~                           | MOV r32, /imm32/  | B8+rd /id/        | ~BA~ /~28 00 00 10~/                      | rdx = Latest                           |
 | ~Head();~  /# Compiled call./             | ---               | ---               | {{{compile(48,H)}}}                       | Call Head                              |
+|                                           |                   |                   |                                           |                                        |
+| /# Set the HIDDEN flag (~0x40~)/          |                   |                   |                                           |                                        |
+| /# on the dictionary entry./              |                   |                   |                                           |                                        |
 | ~RCX ← [RDX];~                            | MOV r64, r/m64    | REX.W 8B /r       | ~48 8B~ {{{modrm(0A,00,001,010)}}}        | rcx = [rdx]                            |
 | ~RCX += 16;~                              | ADD r/m64, /imm8/ | 9REX.W 83 /​0 /ib/ | ~48 83~ {{{modrm(C1,11,000,001)}}} /~10~/ | rcx += 10                              |
 | ~[RCX]~ \vert{}​~=~ ~0x40;~                      | OR r/m8, /imm8/   | 80 /1 /ib/        | ~80~ {{{modrm(09,00,001,001)}}} /~40~/    | [rcx] ¦= 40 HIDDEN                     |
+|                                           |                   |                   |                                           |                                        |
+| /# Switch to compiling state./            |                   |                   |                                           |                                        |
 | ~rbracket();~  /# Compiled call./         | ---               | ---               | {{{compile(5D,])}}}                       | Call ]                                 |
 | ~return.~                                 | RET               | C3                | ~C3~                                      | return                                 |
 
+**** ;
+
+#+CAPTION: Subroutine ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting.
+#+LABEL: tbl:forth:colon
+#+ATTR_LATEX: :align l|ll|lH
+| *Pseudocode*                              | *Instruction*     | *Opcode*         | *Machine code*                                              | *Intention*          |
+|-------------------------------------------+-------------------+------------------+-------------------------------------------------------------+----------------------|
+| /# Define immediate:/ _~;~_               | ---               | ---              | {{{define(81,3B)}}}                                         | define ;             |
+| /# In/Out: ~( C: -​- )~/                   |                   |                  |                                                             |                      |
+| /#/                                       |                   |                  |                                                             |                      |
+| /# Finalize a colon definition and/       |                   |                  |                                                             |                      |
+| /# switch back to interpreting state./    |                   |                  |                                                             |                      |
+|                                           |                   |                  |                                                             |                      |
+| /# Write a RET instr. to ~OUTPUT~./       |                   |                  |                                                             |                      |
+| ~op@AL ← 0xC3;~  /# RET opcode./          | MOV r8, /imm8/    | B0+rb /ib/       | ~B0~ /~C3~/                                                 | al = opcode ret      |
+| ~[OUTPUT@RDI++] ← op@AL;~                 | STOS m8           | AA               | ~AA~                                                        | [rdi++] = al         |
+|                                           |                   |                  |                                                             |                      |
+| /# Clear the HIDDEN flag (~0x40~)/        |                   |                  |                                                             |                      |
+| /# on the dictionary entry./              |                   |                  |                                                             |                      |
+| ~RCX ← [LATEST];~                         | MOV r64, r/m64    | REX.W 8B /r      | ~48 8B~ {{{modrm(0C,00,001,100)}}} {{{sib(25,00,100,101)}}} | rcx = [Latest]       |
+|                                           |                   |                  | \hookrightarrow {{{c(2)}}} {{{displ(28 00 00 10)}}}         |                      |
+| ~RCX += 0x10;~                            | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~48 83~ {{{modrm(C1,11,000,001)}}} /10/                     | rcx += 10            |
+| ~[flagRCX] &= 0b10111111;~                | AND r/m8, /imm8/  | 80 /4 /ib/       | ~80~ {{{modrm(21,00,100,001)}}} /BF/                        | [rcx] &= BF(~HIDDEN) |
+|                                           |                   |                  |                                                             |                      |
+| /# Switch to interpreting state./         |                   |                  |                                                             |                      |
+| ~lbracket();~  /# Compiled call./         |                   |                  | {{{compile(5B,[)}}}                                         | Call [               |
+| ~return.~                                 | RET               | C3               | ~C3~                                                        | return               |
 
 
 * Notes                                                            :noexport:
