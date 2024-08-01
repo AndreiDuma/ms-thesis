@@ -309,33 +309,33 @@ Why this approach?
 #+CAPTION: =COMPL=, the FORTH compiler.
 #+LABEL: tbl:forth:compl
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                                                                                 | *Instruction* | *Opcode* | *&*  | *Machine code*                  | *Intention*                                        |
-|----------------------------------------------------------------------------------------------+---------------+----------+------+---------------------------------+----------------------------------------------------|
-| /# Define:/ _~COMPL~_                                                                        | /N/A/         | /N/A/    | ~B2~ | {{{define(99,43 4F 4D 50 4C)}}} | define COMPL                                       |
-| /# In/Out:/ ~( xt@EBX -- )~                                                                  |               |          |      |                                 |                                                    |
-|                                                                                              |               |          |      |                                 |                                                    |
-| /# Generate a CALL instr. to ~OUTPUT~:/                                                      |               |          |      |                                 |                                                    |
-| /# – instruction: CALL r/m64/                                                                |               |          |      |                                 |                                                    |
-| /# – opcode: FF /2/                                                                          |               |          |      |                                 |                                                    |
-| /#/                                                                                          |               |          |      |                                 |                                                    |
-| /# Thus we generate code as follows:/                                                        |               |          |      |                                 |                                                    |
-| /#/{{{c(2)}}}​~FF~ {{{modrm(14,00,010,100)}}} ~25~​{{{sib(00,100,101)}}} _~??~ ~??~ ~??~ ~??~_ |               |          |      |                                 |                                                    |
-|                                                                                              |               |          |      |                                 |                                                    |
-| /# 1. Write opcode of CALL (0x99)./                                                          |               |          |      |                                 |                                                    |
-| ~op@AL ← 0xFF;~                                                                              | MOV r8, imm8  | B0+rb ib | ~B9~ | ~B0~ /FF/                       | compile: call r/m64 (FF /2, 00 010 100, 00 100 101 |
-| ~[output@RDI++] ← op@AL;~                                                                    | STOS m8       | AA       |      | ~AA~                            |                                                    |
-| /# 2. Write ModR/M byte (0x14)./                                                             |               |          |      |                                 |                                                    |
-| ~modrm@AL ← 0x14;~                                                                           | MOV r8, imm8  | B0+rb ib |      | ~B0~ /14/                       | al = _                                             |
-| ~[output@RDI++] ← op@AL;~                                                                    | STOS m8       | AA       |      | ~AA~                            |                                                    |
-| /# 3. Write SIB byte (0x25)./                                                                |               |          |      |                                 |                                                    |
-| ~sib@AL ← 0x25;~                                                                             | MOV r8, imm8  | B0+rb ib |      | ~B0~ /25/                       | [rdi++] = al                                       |
-| ~[output@RDI++] ← op@AL;~                                                                    | STOS m8       | AA       |      | ~AA~                            |                                                    |
-| /# 4. Write 4-byte code address./                                                            |               |          |      |                                 |                                                    |
-| ~code@EAX ← xt@EBX;~                                                                         | XCHG EAX, r32 | 90+rd    |      | ~93~                            | eax = ebx                                          |
-| ~[output@RDI++4] ← op@EAX;~                                                                  | STOS m32      | AB       |      | ~AB~                            | [rdi(++4)] = eax                                   |
-|                                                                                              |               |          |      |                                 |                                                    |
-| ~return.~  /# From binary interpreter./                                                      | RET           | C3       |      | ~C3~                            | return                                             |
-|                                                                                              |               |          | ~C5~ |                                 |                                                    |
+| *Pseudocode*                                                                                | *Instruction* | *Opcode* | *&*  | *Machine code*                  | *Intention*                                        |
+|---------------------------------------------------------------------------------------------+---------------+----------+------+---------------------------------+----------------------------------------------------|
+| /# Define:/ _~COMPL~_                                                                       | /N/A/         | /N/A/    | ~B2~ | {{{define(99,43 4F 4D 50 4C)}}} | define COMPL                                       |
+| /# In/Out:/ ~( xt@EBX -- )~                                                                 |               |          |      |                                 |                                                    |
+|                                                                                             |               |          |      |                                 |                                                    |
+| /# Generate a CALL instr. to ~OUTPUT~:/                                                     |               |          |      |                                 |                                                    |
+| /# – instruction: CALL r/m64/                                                               |               |          |      |                                 |                                                    |
+| /# – opcode: FF /2/                                                                         |               |          |      |                                 |                                                    |
+| /#/                                                                                         |               |          |      |                                 |                                                    |
+| /# Thus we generate code as follows:/                                                       |               |          |      |                                 |                                                    |
+| /#/{{{c(2)}}}​~FF~ {{{modrm(14,00,010,100)}}} {{{sib(25,00,100,101)}}} _~??~ ~??~ ~??~ ~??~_ |               |          |      |                                 |                                                    |
+|                                                                                             |               |          |      |                                 |                                                    |
+| /# 1. Write opcode of CALL (0x99)./                                                         |               |          |      |                                 |                                                    |
+| ~op@AL ← 0xFF;~                                                                             | MOV r8, imm8  | B0+rb ib | ~B9~ | ~B0~ /FF/                       | compile: call r/m64 (FF /2, 00 010 100, 00 100 101 |
+| ~[output@RDI++] ← op@AL;~                                                                   | STOS m8       | AA       |      | ~AA~                            |                                                    |
+| /# 2. Write ModR/M byte (0x14)./                                                            |               |          |      |                                 |                                                    |
+| ~modrm@AL ← 0x14;~                                                                          | MOV r8, imm8  | B0+rb ib |      | ~B0~ /14/                       | al = _                                             |
+| ~[output@RDI++] ← op@AL;~                                                                   | STOS m8       | AA       |      | ~AA~                            |                                                    |
+| /# 3. Write SIB byte (0x25)./                                                               |               |          |      |                                 |                                                    |
+| ~sib@AL ← 0x25;~                                                                            | MOV r8, imm8  | B0+rb ib |      | ~B0~ /25/                       | [rdi++] = al                                       |
+| ~[output@RDI++] ← op@AL;~                                                                   | STOS m8       | AA       |      | ~AA~                            |                                                    |
+| /# 4. Write 4-byte code address./                                                           |               |          |      |                                 |                                                    |
+| ~code@EAX ← xt@EBX;~                                                                        | XCHG EAX, r32 | 90+rd    |      | ~93~                            | eax = ebx                                          |
+| ~[output@RDI++4] ← op@EAX;~                                                                 | STOS m32      | AB       |      | ~AB~                            | [rdi(++4)] = eax                                   |
+|                                                                                             |               |          |      |                                 |                                                    |
+| ~return.~  /# From binary interpreter./                                                     | RET           | C3       |      | ~C3~                            | return                                             |
+|                                                                                             |               |          | ~C5~ |                                 |                                                    |
 
 
 *** Subroutine Head                                                :noexport:
