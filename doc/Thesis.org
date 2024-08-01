@@ -46,7 +46,7 @@
 #+MACRO: c   (eval (format "\\hspace{%fem}" (* 0.5265 (string-to-number $1))))
 
 # --- Byte annotation macros.
-#+MACRO: modrm   $^{\text{\tiny ModR/M}}_{\text{\tiny $1·$2·$3}}$
+#+MACRO: modrm   ~$1~​$^{\text{\tiny ModR/M}}_{\text{\tiny $2·$3·$4}}$
 #+MACRO:   sib   $^{\text{\tiny    SIB}}_{\text{\tiny $1·$2·$3}}$
 #+MACRO: offset  _~$1~_​$_{\text{\tiny $2}}$
 #+MACRO: displ   $^{\text{\tiny +}}$
@@ -253,55 +253,55 @@ Why this approach?
 #+CAPTION: The binary interpreter routine and loop.
 #+LABEL: tbl:forth:bi
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                                  | *Instruction*  | *Opcode*    | *&*  | *Machine code*                         | *Intention*             |
-|-----------------------------------------------+----------------+-------------+------+----------------------------------------+-------------------------|
-| ~_bi:~                                        |                |             | ~82~ |                                        |                         |
-| {{{i(1)}}} /# Loop the binary interpreter./   |                |             |      |                                        |                         |
-| {{{i(1)}}} ~call bi().~                       | CALL rel32     | E8 cb[fn:1] |      | ~E8~ {{{offset(02 00 00 00,89-87)}}}   | call bi()               |
-| {{{i(1)}}} ~goto _bi.~                        | JMP rel8       | EB cb       | ~87~ | ~EB~ {{{offset(F9,82-89)}}}            | jump _bi                |
-| ~bi():~                                       |                |             | ~89~ |                                        |                         |
-| {{{i(1)}}} /# Read next byte from ~INPUT~./   |                |             |      |                                        |                         |
-| {{{i(1)}}} ~chr@AL ← [INPUT@RSI++];~          | LODS m8        | AC          |      | ~AC~                                   | al = [rsi++]            |
-| {{{i(1)}}} /# Does it start a command?/       |                |             |      |                                        |                         |
-| {{{i(1)}}} ~if chr@AL = 0x99:~                | CMP AL, imm8   | 3C ib       |      | ~3C~ /~99~/                            | cmp al, 99(command)     |
-| {{{i(2)}}}     ~goto _command.~               | JE rel8        | 74 cb       |      | ~74~ {{{offset(02,90-8E)}}}            | jump _command if ==     |
-| {{{i(1)}}} /# If not, just copy the byte/     |                |             |      |                                        |                         |
-| {{{i(1)}}} /# to ~OUTPUT~ and return./        |                |             |      |                                        |                         |
-| {{{i(1)}}} ~[OUTPUT@RDI++] <- chr@AL;~        | STOS m8        | AA          | ~8E~ | ~AA~                                   | [rdi++] = al (xmit)     |
-| {{{i(1)}}} ~return.~                          | RET            | C3          |      | ~C3~                                   | return                  |
-| ~_command:~                                   |                |             | ~90~ |                                        |                         |
-| {{{i(1)}}} /# Global variable ~LATEST~./      |                |             |      |                                        |                         |
-| {{{i(1)}}} ~LATEST@RDX ← 0x10000028;~         | MOV r32, imm32 | B8+rd id    |      | ~BA~ /~28 00 00 10~/                   | rdx = Latest            |
-| {{{i(1)}}} /# Read command argument./         |                |             |      |                                        |                         |
-| {{{i(1)}}} ~arg@AL ← [INPUT@RSI++];~          | LODS m8        | AC          |      | ~AC~                                   | al = [rsi++] (argument) |
-| {{{i(1)}}} /# Command type by argument:/      |                |             |      |                                        |                         |
-| {{{i(1)}}} /# – ~0bx00xxxxx~: define;/        |                |             |      |                                        |                         |
-| {{{i(1)}}} /# – ~0b011xxxxx~: compile;/       |                |             |      |                                        |                         |
-| {{{i(1)}}} /# – ~0b111xxxxx~: execute./       |                |             |      |                                        |                         |
-| {{{i(1)}}} ~if arg & 0b01100000 = 0:~         | TEST AL, imm8  | A8 ib       |      | ~A8~ /~60~/                            | al & 60(graphic)?       |
-| {{{i(2)}}}     /# Define a new word./         |                |             |      |                                        |                         |
-| {{{i(2)}}}     ~goto Head.~                   | JZ rel8        | 74 cb       |      | ~74~ {{{offset(31,CB-9A)}}}            | jump Head if zero       |
-| {{{i(1)}}} /# Get latest dictionary entry./   |                |             | ~9A~ |                                        |                         |
-| {{{i(1)}}} ~entry@RBX ← *LATEST;~             | MOV r64, r/m64 | REX.W 8B /r |      | ~48 8B 1A~​{{{modrm(00,011,010)}}}      | rbx = [rdx]             |
-| ~_find1:~                                     |                |             | ~9D~ |                                        |                         |
-| {{{i(1)}}} ~save arg@AL on the stack;~        | PUSH r64       | 50+rd       |      | ~50~                                   | push al                 |
-| {{{i(1)}}} ~chr@AL &= 0b0111111;~             | AND AL, imm8   | 24 ib       |      | ~24 7F~                                | al &= 7F                |
-| {{{i(1)}}} ~if char@AL = [entry + 11]:~       | CMP r8, r/m8   | REX 3A /r   |      | ~3A 43 11~​{{{modrm(00,010,001)}}}      | cmp al, [rbx+11]        |
-| {{{i(2)}}}     /# We found an entry whose/    |                |             |      |                                        |                         |
-| {{{i(2)}}}     /# name begins with ~chr~./    |                |             |      |                                        |                         |
-| {{{i(2)}}}     ~restore arg@AL;~              | POP r64        | 58+rd       |      | ~58~                                   | pop al                  |
-| {{{i(2)}}}     ~goto _match.~                 | JE rel8        | 74 cb       |      | ~74~ {{{offset(06,AC-A6)}}}            | jump _match if ==       |
-| {{{i(1)}}} /# Follow entry's link pointer/    |                |             | ~A6~ |                                        |                         |
-| {{{i(1)}}} /# to previous entry and repeat./  |                |             |      |                                        |                         |
-| {{{i(1)}}} ~entry ← [entry + 8];~             | MOV r64, r/m64 | REX.W 8B /r |      | ~48 8B 5B~​{{{modrm(01,011,011)}}} ~08~ | rbx = [rbx+8]           |
-| {{{i(1)}}} ~goto _find1.~                     | JMP rel8       | EB cb       |      | ~EB~ {{{offset(F1,9D-AC)}}}            | jump _find1             |
-| ~_match:~                                     |                |             | ~AC~ |                                        |                         |
-| {{{i(1)}}} ~if arg & 0b1000000 = 0:~          | TEST AL, imm8  | A8 ib       |      | ~A8~ /~80~/                            | al & 80(exec) ?         |
-| {{{i(2)}}}     /# Compile./                   |                |             |      |                                        |                         |
-| {{{i(2)}}}     ~goto COMPL.~                  | JZ rel8        | 74 cb       |      | ~74~ {{{offset(09,B9-B0)}}}            | jump COMPL if zero      |
-| {{{i(1)}}} /# Execute: jump to entry's code./ |                |             | ~B0~ |                                        |                         |
-| {{{i(1)}}} ~goto [entry@RBX].~                | JMP r/m64      | REX FF /4   |      | ~FF 23~​{{{modrm(00,100,011)}}}         | jump [rbx] (exec)       |
-|                                               |                |             | ~B2~ |                                        |                         |
+| *Pseudocode*                                  | *Instruction*  | *Opcode*    | *&*  | *Machine code*                          | *Intention*             |
+|-----------------------------------------------+----------------+-------------+------+-----------------------------------------+-------------------------|
+| ~_bi:~                                        |                |             | ~82~ |                                         |                         |
+| {{{i(1)}}} /# Loop the binary interpreter./   |                |             |      |                                         |                         |
+| {{{i(1)}}} ~call bi().~                       | CALL rel32     | E8 cb[fn:1] |      | ~E8~ {{{offset(02 00 00 00,89-87)}}}    | call bi()               |
+| {{{i(1)}}} ~goto _bi.~                        | JMP rel8       | EB cb       | ~87~ | ~EB~ {{{offset(F9,82-89)}}}             | jump _bi                |
+| ~bi():~                                       |                |             | ~89~ |                                         |                         |
+| {{{i(1)}}} /# Read next byte from ~INPUT~./   |                |             |      |                                         |                         |
+| {{{i(1)}}} ~chr@AL ← [INPUT@RSI++];~          | LODS m8        | AC          |      | ~AC~                                    | al = [rsi++]            |
+| {{{i(1)}}} /# Does it start a command?/       |                |             |      |                                         |                         |
+| {{{i(1)}}} ~if chr@AL = 0x99:~                | CMP AL, imm8   | 3C ib       |      | ~3C~ /~99~/                             | cmp al, 99(command)     |
+| {{{i(2)}}}     ~goto _command.~               | JE rel8        | 74 cb       |      | ~74~ {{{offset(02,90-8E)}}}             | jump _command if ==     |
+| {{{i(1)}}} /# If not, just copy the byte/     |                |             |      |                                         |                         |
+| {{{i(1)}}} /# to ~OUTPUT~ and return./        |                |             |      |                                         |                         |
+| {{{i(1)}}} ~[OUTPUT@RDI++] <- chr@AL;~        | STOS m8        | AA          | ~8E~ | ~AA~                                    | [rdi++] = al (xmit)     |
+| {{{i(1)}}} ~return.~                          | RET            | C3          |      | ~C3~                                    | return                  |
+| ~_command:~                                   |                |             | ~90~ |                                         |                         |
+| {{{i(1)}}} /# Global variable ~LATEST~./      |                |             |      |                                         |                         |
+| {{{i(1)}}} ~LATEST@RDX ← 0x10000028;~         | MOV r32, imm32 | B8+rd id    |      | ~BA~ /~28 00 00 10~/                    | rdx = Latest            |
+| {{{i(1)}}} /# Read command argument./         |                |             |      |                                         |                         |
+| {{{i(1)}}} ~arg@AL ← [INPUT@RSI++];~          | LODS m8        | AC          |      | ~AC~                                    | al = [rsi++] (argument) |
+| {{{i(1)}}} /# Command type by argument:/      |                |             |      |                                         |                         |
+| {{{i(1)}}} /# – ~0bx00xxxxx~: define;/        |                |             |      |                                         |                         |
+| {{{i(1)}}} /# – ~0b011xxxxx~: compile;/       |                |             |      |                                         |                         |
+| {{{i(1)}}} /# – ~0b111xxxxx~: execute./       |                |             |      |                                         |                         |
+| {{{i(1)}}} ~if arg & 0b01100000 = 0:~         | TEST AL, imm8  | A8 ib       |      | ~A8~ /~60~/                             | al & 60(graphic)?       |
+| {{{i(2)}}}     /# Define a new word./         |                |             |      |                                         |                         |
+| {{{i(2)}}}     ~goto Head.~                   | JZ rel8        | 74 cb       |      | ~74~ {{{offset(31,CB-9A)}}}             | jump Head if zero       |
+| {{{i(1)}}} /# Get latest dictionary entry./   |                |             | ~9A~ |                                         |                         |
+| {{{i(1)}}} ~entry@RBX ← *LATEST;~             | MOV r64, r/m64 | REX.W 8B /r |      | ~48 8B~ {{{modrm(1A,00,011,010)}}}      | rbx = [rdx]             |
+| ~_find1:~                                     |                |             | ~9D~ |                                         |                         |
+| {{{i(1)}}} ~save arg@AL on the stack;~        | PUSH r64       | 50+rd       |      | ~50~                                    | push al                 |
+| {{{i(1)}}} ~chr@AL &= 0b0111111;~             | AND AL, imm8   | 24 ib       |      | ~24 7F~                                 | al &= 7F                |
+| {{{i(1)}}} ~if char@AL = [entry + 11]:~       | CMP r8, r/m8   | REX 3A /r   |      | ~3A 43~ {{{modrm(11,00,010,001)}}}      | cmp al, [rbx+11]        |
+| {{{i(2)}}}     /# We found an entry whose/    |                |             |      |                                         |                         |
+| {{{i(2)}}}     /# name begins with ~chr~./    |                |             |      |                                         |                         |
+| {{{i(2)}}}     ~restore arg@AL;~              | POP r64        | 58+rd       |      | ~58~                                    | pop al                  |
+| {{{i(2)}}}     ~goto _match.~                 | JE rel8        | 74 cb       |      | ~74~ {{{offset(06,AC-A6)}}}             | jump _match if ==       |
+| {{{i(1)}}} /# Follow entry's link pointer/    |                |             | ~A6~ |                                         |                         |
+| {{{i(1)}}} /# to previous entry and repeat./  |                |             |      |                                         |                         |
+| {{{i(1)}}} ~entry ← [entry + 8];~             | MOV r64, r/m64 | REX.W 8B /r |      | ~48 8B~ {{{modrm(5B,01,011,011)}}} ~08~ | rbx = [rbx+8]           |
+| {{{i(1)}}} ~goto _find1.~                     | JMP rel8       | EB cb       |      | ~EB~ {{{offset(F1,9D-AC)}}}             | jump _find1             |
+| ~_match:~                                     |                |             | ~AC~ |                                         |                         |
+| {{{i(1)}}} ~if arg & 0b1000000 = 0:~          | TEST AL, imm8  | A8 ib       |      | ~A8~ /~80~/                             | al & 80(exec) ?         |
+| {{{i(2)}}}     /# Compile./                   |                |             |      |                                         |                         |
+| {{{i(2)}}}     ~goto COMPL.~                  | JZ rel8        | 74 cb       |      | ~74~ {{{offset(09,B9-B0)}}}             | jump COMPL if zero      |
+| {{{i(1)}}} /# Execute: jump to entry's code./ |                |             | ~B0~ |                                         |                         |
+| {{{i(1)}}} ~goto [entry@RBX].~                | JMP r/m64      | REX FF /4   |      | ~FF~ {{{modrm(23,00,100,011)}}}         | jump [rbx] (exec)       |
+|                                               |                |             | ~B2~ |                                         |                         |
 
 
 *** Subroutine COMPL                                               :noexport:
@@ -309,33 +309,33 @@ Why this approach?
 #+CAPTION: =COMPL=, the FORTH compiler.
 #+LABEL: tbl:forth:compl
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                                                                                | *Instruction* | *Opcode* | *&*  | *Machine code*                  | *Intention*                                        |
-|---------------------------------------------------------------------------------------------+---------------+----------+------+---------------------------------+----------------------------------------------------|
-| /# Define:/ _~COMPL~_                                                                       | /N/A/         | /N/A/    | ~B2~ | {{{define(99,43 4F 4D 50 4C)}}} | define COMPL                                       |
-| /# In/Out:/ ~( xt@EBX -- )~                                                                 |               |          |      |                                 |                                                    |
-|                                                                                             |               |          |      |                                 |                                                    |
-| /# Generate a CALL instr. to ~OUTPUT~:/                                                     |               |          |      |                                 |                                                    |
-| /# – instruction: CALL r/m64/                                                               |               |          |      |                                 |                                                    |
-| /# – opcode: FF /2/                                                                         |               |          |      |                                 |                                                    |
-| /#/                                                                                         |               |          |      |                                 |                                                    |
-| /# Thus we generate code as follows:/                                                       |               |          |      |                                 |                                                    |
-| /#/{{{c(2)}}}​~FF 14~​{{{modrm(00,010,100)}}} ~25~​{{{sib(00,100,101)}}} _~??~ ~??~ ~??~ ~??~_ |               |          |      |                                 |                                                    |
-|                                                                                             |               |          |      |                                 |                                                    |
-| /# 1. Write opcode of CALL (0x99)./                                                         |               |          |      |                                 |                                                    |
-| ~op@AL ← 0xFF;~                                                                             | MOV r8, imm8  | B0+rb ib | ~B9~ | ~B0~ /FF/                       | compile: call r/m64 (FF /2, 00 010 100, 00 100 101 |
-| ~[output@RDI++] ← op@AL;~                                                                   | STOS m8       | AA       |      | ~AA~                            |                                                    |
-| /# 2. Write ModR/M byte (0x14)./                                                            |               |          |      |                                 |                                                    |
-| ~modrm@AL ← 0x14;~                                                                          | MOV r8, imm8  | B0+rb ib |      | ~B0~ /14/                       | al = _                                             |
-| ~[output@RDI++] ← op@AL;~                                                                   | STOS m8       | AA       |      | ~AA~                            |                                                    |
-| /# 3. Write SIB byte (0x25)./                                                               |               |          |      |                                 |                                                    |
-| ~sib@AL ← 0x25;~                                                                            | MOV r8, imm8  | B0+rb ib |      | ~B0~ /25/                       | [rdi++] = al                                       |
-| ~[output@RDI++] ← op@AL;~                                                                   | STOS m8       | AA       |      | ~AA~                            |                                                    |
-| /# 4. Write 4-byte code address./                                                           |               |          |      |                                 |                                                    |
-| ~code@EAX ← xt@EBX;~                                                                        | XCHG EAX, r32 | 90+rd    |      | ~93~                            | eax = ebx                                          |
-| ~[output@RDI++4] ← op@EAX;~                                                                 | STOS m32      | AB       |      | ~AB~                            | [rdi(++4)] = eax                                   |
-|                                                                                             |               |          |      |                                 |                                                    |
-| ~return.~  /# From binary interpreter./                                                     | RET           | C3       |      | ~C3~                            | return                                             |
-|                                                                                             |               |          | ~C5~ |                                 |                                                    |
+| *Pseudocode*                                                                                 | *Instruction* | *Opcode* | *&*  | *Machine code*                  | *Intention*                                        |
+|----------------------------------------------------------------------------------------------+---------------+----------+------+---------------------------------+----------------------------------------------------|
+| /# Define:/ _~COMPL~_                                                                        | /N/A/         | /N/A/    | ~B2~ | {{{define(99,43 4F 4D 50 4C)}}} | define COMPL                                       |
+| /# In/Out:/ ~( xt@EBX -- )~                                                                  |               |          |      |                                 |                                                    |
+|                                                                                              |               |          |      |                                 |                                                    |
+| /# Generate a CALL instr. to ~OUTPUT~:/                                                      |               |          |      |                                 |                                                    |
+| /# – instruction: CALL r/m64/                                                                |               |          |      |                                 |                                                    |
+| /# – opcode: FF /2/                                                                          |               |          |      |                                 |                                                    |
+| /#/                                                                                          |               |          |      |                                 |                                                    |
+| /# Thus we generate code as follows:/                                                        |               |          |      |                                 |                                                    |
+| /#/{{{c(2)}}}​~FF~ {{{modrm(14,00,010,100)}}} ~25~​{{{sib(00,100,101)}}} _~??~ ~??~ ~??~ ~??~_ |               |          |      |                                 |                                                    |
+|                                                                                              |               |          |      |                                 |                                                    |
+| /# 1. Write opcode of CALL (0x99)./                                                          |               |          |      |                                 |                                                    |
+| ~op@AL ← 0xFF;~                                                                              | MOV r8, imm8  | B0+rb ib | ~B9~ | ~B0~ /FF/                       | compile: call r/m64 (FF /2, 00 010 100, 00 100 101 |
+| ~[output@RDI++] ← op@AL;~                                                                    | STOS m8       | AA       |      | ~AA~                            |                                                    |
+| /# 2. Write ModR/M byte (0x14)./                                                             |               |          |      |                                 |                                                    |
+| ~modrm@AL ← 0x14;~                                                                           | MOV r8, imm8  | B0+rb ib |      | ~B0~ /14/                       | al = _                                             |
+| ~[output@RDI++] ← op@AL;~                                                                    | STOS m8       | AA       |      | ~AA~                            |                                                    |
+| /# 3. Write SIB byte (0x25)./                                                                |               |          |      |                                 |                                                    |
+| ~sib@AL ← 0x25;~                                                                             | MOV r8, imm8  | B0+rb ib |      | ~B0~ /25/                       | [rdi++] = al                                       |
+| ~[output@RDI++] ← op@AL;~                                                                    | STOS m8       | AA       |      | ~AA~                            |                                                    |
+| /# 4. Write 4-byte code address./                                                            |               |          |      |                                 |                                                    |
+| ~code@EAX ← xt@EBX;~                                                                         | XCHG EAX, r32 | 90+rd    |      | ~93~                            | eax = ebx                                          |
+| ~[output@RDI++4] ← op@EAX;~                                                                  | STOS m32      | AB       |      | ~AB~                            | [rdi(++4)] = eax                                   |
+|                                                                                              |               |          |      |                                 |                                                    |
+| ~return.~  /# From binary interpreter./                                                      | RET           | C3       |      | ~C3~                            | return                                             |
+|                                                                                              |               |          | ~C5~ |                                 |                                                    |
 
 
 *** Subroutine Head                                                :noexport:
@@ -343,41 +343,41 @@ Why this approach?
 #+CAPTION: Subroutine =Head= defines new words in the dictionary.
 #+LABEL: tbl:forth:head
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                               | *Instruction*   | *Opcode*       | *&*  | *Machine code*                         | *Intention*   |
-|--------------------------------------------+-----------------+----------------+------+----------------------------------------+---------------|
-| /# Define:/ _~Head~_                       | /N/A/           | /N/A/          | ~C5~ | {{{define(04,48 65 61 64)}}}           | define Head   |
-| /# In/Out:/ ~( flag@AL -​- )~               |                 |                |      |                                        |               |
-|                                            |                 |                |      |                                        |               |
-| /# 16-bit align ~OUTPUT~./                 |                 |                |      |                                        |               |
-| ~OUTPUT@RDI += 0x0F;~                      | ADD r/m64, imm8 | REX.W 83 /0 ib | ~CB~ | ~48 83 C7~​{{{modrm(11,000,111)}}} ~0F~ | rdi += 0F     |
-| ~OUTPUT@RDI &= 0xF0;~                      | AND r/m64, imm8 | REX.W 83 /4 ib |      | ~48 83 E7~​{{{modrm(11,100,111)}}} ~F0~ | rdi &= F0     |
-|                                            |                 |                |      |                                        |               |
-| /# Fill the new dictionary entry:/         |                 |                |      |                                        |               |
-|                                            |                 |                |      |                                        |               |
-| /# 1. Set the _link field_, then set/      |                 |                |      |                                        |               |
-| /#{{{c(3)}}}LATEST to the new entry./      |                 |                |      |                                        |               |
-| ~latest@RCX ← [LATEST@RDX];~               | MOV r64, r/m64  | REX.W 8B /r    |      | ~48 8B 0A~​{{{modrm(00,001,010)}}}      | rcx = [rdx]   |
-| ~[OUTPUT@RDI+8] ← latest@RCX;~             | MOV r/m64, r64  | REX.W 89 /r    |      | ~48 89 4F~​{{{modrm(01,001,111)}}} ~08~ | [rdi+8] = rcx |
-| ~[LATEST@RDX] ← OUTPUT@RDI;~               | MOV r/m64, r64  | REX.W 89 /r    |      | ~48 89 3A~​{{{modrm(00,111,010)}}}      | [rdx] = rdi   |
-|                                            |                 |                |      |                                        |               |
-| /# 2. Set the _flag+length field_./        |                 |                |      |                                        |               |
-| ~OUTPUT@RDI += 0x10;~                      | ADD r/m64, imm8 | REX.W 83 /0 ib |      | ~48 83 C7~​{{{modrm(11,000,111)}}} ~10~ | rdi += 10     |
-| ~[OUTPUT@RDI++] ← flag@AL;~                | STOS m8         | AA             |      | ~AA~                                   | [rdi++] = al  |
-|                                            |                 |                |      |                                        |               |
-| /# 3. Extract name length from flag/       |                 |                |      |                                        |               |
-| /#{{{c(3)}}}and copy _name field_./        |                 |                |      |                                        |               |
-| ~flag@ECX ← flag@AL;~                      | XCHG EAX, r32   | 90+rd          |      | ~91~                                   | ecx = eax     |
-| ~length@ECX ← flag@ECX & 0x1F;~            | AND r/m32, imm8 | 83 /4 ib       |      | ~83 E1~​{{{modrm(11,100,001)}}} ~1F~    | ecx &= 1F     |
-| ~copy      length@ECX bytes~               |                 |                |      |                                        |               |
-| {{{c(5)}}}​~from INPUT@RSI~                 |                 |                |      |                                        |               |
-| {{{c(5)}}}​~to OUTPUT@RDI;~                 | REP MOVS m8, m8 | F3 A4          |      | ~F3 A4~                                | copy Name     |
-|                                            |                 |                |      |                                        |               |
-| /# 4. Point _code field_ to the machine/   |                 |                |      |                                        |               |
-| /#{{{c(3)}}}code that follows at ~INPUT~./ |                 |                |      |                                        |               |
-| ~code@RCX ← [LATEST@RDX];~                 | MOV r64, r/m64  | REX.W 8B /r    |      | ~48 8B 0A~​{{{modrm(00,001,010)}}}      | rcx = [rdx]   |
-| ~[code@RCX] ← INPUT@RDI;~                  | MOV r/m64, r64  | REX.W 89 /r    |      | ~48 89 39~​{{{modrm(00,111,001)}}}      | [rcx] = rdi   |
-| ~return;~  /# From binary interpreter./    | RET             | C3             |      | ~C3~                                   | return        |
-|                                            |                 |                | ~EF~ |                                        |               |
+| *Pseudocode*                               | *Instruction*   | *Opcode*       | *&*  | *Machine code*                          | *Intention*   |
+|--------------------------------------------+-----------------+----------------+------+-----------------------------------------+---------------|
+| /# Define:/ _~Head~_                       | /N/A/           | /N/A/          | ~C5~ | {{{define(04,48 65 61 64)}}}            | define Head   |
+| /# In/Out:/ ~( flag@AL -​- )~               |                 |                |      |                                         |               |
+|                                            |                 |                |      |                                         |               |
+| /# 16-bit align ~OUTPUT~./                 |                 |                |      |                                         |               |
+| ~OUTPUT@RDI += 0x0F;~                      | ADD r/m64, imm8 | REX.W 83 /0 ib | ~CB~ | ~48 83~ {{{modrm(C7,11,000,111)}}} ~0F~ | rdi += 0F     |
+| ~OUTPUT@RDI &= 0xF0;~                      | AND r/m64, imm8 | REX.W 83 /4 ib |      | ~48 83~ {{{modrm(E7,11,100,111)}}} ~F0~ | rdi &= F0     |
+|                                            |                 |                |      |                                         |               |
+| /# Fill the new dictionary entry:/         |                 |                |      |                                         |               |
+|                                            |                 |                |      |                                         |               |
+| /# 1. Set the _link field_, then set/      |                 |                |      |                                         |               |
+| /#{{{c(3)}}}LATEST to the new entry./      |                 |                |      |                                         |               |
+| ~latest@RCX ← [LATEST@RDX];~               | MOV r64, r/m64  | REX.W 8B /r    |      | ~48 8B~ {{{modrm(0A,00,001,010)}}}      | rcx = [rdx]   |
+| ~[OUTPUT@RDI+8] ← latest@RCX;~             | MOV r/m64, r64  | REX.W 89 /r    |      | ~48 89~ {{{modrm(4F,01,001,111)}}} ~08~ | [rdi+8] = rcx |
+| ~[LATEST@RDX] ← OUTPUT@RDI;~               | MOV r/m64, r64  | REX.W 89 /r    |      | ~48 89~ {{{modrm(3A,00,111,010)}}}      | [rdx] = rdi   |
+|                                            |                 |                |      |                                         |               |
+| /# 2. Set the _flag+length field_./        |                 |                |      |                                         |               |
+| ~OUTPUT@RDI += 0x10;~                      | ADD r/m64, imm8 | REX.W 83 /0 ib |      | ~48 83~ {{{modrm(C7,11,000,111)}}} ~10~ | rdi += 10     |
+| ~[OUTPUT@RDI++] ← flag@AL;~                | STOS m8         | AA             |      | ~AA~                                    | [rdi++] = al  |
+|                                            |                 |                |      |                                         |               |
+| /# 3. Extract name length from flag/       |                 |                |      |                                         |               |
+| /#{{{c(3)}}}and copy _name field_./        |                 |                |      |                                         |               |
+| ~flag@ECX ← flag@AL;~                      | XCHG EAX, r32   | 90+rd          |      | ~91~                                    | ecx = eax     |
+| ~length@ECX ← flag@ECX & 0x1F;~            | AND r/m32, imm8 | 83 /4 ib       |      | ~83~ {{{modrm(E1,11,100,001)}}} ~1F~    | ecx &= 1F     |
+| ~copy      length@ECX bytes~               |                 |                |      |                                         |               |
+| {{{c(5)}}}​~from INPUT@RSI~                 |                 |                |      |                                         |               |
+| {{{c(5)}}}​~to OUTPUT@RDI;~                 | REP MOVS m8, m8 | F3 A4          |      | ~F3 A4~                                 | copy Name     |
+|                                            |                 |                |      |                                         |               |
+| /# 4. Point _code field_ to the machine/   |                 |                |      |                                         |               |
+| /#{{{c(3)}}}code that follows at ~INPUT~./ |                 |                |      |                                         |               |
+| ~code@RCX ← [LATEST@RDX];~                 | MOV r64, r/m64  | REX.W 8B /r    |      | ~48 8B~ {{{modrm(0A,00,001,010)}}}      | rcx = [rdx]   |
+| ~[code@RCX] ← INPUT@RDI;~                  | MOV r/m64, r64  | REX.W 89 /r    |      | ~48 89~ {{{modrm(39,00,111,001)}}}      | [rcx] = rdi   |
+| ~return;~  /# From binary interpreter./    | RET             | C3             |      | ~C3~                                    | return        |
+|                                            |                 |                | ~EF~ |                                         |               |
 
 
 *** Subroutine BYE                                                 :noexport:
@@ -385,17 +385,17 @@ Why this approach?
 #+CAPTION: Subroutine ~BYE~ terminates the program by performing an ~exit~ syscall.
 #+LABEL: tbl:forth:bye
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                       | *Instruction*  | *Opcode* | *&*  | *Machine code*                 | *Intention*            |
-|------------------------------------+----------------+----------+------+--------------------------------+------------------------|
-| /# Define:/ _~BYE~_                | /N/A/          | /N/A/    | ~EF~ | {{{define(03,42 59 45)}}}      | define BYE             |
-| /# In/Out: ~( -​- )~/               |                |          |      |                                |                        |
-|                                    |                |          |      |                                |                        |
-| /# Goodbye, world (exit syscall)./ |                |          |      |                                |                        |
-| ~nr@RAX ← 0x3C;~  /# ~__NR_exit~./ | PUSH imm8      | 6A ib    |      | ~6A~ /~3C~/                    | rax = exit (no return) |
-|                                    | POP            | 58+rd    |      | ~58~                           |                        |
-| ~status@RDI ← 0;~                  | XOR r/m32, r32 | 31 /r    |      | ~31 FF~​{{{modrm(11,111,111)}}} | rdi = stat             |
-| ~syscall exit(status@RDI).~        | SYSCALL        | 0F 05    |      | ~0F 05~                        | syscall                |
-|                                    |                |          | ~FB~ |                                |                        |
+| *Pseudocode*                       | *Instruction*  | *Opcode* | *&*  | *Machine code*                  | *Intention*            |
+|------------------------------------+----------------+----------+------+---------------------------------+------------------------|
+| /# Define:/ _~BYE~_                | /N/A/          | /N/A/    | ~EF~ | {{{define(03,42 59 45)}}}       | define BYE             |
+| /# In/Out: ~( -​- )~/               |                |          |      |                                 |                        |
+|                                    |                |          |      |                                 |                        |
+| /# Goodbye, world (exit syscall)./ |                |          |      |                                 |                        |
+| ~nr@RAX ← 0x3C;~  /# ~__NR_exit~./ | PUSH imm8      | 6A ib    |      | ~6A~ /~3C~/                     | rax = exit (no return) |
+|                                    | POP            | 58+rd    |      | ~58~                            |                        |
+| ~status@RDI ← 0;~                  | XOR r/m32, r32 | 31 /r    |      | ~31~ {{{modrm(FF,11,111,111)}}} | rdi = stat             |
+| ~syscall exit(status@RDI).~        | SYSCALL        | 0F 05    |      | ~0F 05~                         | syscall                |
+|                                    |                |          | ~FB~ |                                 |                        |
 
 
 *** Subroutine TYPE                                                :noexport:
@@ -407,35 +407,35 @@ Why this approach?
 #+CAPTION: Subroutine ~TYPE~ dumps a memory range to ~STDOUT~.
 #+LABEL: tbl:forth:type
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                                     | *Instruction*   | *Opcode*    | *&*        | *Machine code*                    | *Intention*           |
-|--------------------------------------------------+-----------------+-------------+------------+-----------------------------------+-----------------------|
-| /# Define:/ _~TYPE~_                             | /N/A/           | /N/A/       |            | {{{define(04,54 59 50 45)}}}      | define TYPE           |
-| /# In/Out: ~( addr@RSI u@RDX~/                   |                 |             |            |                                   |                       |
-| /#{{{c(6)}}} ~-​- ?@RSI ?@RDI )~/                 |                 |             |            |                                   |                       |
-| /#/                                              |                 |             |            |                                   |                       |
-| /# Dump memory range ~[addr, addr+u)~./          |                 |             |            |                                   |                       |
-|                                                  |                 |             |            |                                   |                       |
-| {{{i(1)}}} ~fd@RDI ← 1;~ /# ~STDOUT_FILENO~./    | PUSH imm8       | 6A ib       |            | ~6A~ /~01~/                       | rdi(fd) = stdout = 1  |
-|                                                  | POP             | 58+rd       |            | ~5F~                              |                       |
-| ~_beg:~                                          |                 |             | ~00~[fn:2] |                                   |                       |
-| {{{i(1)}}} /# ~__NR_write~ is also 1./           |                 |             |            |                                   |                       |
-| {{{i(1)}}} ~nr@RAX ← fd@RDI;~                    | MOV r32, r/m32  | 8B /r       |            | ~8B C7~​{{{modrm(11,000,111)}}}    | rax = write = 1 = rdi |
-| {{{i(1)}}} ~syscall write(fd@RDI,~               |                 |             |            |                                   |                       |
-| {{{i(1)}}}{{{c(14)}}}    ~addr@RSI,~             |                 |             |            |                                   |                       |
-| {{{i(1)}}}{{{c(14)}}}    ~u@RDX);~               | SYSCALL         | 0F 05       |            | ~0F 05~                           | syscall               |
-| {{{i(1)}}} ~if ret@RAX < 0:~                     | TEST r/m64, r64 | REX.W 85 /r |            | ~48 85 C0~​{{{modrm(11,000,000)}}} | cmp rax, 0            |
-| {{{i(2)}}} /# An error occured./                 |                 |             |            |                                   |                       |
-| {{{i(2)}}}     ~goto _end;~                      | JL rel8         | 7C cb       |            | ~7C~ {{{offset(08,11-09)}}}       | +jump _end if <       |
-| {{{i(1)}}} /# Advance by ~ret~ (printed) bytes./ |                 |             | ~09~       |                                   |                       |
-| {{{i(1)}}} ~addr@RSI += ret@RAX;~                | ADD r/m64, r64  | REX.W 01 /r |            | ~48 01 C6~​{{{modrm(11,000,110)}}} | rsi(buf) += rax       |
-| {{{i(1)}}} /# Fewer bytes left to print./        |                 |             |            |                                   |                       |
-| {{{i(1)}}} ~u@RDX -= ret@RAX;~                   | SUB r/m64, r64  | REX.W 29 /r |            | ~48 29 C2~​{{{modrm(11,000,010)}}} | rdx(count) -= rax     |
-| {{{i(1)}}} ~if count > 0:~                       |                 |             |            |                                   |                       |
-| {{{i(2)}}}     /# We still have bytes to print./ |                 |             |            |                                   |                       |
-| {{{i(2)}}}     ~goto _beg;~                      | JG rel8         | 7F cb       |            | ~7F~ {{{offset(EF,00-11)}}}       | -jump _beg if >       |
-| ~_end:~                                          |                 |             | ~11~       |                                   |                       |
-| {{{i(1)}}} ~return.~                             | RET             | C3          |            | ~C3~                              | return                |
-|                                                  |                 |             | ~12~       |                                   |                       |
+| *Pseudocode*                                     | *Instruction*   | *Opcode*    | *&*        | *Machine code*                     | *Intention*           |
+|--------------------------------------------------+-----------------+-------------+------------+------------------------------------+-----------------------|
+| /# Define:/ _~TYPE~_                             | /N/A/           | /N/A/       |            | {{{define(04,54 59 50 45)}}}       | define TYPE           |
+| /# In/Out: ~( addr@RSI u@RDX~/                   |                 |             |            |                                    |                       |
+| /#{{{c(6)}}} ~-​- ?@RSI ?@RDI )~/                 |                 |             |            |                                    |                       |
+| /#/                                              |                 |             |            |                                    |                       |
+| /# Dump memory range ~[addr, addr+u)~./          |                 |             |            |                                    |                       |
+|                                                  |                 |             |            |                                    |                       |
+| {{{i(1)}}} ~fd@RDI ← 1;~ /# ~STDOUT_FILENO~./    | PUSH imm8       | 6A ib       |            | ~6A~ /~01~/                        | rdi(fd) = stdout = 1  |
+|                                                  | POP             | 58+rd       |            | ~5F~                               |                       |
+| ~_beg:~                                          |                 |             | ~00~[fn:2] |                                    |                       |
+| {{{i(1)}}} /# ~__NR_write~ is also 1./           |                 |             |            |                                    |                       |
+| {{{i(1)}}} ~nr@RAX ← fd@RDI;~                    | MOV r32, r/m32  | 8B /r       |            | ~8B~ {{{modrm(C7,11,000,111)}}}    | rax = write = 1 = rdi |
+| {{{i(1)}}} ~syscall write(fd@RDI,~               |                 |             |            |                                    |                       |
+| {{{i(1)}}}{{{c(14)}}}    ~addr@RSI,~             |                 |             |            |                                    |                       |
+| {{{i(1)}}}{{{c(14)}}}    ~u@RDX);~               | SYSCALL         | 0F 05       |            | ~0F 05~                            | syscall               |
+| {{{i(1)}}} ~if ret@RAX < 0:~                     | TEST r/m64, r64 | REX.W 85 /r |            | ~48 85~ {{{modrm(C0,11,000,000)}}} | cmp rax, 0            |
+| {{{i(2)}}} /# An error occured./                 |                 |             |            |                                    |                       |
+| {{{i(2)}}}     ~goto _end;~                      | JL rel8         | 7C cb       |            | ~7C~ {{{offset(08,11-09)}}}        | +jump _end if <       |
+| {{{i(1)}}} /# Advance by ~ret~ (printed) bytes./ |                 |             | ~09~       |                                    |                       |
+| {{{i(1)}}} ~addr@RSI += ret@RAX;~                | ADD r/m64, r64  | REX.W 01 /r |            | ~48 01~ {{{modrm(C6,11,000,110)}}} | rsi(buf) += rax       |
+| {{{i(1)}}} /# Fewer bytes left to print./        |                 |             |            |                                    |                       |
+| {{{i(1)}}} ~u@RDX -= ret@RAX;~                   | SUB r/m64, r64  | REX.W 29 /r |            | ~48 29~ {{{modrm(C2,11,000,010)}}} | rdx(count) -= rax     |
+| {{{i(1)}}} ~if count > 0:~                       |                 |             |            |                                    |                       |
+| {{{i(2)}}}     /# We still have bytes to print./ |                 |             |            |                                    |                       |
+| {{{i(2)}}}     ~goto _beg;~                      | JG rel8         | 7F cb       |            | ~7F~ {{{offset(EF,00-11)}}}        | -jump _beg if >       |
+| ~_end:~                                          |                 |             | ~11~       |                                    |                       |
+| {{{i(1)}}} ~return.~                             | RET             | C3          |            | ~C3~                               | return                |
+|                                                  |                 |             | ~12~       |                                    |                       |
 
 
 *** Debugging utilities
@@ -467,43 +467,43 @@ Why this approach?
 #+CAPTION: Subroutine ~reg~ dumps the registers to ~STDOUT~.
 #+LABEL: tbl:forth:reg
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                             | *Instruction*   | *Opcode*       | *&*  | *Machine code*                       | *Intention*             |
-|------------------------------------------+-----------------+----------------+------+--------------------------------------+-------------------------|
-| /# Define:/ _~reg~_                      | /N/A/           | /N/A/          | ~12~ | {{{define(03,72 65 67)}}}            | define reg              |
-| /# In/Out: ~( -​- )~/                     |                 |                |      |                                      |                         |
-| /#/                                      |                 |                |      |                                      |                         |
-| /# Dump the registers./                  |                 |                |      |                                      |                         |
-|                                          |                 |                |      |                                      |                         |
-| ~save INPUT@RSI;~                        | PUSH r64        | 50+rd          |      | ~56~                                 | push rsi                |
-| ~save OUTPUT@RDI;~                       | PUSH r64        | 50+rd          |      | ~57~                                 | push rdi                |
-|                                          |                 |                |      |                                      |                         |
-| /# Push the 16 registers on the/         | PUSH r64        | REX 50+rd      |      | ~41 57~                              | push r15, rdi, r14, rsi |
-| /# stack so that when printed/           | PUSH r64        | 50+rd          |      | ~57~                                 | push r13, rbp, r12, rsp |
-| /# they're displayed like this:/         | PUSH r64        | REX 50+rd      |      | ~41 56~                              | push r11, rbx, r10, rdx |
-| /#/                                      | PUSH r64        | 50+rd          |      | ~56~                                 | push r9 , rcx, r8 , rax |
-| /#/{{{c(4)}}} ~·-----------·~            | PUSH r64        | REX 50+rd      |      | ~41 55~                              |                         |
-| /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~R15 ¦ RDI ¦~ | PUSH r64        | 50+rd          |      | ~55~                                 |                         |
-| /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~R14 ¦ RSI ¦~ | PUSH r64        | REX 50+rd      |      | ~41 54~                              |                         |
-| /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~··· ¦ ··· ¦~ | PUSH r64        | 50+rd          |      | ~54~                                 |                         |
-| /#/{{{c(4)}}} ~¦~​{{{c(2)}}}​~R8  ¦ RAX ¦~ | PUSH r64        | REX 50+rd      |      | ~41 53~                              |                         |
-| /#/{{{c(4)}}} ~·-----------·~            | PUSH r64        | 50+rd          |      | ~53~                                 |                         |
-|                                          | PUSH r64        | REX 50+rd      |      | ~41 52~                              |                         |
-|                                          | PUSH r64        | 50+rd          |      | ~52~                                 |                         |
-|                                          | PUSH r64        | REX 50+rd      |      | ~41 51~                              |                         |
-|                                          | PUSH r64        | 50+rd          |      | ~51~                                 |                         |
-|                                          | PUSH r64        | REX 50+rd      |      | ~41 50~                              |                         |
-|                                          | PUSH r64        | 50+rd          |      | ~50~                                 |                         |
-| /# Print top 128 stack bytes using/      |                 |                |      |                                      |                         |
-| /# subroutine ~TYPE(addr, u)~./          |                 |                |      |                                      |                         |
-| ~addr@RSI ← RSP;~                        | MOV r64, r/m64  | REX.W 8B /r    |      | ~48 8B F4~​{{{modrm(11,110,100)}}}    | rsi = rsp               |
-| ~u@RDX <- 0x80;~                         | MOV r32, imm32  | B8+rd id       |      | ~BA~ /~80 00 00 00~/                 | rdx = u                 |
-| ~TYPE();~  /# Compiled call./            | /N/A/           | /N/A/          |      | {{{compile(54,T)}}}                  | Call TYPE               |
-| /# Clean the stack./                     |                 |                |      |                                      |                         |
-| ~pop 16 quads;~                          | SUB r/m64, imm8 | REX.W 83 /5 ib |      | ~48 83 EC~​{{{modrm(11,101,100)}}} 80 | rsp -= -80              |
-| ~restore OUTPUT@RDI;~                    | POP r64         | 58+rd          |      | ~5F~                                 | pop rdi                 |
-| ~restore INPUT@RSI;~                     | POP r64         | 58+rd          |      | ~5E~                                 | pop rsi                 |
-| ~return.~                                | RET             | C3             |      | ~C3~                                 | return                  |
-|                                          |                 |                | ~42~ |                                      |                         |
+| *Pseudocode*                             | *Instruction*   | *Opcode*       | *&*  | *Machine code*                        | *Intention*             |
+|------------------------------------------+-----------------+----------------+------+---------------------------------------+-------------------------|
+| /# Define:/ _~reg~_                      | /N/A/           | /N/A/          | ~12~ | {{{define(03,72 65 67)}}}             | define reg              |
+| /# In/Out: ~( -​- )~/                     |                 |                |      |                                       |                         |
+| /#/                                      |                 |                |      |                                       |                         |
+| /# Dump the registers./                  |                 |                |      |                                       |                         |
+|                                          |                 |                |      |                                       |                         |
+| ~save INPUT@RSI;~                        | PUSH r64        | 50+rd          |      | ~56~                                  | push rsi                |
+| ~save OUTPUT@RDI;~                       | PUSH r64        | 50+rd          |      | ~57~                                  | push rdi                |
+|                                          |                 |                |      |                                       |                         |
+| /# Push the 16 registers on the/         | PUSH r64        | REX 50+rd      |      | ~41 57~                               | push r15, rdi, r14, rsi |
+| /# stack so that when printed/           | PUSH r64        | 50+rd          |      | ~57~                                  | push r13, rbp, r12, rsp |
+| /# they're displayed like this:/         | PUSH r64        | REX 50+rd      |      | ~41 56~                               | push r11, rbx, r10, rdx |
+| /#/                                      | PUSH r64        | 50+rd          |      | ~56~                                  | push r9 , rcx, r8 , rax |
+| /#/{{{c(4)}}} ~·-----------·~            | PUSH r64        | REX 50+rd      |      | ~41 55~                               |                         |
+| /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~R15 ¦ RDI ¦~ | PUSH r64        | 50+rd          |      | ~55~                                  |                         |
+| /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~R14 ¦ RSI ¦~ | PUSH r64        | REX 50+rd      |      | ~41 54~                               |                         |
+| /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~··· ¦ ··· ¦~ | PUSH r64        | 50+rd          |      | ~54~                                  |                         |
+| /#/{{{c(4)}}} ~¦~​{{{c(2)}}}​~R8  ¦ RAX ¦~ | PUSH r64        | REX 50+rd      |      | ~41 53~                               |                         |
+| /#/{{{c(4)}}} ~·-----------·~            | PUSH r64        | 50+rd          |      | ~53~                                  |                         |
+|                                          | PUSH r64        | REX 50+rd      |      | ~41 52~                               |                         |
+|                                          | PUSH r64        | 50+rd          |      | ~52~                                  |                         |
+|                                          | PUSH r64        | REX 50+rd      |      | ~41 51~                               |                         |
+|                                          | PUSH r64        | 50+rd          |      | ~51~                                  |                         |
+|                                          | PUSH r64        | REX 50+rd      |      | ~41 50~                               |                         |
+|                                          | PUSH r64        | 50+rd          |      | ~50~                                  |                         |
+| /# Print top 128 stack bytes using/      |                 |                |      |                                       |                         |
+| /# subroutine ~TYPE(addr, u)~./          |                 |                |      |                                       |                         |
+| ~addr@RSI ← RSP;~                        | MOV r64, r/m64  | REX.W 8B /r    |      | ~48 8B~ {{{modrm(F4,11,110,100)}}}    | rsi = rsp               |
+| ~u@RDX <- 0x80;~                         | MOV r32, imm32  | B8+rd id       |      | ~BA~ /~80 00 00 00~/                  | rdx = u                 |
+| ~TYPE();~  /# Compiled call./            | /N/A/           | /N/A/          |      | {{{compile(54,T)}}}                   | Call TYPE               |
+| /# Clean the stack./                     |                 |                |      |                                       |                         |
+| ~pop 16 quads;~                          | SUB r/m64, imm8 | REX.W 83 /5 ib |      | ~48 83~ {{{modrm(EC,11,101,100)}}} 80 | rsp -= -80              |
+| ~restore OUTPUT@RDI;~                    | POP r64         | 58+rd          |      | ~5F~                                  | pop rdi                 |
+| ~restore INPUT@RSI;~                     | POP r64         | 58+rd          |      | ~5E~                                  | pop rsi                 |
+| ~return.~                                | RET             | C3             |      | ~C3~                                  | return                  |
+|                                          |                 |                | ~42~ |                                       |                         |
 
 
 *** Text interpreter
@@ -527,112 +527,112 @@ Why this approach?
 #+CAPTION: Subroutine ~REFILL~ TODO.
 #+LABEL: tbl:forth:refill
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                                     | *Instruction*      | *Opcode*         | *&*  | *Machine code*                                           | *Intention*      |
-|--------------------------------------------------+--------------------+------------------+------+----------------------------------------------------------+------------------|
-| /# Define:/ _~REFILL~_                           | /N/A/              | /N/A/            |      | {{{define(06,52 45 46 49 4C 4C)}}}                       | define REFILL    |
-| /# In/Out: ~( -​- )~/                             |                    |                  |      |                                                          |                  |
-| /#/                                              |                    |                  |      |                                                          |                  |
-| /# Advance ~TIB~ and ~#IN~ so/                   |                    |                  |      |                                                          |                  |
-| /# that ~[TIB, #IN)~ contains/                   |                    |                  |      |                                                          |                  |
-| /# a new line to be parsed./                     |                    |                  |      |                                                          |                  |
-|                                                  |                    |                  |      |                                                          |                  |
-| {{{i(1)}}} /# Base address of globals./          |                    |                  |      |                                                          |                  |
-| {{{i(1)}}} ~VARS@R9 ← 0x10000000;~               | MOV r/m64, /imm32/ | REX.W C7 /​0 /id/ |      | ~49 C7 C1~​{{{modrm(11,000,001)}}} /~00 00 00 10~/        | r9 = VAR         |
-|                                                  |                    |                  |      |                                                          |                  |
-| {{{i(1)}}} /# Advance ~TIB~​ by ~#IN~./           |                    |                  |      |                                                          |                  |
-| {{{i(1)}}} /#/                                   |                    |                  |      |                                                          |                  |
-| {{{i(1)}}} /# Note:         ~#IN~ is ~VARS+0~,/  |                    |                  |      |                                                          |                  |
-| {{{i(1)}}} /# {{{i(2.35)}}} ~TIB~ is ~VARS+8~,/  |                    |                  |      |                                                          |                  |
-| {{{i(1)}}} /# {{{i(2.35)}}} ~>IN~ is ~VARS+16~./ |                    |                  |      |                                                          |                  |
-| {{{i(1)}}} ~nIN@RAX ← [#IN];~                    | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B 01~​{{{modrm(00,000,001)}}}                        | rax = [#IN]      |
-| {{{i(1)}}} ~[TIB] += nIN@RAX;~                   | ADD r/m64, r64     | REX.W 01 /r      |      | ~49 01 41~​{{{modrm(01,000,001)}}} {{{displ}}}​~08~        | [TIB] += rax     |
-| {{{i(1)}}} /# Reset ~#IN~ and ~>IN~ to 0./       |                    |                  |      |                                                          |                  |
-| {{{i(1)}}} ~[#IN] &= 0;~                         | AND r/m64, /imm8/  | REX.W 83 /​4 /ib/ |      | ~49 83 21~​{{{modrm(00,100,001)}}} /~00~/                 | [#IN] = 0        |
-| {{{i(1)}}} ~[>IN] &= 0;~                         | AND r/m64, /imm8/  | REX.W 83 /​4 /ib/ |      | ~49 83 61~​{{{modrm(01,100,001)}}} {{{displ}}}​~10~ /~00~/ | [>IN] = 0        |
-|                                                  |                    |                  |      |                                                          |                  |
-| {{{i(1)}}} /# Advance ~#IN~ until just/          |                    |                  |      |                                                          |                  |
-| {{{i(1)}}} /# after first ~LF~ character./       |                    |                  |      |                                                          |                  |
-| ~_beg:~                                          |                    |                  | ~00~ |                                                          | _beg:            |
-| {{{i(1)}}} ~[#IN]++;~                            | INC r/m64          | REX.W FF /0      |      | ~49 FF 01~​{{{modrm(00,000,001)}}}                        | [#IN]++          |
-| {{{i(1)}}} ~RAX ← [TIB];~                        | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B 41~​{{{modrm(01,000,001)}}} {{{displ}}}​~08~        | rax = [TIB]      |
-| {{{i(1)}}} ~RAX += [#IN];~                       | ADD r64, r/m64     | REX.W 03 /r      |      | ~49 03 01~​{{{modrm(00,000,001)}}}                        | rax += [#IN]     |
-| {{{i(1)}}} /# Newline character?/                |                    |                  |      |                                                          |                  |
-| {{{i(1)}}} ~if [RAX-1] != 0x0A:~                 | CMP r/m8, /imm8/   | 80 /​7 /ib/       |      | ~80 78~​{{{modrm(01,111,000)}}} {{{displ}}}​~FF~ /~0A~/    | cmp [rax-1], LF  |
-| {{{i(2)}}}   ~goto _beg.~                        | JNE _rel8_         | 75 _cb_          |      | ~75~ {{{offset(F0,00-10)}}}                              | -jump _beg if != |
-| {{{i(1)}}} ~return.~                             | RET                | C3               | ~10~ | ~C3~                                                     | return           |
+| *Pseudocode*                                     | *Instruction*      | *Opcode*         | *&*  | *Machine code*                                            | *Intention*      |
+|--------------------------------------------------+--------------------+------------------+------+-----------------------------------------------------------+------------------|
+| /# Define:/ _~REFILL~_                           | /N/A/              | /N/A/            |      | {{{define(06,52 45 46 49 4C 4C)}}}                        | define REFILL    |
+| /# In/Out: ~( -​- )~/                             |                    |                  |      |                                                           |                  |
+| /#/                                              |                    |                  |      |                                                           |                  |
+| /# Advance ~TIB~ and ~#IN~ so/                   |                    |                  |      |                                                           |                  |
+| /# that ~[TIB, #IN)~ contains/                   |                    |                  |      |                                                           |                  |
+| /# a new line to be parsed./                     |                    |                  |      |                                                           |                  |
+|                                                  |                    |                  |      |                                                           |                  |
+| {{{i(1)}}} /# Base address of globals./          |                    |                  |      |                                                           |                  |
+| {{{i(1)}}} ~VARS@R9 ← 0x10000000;~               | MOV r/m64, /imm32/ | REX.W C7 /​0 /id/ |      | ~49 C7~ {{{modrm(C1,11,000,001)}}} /~00 00 00 10~/        | r9 = VAR         |
+|                                                  |                    |                  |      |                                                           |                  |
+| {{{i(1)}}} /# Advance ~TIB~​ by ~#IN~./           |                    |                  |      |                                                           |                  |
+| {{{i(1)}}} /#/                                   |                    |                  |      |                                                           |                  |
+| {{{i(1)}}} /# Note:         ~#IN~ is ~VARS+0~,/  |                    |                  |      |                                                           |                  |
+| {{{i(1)}}} /# {{{i(2.35)}}} ~TIB~ is ~VARS+8~,/  |                    |                  |      |                                                           |                  |
+| {{{i(1)}}} /# {{{i(2.35)}}} ~>IN~ is ~VARS+16~./ |                    |                  |      |                                                           |                  |
+| {{{i(1)}}} ~nIN@RAX ← [#IN];~                    | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(01,00,000,001)}}}                        | rax = [#IN]      |
+| {{{i(1)}}} ~[TIB] += nIN@RAX;~                   | ADD r/m64, r64     | REX.W 01 /r      |      | ~49 01~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~08~        | [TIB] += rax     |
+| {{{i(1)}}} /# Reset ~#IN~ and ~>IN~ to 0./       |                    |                  |      |                                                           |                  |
+| {{{i(1)}}} ~[#IN] &= 0;~                         | AND r/m64, /imm8/  | REX.W 83 /​4 /ib/ |      | ~49 83~ {{{modrm(21,00,100,001)}}} /~00~/                 | [#IN] = 0        |
+| {{{i(1)}}} ~[>IN] &= 0;~                         | AND r/m64, /imm8/  | REX.W 83 /​4 /ib/ |      | ~49 83~ {{{modrm(61,01,100,001)}}} {{{displ}}}​~10~ /~00~/ | [>IN] = 0        |
+|                                                  |                    |                  |      |                                                           |                  |
+| {{{i(1)}}} /# Advance ~#IN~ until just/          |                    |                  |      |                                                           |                  |
+| {{{i(1)}}} /# after first ~LF~ character./       |                    |                  |      |                                                           |                  |
+| ~_beg:~                                          |                    |                  | ~00~ |                                                           | _beg:            |
+| {{{i(1)}}} ~[#IN]++;~                            | INC r/m64          | REX.W FF /0      |      | ~49 FF~ {{{modrm(01,00,000,001)}}}                        | [#IN]++          |
+| {{{i(1)}}} ~RAX ← [TIB];~                        | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~08~        | rax = [TIB]      |
+| {{{i(1)}}} ~RAX += [#IN];~                       | ADD r64, r/m64     | REX.W 03 /r      |      | ~49 03~ {{{modrm(01,00,000,001)}}}                        | rax += [#IN]     |
+| {{{i(1)}}} /# Newline character?/                |                    |                  |      |                                                           |                  |
+| {{{i(1)}}} ~if [RAX-1] != 0x0A:~                 | CMP r/m8, /imm8/   | 80 /​7 /ib/       |      | ~80~ {{{modrm(78,01,111,000)}}} {{{displ}}}​~FF~ /~0A~/    | cmp [rax-1], LF  |
+| {{{i(2)}}}   ~goto _beg.~                        | JNE _rel8_         | 75 _cb_          |      | ~75~ {{{offset(F0,00-10)}}}                               | -jump _beg if != |
+| {{{i(1)}}} ~return.~                             | RET                | C3               | ~10~ | ~C3~                                                      | return           |
 
 **** seek
 
 #+CAPTION: Subroutine ~seek~ parses characters until it finds one in a given range.
 #+LABEL: tbl:forth:seek
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                                    | *Instruction*      | *Opcode*         | *&*  | *Machine code*                                    | *Intention*                                 |
-|-------------------------------------------------+--------------------+------------------+------+---------------------------------------------------+---------------------------------------------|
-| /# Define:/ _~seek~_                            | /N/A/              | /N/A/            |      | {{{define(04,73 65 65 6B)}}}                      | define seek                                 |
-| /# In/Out:    ~( low@CL high@DL~/               |                    |                  |      |                                                   |                                             |
-| /# {{{c(8)}}} ​~"ccc"~/                          |                    |                  |      |                                                   |                                             |
-| /# {{{c(5)}}}​ ~-​- eflags )~/                    |                    |                  |      |                                                   |                                             |
-| /#/                                             |                    |                  |      |                                                   |                                             |
-| /# Advance ~>IN~ until next/                    |                    |                  |      |                                                   |                                             |
-| /# char is within ~[low, high)~/                |                    |                  |      |                                                   |                                             |
-| /# or parse area is empty./                     |                    |                  |      |                                                   |                                             |
-|                                                 |                    |                  |      |                                                   |                                             |
-| {{{c(2)}}} ~VARS@R9 ← 0x10000000;~              | MOV r/m64, /imm32/ | REX.W C7 /​0 /id/ |      | ~49 C7 C1~​{{{modrm(11,000,001)}}} /~00 00 00 10~/ | r9 = VAR                                    |
-| {{{c(2)}}} ~high@DL -= low@CL;~                 | SUB r8, r/m8       | 2A /r            |      | ~2A D1~​{{{modrm(11,010,001)}}}                    | dl -= cl                                    |
-| ~_beg:~                                         |                    |                  | ~00~ |                                                   | # _beg:  like WITHIN ( al cl dl -- eflags ) |
-| {{{c(2)}}} /# Is parse area empty?/             |                    |                  |      |                                                   |                                             |
-| {{{c(2)}}} ~RAX ← [>IN];~                       | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B 41~​{{{modrm(01,000,001)}}} {{{displ}}}​~10~ | rax = [>IN]                                 |
-| {{{c(2)}}} ~if RAX~ \ge{{{unsigned}}} ~[#IN]:~  | CMP r64, r/m64     | REX.W 3B /r      |      | ~49 3B 01~​{{{modrm(00,000,001)}}}                 | cmp rax, [#IN]                              |
-| {{{c(4)}}}   ~goto _end.~                       | JAE _rel8_         | 73 _cb_          |      | ~73~ {{{offset(16,1F-09)}}}                       | +jump _end if U>=                           |
-| {{{c(2)}}} /# Get current character./           |                    |                  | ~09~ |                                                   |                                             |
-| {{{c(2)}}} ~RAX ← [TIB];~                       | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B 41~​{{{modrm(01,000,001)}}} {{{displ}}}​~08~ | rax = [TIB]                                 |
-| {{{c(2)}}} ~RAX += [>IN];~                      | ADD r64, r/m64     | REX.W 03 /r      |      | ~49 03 41~​{{{modrm(01,000,001)}}} {{{displ}}}​~10~ | rax += [>IN]                                |
-| {{{c(2)}}} ~chr@AL ← [RAX];~                    | MOV r8, r/m8       | 8A /r            |      | ~8A 00~​{{{modrm(00,000,000)}}}                    | al = [rax]                                  |
-| {{{c(2)}}} /# Is ~chr~ in ~[low, high)~?/       |                    |                  |      |                                                   |                                             |
-| {{{c(2)}}} ~AL -= low@CL;~                      | SUB r8, r/m8       | 2A /r            |      | ~2A C1~​{{{modrm(11,000,001)}}}                    | al -= cl                                    |
-| {{{c(2)}}} ~if AL~ \lt{{{unsigned}}} ~high@DL:~ | CMP r8, r/m8       | 3A /r            |      | ~3A C2~​{{{modrm(11,000,010)}}}                    | cmp al, dl                                  |
-| {{{c(4)}}}   ~goto _end.~                       | JB _rel8_          | 72 _cb_          |      | ~72~ {{{offset(06,1F-19)}}}                       | +jump _end if U<                            |
-| {{{c(2)}}} /# Go to next character./            |                    |                  | ~19~ |                                                   |                                             |
-| {{{c(2)}}} ~[>IN]++;~                           | INC r/m64          | REX.W FF /0      |      | ~49 FF 41~​{{{modrm(01,000,001)}}} {{{displ}}}​~10~ | [>IN]++                                     |
-| {{{c(2)}}} ~goto _beg.~                         | JMP _rel8_         | EB _cb_          |      | ~EB~ {{{offset(E1,00-1F)}}}                       | -jump _beg                                  |
-| ~_end:~                                         |                    |                  | ~1F~ |                                                   | # _end:                                     |
-| {{{c(2)}}} ~return.~                            | RET                | C3               |      | ~C3~                                              | return                                      |
+| *Pseudocode*                                    | *Instruction*      | *Opcode*         | *&*  | *Machine code*                                     | *Intention*                                 |
+|-------------------------------------------------+--------------------+------------------+------+----------------------------------------------------+---------------------------------------------|
+| /# Define:/ _~seek~_                            | /N/A/              | /N/A/            |      | {{{define(04,73 65 65 6B)}}}                       | define seek                                 |
+| /# In/Out:    ~( low@CL high@DL~/               |                    |                  |      |                                                    |                                             |
+| /# {{{c(8)}}} ​~"ccc"~/                          |                    |                  |      |                                                    |                                             |
+| /# {{{c(5)}}}​ ~-​- eflags )~/                    |                    |                  |      |                                                    |                                             |
+| /#/                                             |                    |                  |      |                                                    |                                             |
+| /# Advance ~>IN~ until next/                    |                    |                  |      |                                                    |                                             |
+| /# char is within ~[low, high)~/                |                    |                  |      |                                                    |                                             |
+| /# or parse area is empty./                     |                    |                  |      |                                                    |                                             |
+|                                                 |                    |                  |      |                                                    |                                             |
+| {{{c(2)}}} ~VARS@R9 ← 0x10000000;~              | MOV r/m64, /imm32/ | REX.W C7 /​0 /id/ |      | ~49 C7~ {{{modrm(C1,11,000,001)}}} /~00 00 00 10~/ | r9 = VAR                                    |
+| {{{c(2)}}} ~high@DL -= low@CL;~                 | SUB r8, r/m8       | 2A /r            |      | ~2A~ {{{modrm(D1,11,010,001)}}}                    | dl -= cl                                    |
+| ~_beg:~                                         |                    |                  | ~00~ |                                                    | # _beg:  like WITHIN ( al cl dl -- eflags ) |
+| {{{c(2)}}} /# Is parse area empty?/             |                    |                  |      |                                                    |                                             |
+| {{{c(2)}}} ~RAX ← [>IN];~                       | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~10~ | rax = [>IN]                                 |
+| {{{c(2)}}} ~if RAX~ \ge{{{unsigned}}} ~[#IN]:~  | CMP r64, r/m64     | REX.W 3B /r      |      | ~49 3B~ {{{modrm(01,00,000,001)}}}                 | cmp rax, [#IN]                              |
+| {{{c(4)}}}   ~goto _end.~                       | JAE _rel8_         | 73 _cb_          |      | ~73~ {{{offset(16,1F-09)}}}                        | +jump _end if U>=                           |
+| {{{c(2)}}} /# Get current character./           |                    |                  | ~09~ |                                                    |                                             |
+| {{{c(2)}}} ~RAX ← [TIB];~                       | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~08~ | rax = [TIB]                                 |
+| {{{c(2)}}} ~RAX += [>IN];~                      | ADD r64, r/m64     | REX.W 03 /r      |      | ~49 03~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~10~ | rax += [>IN]                                |
+| {{{c(2)}}} ~chr@AL ← [RAX];~                    | MOV r8, r/m8       | 8A /r            |      | ~8A~ {{{modrm(00,00,000,000)}}}                    | al = [rax]                                  |
+| {{{c(2)}}} /# Is ~chr~ in ~[low, high)~?/       |                    |                  |      |                                                    |                                             |
+| {{{c(2)}}} ~AL -= low@CL;~                      | SUB r8, r/m8       | 2A /r            |      | ~2A~ {{{modrm(C1,11,000,001)}}}                    | al -= cl                                    |
+| {{{c(2)}}} ~if AL~ \lt{{{unsigned}}} ~high@DL:~ | CMP r8, r/m8       | 3A /r            |      | ~3A~ {{{modrm(C2,11,000,010)}}}                    | cmp al, dl                                  |
+| {{{c(4)}}}   ~goto _end.~                       | JB _rel8_          | 72 _cb_          |      | ~72~ {{{offset(06,1F-19)}}}                        | +jump _end if U<                            |
+| {{{c(2)}}} /# Go to next character./            |                    |                  | ~19~ |                                                    |                                             |
+| {{{c(2)}}} ~[>IN]++;~                           | INC r/m64          | REX.W FF /0      |      | ~49 FF~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~10~ | [>IN]++                                     |
+| {{{c(2)}}} ~goto _beg.~                         | JMP _rel8_         | EB _cb_          |      | ~EB~ {{{offset(E1,00-1F)}}}                        | -jump _beg                                  |
+| ~_end:~                                         |                    |                  | ~1F~ |                                                    | # _end:                                     |
+| {{{c(2)}}} ~return.~                            | RET                | C3               |      | ~C3~                                               | return                                      |
 
 **** PARSE
 
 #+CAPTION: Subroutine ~PARSE~ returns the address and size of a newly parsed string.
 #+LABEL: tbl:forth:parse
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                               | *Instruction*      | *Opcode*         | *&*  | *Machine code*                                    | *Intention*                                                                         |
-|--------------------------------------------+--------------------+------------------+------+---------------------------------------------------+-------------------------------------------------------------------------------------|
-| /# Define:/ _~PARSE~_                      | /N/A/              | /N/A/            |      | {{{define(04,50 41 52 53 45)}}}                   | define PARSE                                                                        |
-| /# In/Out:    ~( low@CL high@DL~/          |                    |                  |      |                                                   |                                                                                     |
-| /# {{{c(8)}}} ​~"ccc<char>"~/               |                    |                  |      |                                                   |                                                                                     |
-| /# {{{c(5)}}}​ ~-​- addr@RBP u@RAX )~/       |                    |                  |      |                                                   |                                                                                     |
-| /#/                                        |                    |                  |      |                                                   |                                                                                     |
-| /# *TODO*:/                                |                    |                  |      |                                                   |                                                                                     |
-| /# -- addr: where ccc begins/              |                    |                  |      |                                                   |                                                                                     |
-| /# -- u: length of ccc/                    |                    |                  |      |                                                   |                                                                                     |
-|                                            |                    |                  |      |                                                   |                                                                                     |
-| {{{c( 2)}}} ~VARS@R9 ← 0x10000000;~        | MOV r/m64, /imm32/ | REX.W C7 /​​0 /id/ |      | ~49 C7 C1~​{{{modrm(11,000,001)}}} /~00 00 00 10~/ | r9 = VAR                                                                            |
-| {{{c( 2)}}} ~start@RBP ← [>IN];~           | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B 69~​{{{modrm(01,101,001)}}} {{{displ}}}​~10~ | rbp = [>IN]                                                                         |
-| {{{c( 2)}}} /# Compile a call to ~seek()~/ |                    |                  |      |                                                   |                                                                                     |
-| {{{c( 2)}}} /# that advances ~>IN~./       |                    |                  |      |                                                   |                                                                                     |
-| {{{c( 2)}}} ~seek();~  /# Compiled call./  | /N/A/              | /N/A/            |      | {{{compile(73,s)}}}                               | Call seek  (parse until 1st instance within [cl, dl) is parsed or parse area empty) |
-| {{{c( 2)}}} ~end@RAX ← [>IN];~             | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B 41~​{{{modrm(01,000,001)}}} {{{displ}}}​~10~ | rax = [>IN]                                                                         |
-| {{{c( 2)}}} /# Did ~seek()~ encounter the/ |                    |                  |      |                                                   |                                                                                     |
-| {{{c( 2)}}} /# end of the parse area?/     |                    |                  |      |                                                   |                                                                                     |
-| {{{c( 2)}}} ~if parse area empty:~         |                    |                  |      |                                                   |                                                                                     |
-| {{{c( 4)}}}   ~goto _end.~                 | JAE _rel8_         | 73 _cb_          |      | ~73~ {{{offset(04,04-00)}}}                       | +jump _end if U>=                                                                   |
-| {{{c( 2)}}} ~[>IN]++;~  /# ???/            | INC r/m64          | REX.W FF /0      | ~00~ | ~49 FF 41~​{{{modrm(01,000,001)}}} {{{displ}}}​~10~ | [>IN]++                                                                             |
-| ~_end:~                                    |                    |                  | ~04~ |                                                   | # _end:                                                                             |
-| {{{c( 2)}}} /# Compute address and/        |                    |                  |      |                                                   |                                                                                     |
-| {{{c( 2)}}} /# size of parsed input./      |                    |                  |      |                                                   |                                                                                     |
-| {{{c( 2)}}} ~u@RAX = end@RAX~              |                    |                  |      |                                                   |                                                                                     |
-| {{{c( 8)}}}       ~- start@RBP;~           | SUB r/m64, r64     | REX.W 29 /r      |      | ~48 29 E8~​{{{modrm(11,101,000)}}}                 | rax -= rbp                                                                          |
-| {{{c( 2)}}} ~addr@RBP = bgn@RBP~           | ADD r64, r/m64     | REX.W 03 /r      |      | ~49 03 69~​{{{modrm(01,101,001)}}} {{{displ}}}​~08~ | rbp += [TIB]                                                                        |
-| {{{c(11)}}}          ~+ [TIB];~            |                    |                  |      |                                                   |                                                                                     |
-| {{{c( 2)}}} ~return.~                      | RET                | C3               |      | ~C3~                                              | return                                                                              |
+| *Pseudocode*                               | *Instruction*      | *Opcode*         | *&*  | *Machine code*                                     | *Intention*                                                                         |
+|--------------------------------------------+--------------------+------------------+------+----------------------------------------------------+-------------------------------------------------------------------------------------|
+| /# Define:/ _~PARSE~_                      | /N/A/              | /N/A/            |      | {{{define(04,50 41 52 53 45)}}}                    | define PARSE                                                                        |
+| /# In/Out:    ~( low@CL high@DL~/          |                    |                  |      |                                                    |                                                                                     |
+| /# {{{c(8)}}} ​~"ccc<char>"~/               |                    |                  |      |                                                    |                                                                                     |
+| /# {{{c(5)}}}​ ~-​- addr@RBP u@RAX )~/       |                    |                  |      |                                                    |                                                                                     |
+| /#/                                        |                    |                  |      |                                                    |                                                                                     |
+| /# *TODO*:/                                |                    |                  |      |                                                    |                                                                                     |
+| /# -- addr: where ccc begins/              |                    |                  |      |                                                    |                                                                                     |
+| /# -- u: length of ccc/                    |                    |                  |      |                                                    |                                                                                     |
+|                                            |                    |                  |      |                                                    |                                                                                     |
+| {{{c( 2)}}} ~VARS@R9 ← 0x10000000;~        | MOV r/m64, /imm32/ | REX.W C7 /​​0 /id/ |      | ~49 C7~ {{{modrm(C1,11,000,001)}}} /~00 00 00 10~/ | r9 = VAR                                                                            |
+| {{{c( 2)}}} ~start@RBP ← [>IN];~           | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(69,01,101,001)}}} {{{displ}}}​~10~ | rbp = [>IN]                                                                         |
+| {{{c( 2)}}} /# Compile a call to ~seek()~/ |                    |                  |      |                                                    |                                                                                     |
+| {{{c( 2)}}} /# that advances ~>IN~./       |                    |                  |      |                                                    |                                                                                     |
+| {{{c( 2)}}} ~seek();~  /# Compiled call./  | /N/A/              | /N/A/            |      | {{{compile(73,s)}}}                                | Call seek  (parse until 1st instance within [cl, dl) is parsed or parse area empty) |
+| {{{c( 2)}}} ~end@RAX ← [>IN];~             | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~10~ | rax = [>IN]                                                                         |
+| {{{c( 2)}}} /# Did ~seek()~ encounter the/ |                    |                  |      |                                                    |                                                                                     |
+| {{{c( 2)}}} /# end of the parse area?/     |                    |                  |      |                                                    |                                                                                     |
+| {{{c( 2)}}} ~if parse area empty:~         |                    |                  |      |                                                    |                                                                                     |
+| {{{c( 4)}}}   ~goto _end.~                 | JAE _rel8_         | 73 _cb_          |      | ~73~ {{{offset(04,04-00)}}}                        | +jump _end if U>=                                                                   |
+| {{{c( 2)}}} ~[>IN]++;~  /# ???/            | INC r/m64          | REX.W FF /0      | ~00~ | ~49 FF~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~10~ | [>IN]++                                                                             |
+| ~_end:~                                    |                    |                  | ~04~ |                                                    | # _end:                                                                             |
+| {{{c( 2)}}} /# Compute address and/        |                    |                  |      |                                                    |                                                                                     |
+| {{{c( 2)}}} /# size of parsed input./      |                    |                  |      |                                                    |                                                                                     |
+| {{{c( 2)}}} ~u@RAX = end@RAX~              |                    |                  |      |                                                    |                                                                                     |
+| {{{c( 8)}}}       ~- start@RBP;~           | SUB r/m64, r64     | REX.W 29 /r      |      | ~48 29~ {{{modrm(E8,11,101,000)}}}                 | rax -= rbp                                                                          |
+| {{{c( 2)}}} ~addr@RBP = bgn@RBP~           | ADD r64, r/m64     | REX.W 03 /r      |      | ~49 03~ {{{modrm(69,01,101,001)}}} {{{displ}}}​~08~ | rbp += [TIB]                                                                        |
+| {{{c(11)}}}          ~+ [TIB];~            |                    |                  |      |                                                    |                                                                                     |
+| {{{c( 2)}}} ~return.~                      | RET                | C3               |      | ~C3~                                               | return                                                                              |
 
 **** pname
 
