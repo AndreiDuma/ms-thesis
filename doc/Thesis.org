@@ -545,19 +545,19 @@ Why this approach?
 | {{{i(1)}}} /# {{{i(2.35)}}} ~TIB~ is ~VARS+8~,/  |                    |                  |      |                                                           |                  |
 | {{{i(1)}}} /# {{{i(2.35)}}} ~>IN~ is ~VARS+16~./ |                    |                  |      |                                                           |                  |
 | {{{i(1)}}} ~nIN@RAX ← [#IN];~                    | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(01,00,000,001)}}}                        | rax = [#IN]      |
-| {{{i(1)}}} ~[TIB] += nIN@RAX;~                   | ADD r/m64, r64     | REX.W 01 /r      |      | ~49 01~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~08~        | [TIB] += rax     |
+| {{{i(1)}}} ~[TIB] += nIN@RAX;~                   | ADD r/m64, r64     | REX.W 01 /r      |      | ~49 01~ {{{modrm(41,01,000,001)}}} {{{displ(08)}}}        | [TIB] += rax     |
 | {{{i(1)}}} /# Reset ~#IN~ and ~>IN~ to 0./       |                    |                  |      |                                                           |                  |
 | {{{i(1)}}} ~[#IN] &= 0;~                         | AND r/m64, /imm8/  | REX.W 83 /​4 /ib/ |      | ~49 83~ {{{modrm(21,00,100,001)}}} /~00~/                 | [#IN] = 0        |
-| {{{i(1)}}} ~[>IN] &= 0;~                         | AND r/m64, /imm8/  | REX.W 83 /​4 /ib/ |      | ~49 83~ {{{modrm(61,01,100,001)}}} {{{displ}}}​~10~ /~00~/ | [>IN] = 0        |
+| {{{i(1)}}} ~[>IN] &= 0;~                         | AND r/m64, /imm8/  | REX.W 83 /​4 /ib/ |      | ~49 83~ {{{modrm(61,01,100,001)}}} {{{displ(10)}}} /~00~/ | [>IN] = 0        |
 |                                                  |                    |                  |      |                                                           |                  |
 | {{{i(1)}}} /# Advance ~#IN~ until just/          |                    |                  |      |                                                           |                  |
 | {{{i(1)}}} /# after first ~LF~ character./       |                    |                  |      |                                                           |                  |
 | ~_beg:~                                          |                    |                  | ~00~ |                                                           | _beg:            |
 | {{{i(1)}}} ~[#IN]++;~                            | INC r/m64          | REX.W FF /0      |      | ~49 FF~ {{{modrm(01,00,000,001)}}}                        | [#IN]++          |
-| {{{i(1)}}} ~RAX ← [TIB];~                        | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~08~        | rax = [TIB]      |
+| {{{i(1)}}} ~RAX ← [TIB];~                        | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(08)}}}        | rax = [TIB]      |
 | {{{i(1)}}} ~RAX += [#IN];~                       | ADD r64, r/m64     | REX.W 03 /r      |      | ~49 03~ {{{modrm(01,00,000,001)}}}                        | rax += [#IN]     |
 | {{{i(1)}}} /# Newline character?/                |                    |                  |      |                                                           |                  |
-| {{{i(1)}}} ~if [RAX-1] != 0x0A:~                 | CMP r/m8, /imm8/   | 80 /​7 /ib/       |      | ~80~ {{{modrm(78,01,111,000)}}} {{{displ}}}​~FF~ /~0A~/    | cmp [rax-1], LF  |
+| {{{i(1)}}} ~if [RAX-1] != 0x0A:~                 | CMP r/m8, /imm8/   | 80 /​7 /ib/       |      | ~80~ {{{modrm(78,01,111,000)}}} {{{displ(FF)}}} /~0A~/    | cmp [rax-1], LF  |
 | {{{i(2)}}}   ~goto _beg.~                        | JNE _rel8_         | 75 _cb_          |      | ~75~ {{{offset(F0,00-10)}}}                               | -jump _beg if != |
 | {{{i(1)}}} ~return.~                             | RET                | C3               | ~10~ | ~C3~                                                      | return           |
 
@@ -581,19 +581,19 @@ Why this approach?
 | {{{c(2)}}} ~high@DL -= low@CL;~                 | SUB r8, r/m8       | 2A /r            |      | ~2A~ {{{modrm(D1,11,010,001)}}}                    | dl -= cl                                    |
 | ~_beg:~                                         |                    |                  | ~00~ |                                                    | # _beg:  like WITHIN ( al cl dl -- eflags ) |
 | {{{c(2)}}} /# Is parse area empty?/             |                    |                  |      |                                                    |                                             |
-| {{{c(2)}}} ~RAX ← [>IN];~                       | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~10~ | rax = [>IN]                                 |
+| {{{c(2)}}} ~RAX ← [>IN];~                       | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | rax = [>IN]                                 |
 | {{{c(2)}}} ~if RAX~ \ge{{{unsigned}}} ~[#IN]:~  | CMP r64, r/m64     | REX.W 3B /r      |      | ~49 3B~ {{{modrm(01,00,000,001)}}}                 | cmp rax, [#IN]                              |
 | {{{c(4)}}}   ~goto _end.~                       | JAE _rel8_         | 73 _cb_          |      | ~73~ {{{offset(16,1F-09)}}}                        | +jump _end if U>=                           |
 | {{{c(2)}}} /# Get current character./           |                    |                  | ~09~ |                                                    |                                             |
-| {{{c(2)}}} ~RAX ← [TIB];~                       | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~08~ | rax = [TIB]                                 |
-| {{{c(2)}}} ~RAX += [>IN];~                      | ADD r64, r/m64     | REX.W 03 /r      |      | ~49 03~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~10~ | rax += [>IN]                                |
+| {{{c(2)}}} ~RAX ← [TIB];~                       | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(08)}}} | rax = [TIB]                                 |
+| {{{c(2)}}} ~RAX += [>IN];~                      | ADD r64, r/m64     | REX.W 03 /r      |      | ~49 03~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | rax += [>IN]                                |
 | {{{c(2)}}} ~chr@AL ← [RAX];~                    | MOV r8, r/m8       | 8A /r            |      | ~8A~ {{{modrm(00,00,000,000)}}}                    | al = [rax]                                  |
 | {{{c(2)}}} /# Is ~chr~ in ~[low, high)~?/       |                    |                  |      |                                                    |                                             |
 | {{{c(2)}}} ~AL -= low@CL;~                      | SUB r8, r/m8       | 2A /r            |      | ~2A~ {{{modrm(C1,11,000,001)}}}                    | al -= cl                                    |
 | {{{c(2)}}} ~if AL~ \lt{{{unsigned}}} ~high@DL:~ | CMP r8, r/m8       | 3A /r            |      | ~3A~ {{{modrm(C2,11,000,010)}}}                    | cmp al, dl                                  |
 | {{{c(4)}}}   ~goto _end.~                       | JB _rel8_          | 72 _cb_          |      | ~72~ {{{offset(06,1F-19)}}}                        | +jump _end if U<                            |
 | {{{c(2)}}} /# Go to next character./            |                    |                  | ~19~ |                                                    |                                             |
-| {{{c(2)}}} ~[>IN]++;~                           | INC r/m64          | REX.W FF /0      |      | ~49 FF~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~10~ | [>IN]++                                     |
+| {{{c(2)}}} ~[>IN]++;~                           | INC r/m64          | REX.W FF /0      |      | ~49 FF~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | [>IN]++                                     |
 | {{{c(2)}}} ~goto _beg.~                         | JMP _rel8_         | EB _cb_          |      | ~EB~ {{{offset(E1,00-1F)}}}                        | -jump _beg                                  |
 | ~_end:~                                         |                    |                  | ~1F~ |                                                    | # _end:                                     |
 | {{{c(2)}}} ~return.~                            | RET                | C3               |      | ~C3~                                               | return                                      |
@@ -615,22 +615,22 @@ Why this approach?
 | /# -- u: length of ccc/                    |                    |                  |      |                                                    |                                                                                     |
 |                                            |                    |                  |      |                                                    |                                                                                     |
 | {{{c( 2)}}} ~VARS@R9 ← 0x10000000;~        | MOV r/m64, /imm32/ | REX.W C7 /​​0 /id/ |      | ~49 C7~ {{{modrm(C1,11,000,001)}}} /~00 00 00 10~/ | r9 = VAR                                                                            |
-| {{{c( 2)}}} ~start@RBP ← [>IN];~           | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(69,01,101,001)}}} {{{displ}}}​~10~ | rbp = [>IN]                                                                         |
+| {{{c( 2)}}} ~start@RBP ← [>IN];~           | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(69,01,101,001)}}} {{{displ(10)}}} | rbp = [>IN]                                                                         |
 | {{{c( 2)}}} /# Compile a call to ~seek()~/ |                    |                  |      |                                                    |                                                                                     |
 | {{{c( 2)}}} /# that advances ~>IN~./       |                    |                  |      |                                                    |                                                                                     |
 | {{{c( 2)}}} ~seek();~  /# Compiled call./  | /N/A/              | /N/A/            |      | {{{compile(73,s)}}}                                | Call seek  (parse until 1st instance within [cl, dl) is parsed or parse area empty) |
-| {{{c( 2)}}} ~end@RAX ← [>IN];~             | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~10~ | rax = [>IN]                                                                         |
+| {{{c( 2)}}} ~end@RAX ← [>IN];~             | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | rax = [>IN]                                                                         |
 | {{{c( 2)}}} /# Did ~seek()~ encounter the/ |                    |                  |      |                                                    |                                                                                     |
 | {{{c( 2)}}} /# end of the parse area?/     |                    |                  |      |                                                    |                                                                                     |
 | {{{c( 2)}}} ~if parse area empty:~         |                    |                  |      |                                                    |                                                                                     |
 | {{{c( 4)}}}   ~goto _end.~                 | JAE _rel8_         | 73 _cb_          |      | ~73~ {{{offset(04,04-00)}}}                        | +jump _end if U>=                                                                   |
-| {{{c( 2)}}} ~[>IN]++;~  /# ???/            | INC r/m64          | REX.W FF /0      | ~00~ | ~49 FF~ {{{modrm(41,01,000,001)}}} {{{displ}}}​~10~ | [>IN]++                                                                             |
+| {{{c( 2)}}} ~[>IN]++;~  /# ???/            | INC r/m64          | REX.W FF /0      | ~00~ | ~49 FF~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | [>IN]++                                                                             |
 | ~_end:~                                    |                    |                  | ~04~ |                                                    | # _end:                                                                             |
 | {{{c( 2)}}} /# Compute address and/        |                    |                  |      |                                                    |                                                                                     |
 | {{{c( 2)}}} /# size of parsed input./      |                    |                  |      |                                                    |                                                                                     |
 | {{{c( 2)}}} ~u@RAX = end@RAX~              |                    |                  |      |                                                    |                                                                                     |
 | {{{c( 8)}}}       ~- start@RBP;~           | SUB r/m64, r64     | REX.W 29 /r      |      | ~48 29~ {{{modrm(E8,11,101,000)}}}                 | rax -= rbp                                                                          |
-| {{{c( 2)}}} ~addr@RBP = bgn@RBP~           | ADD r64, r/m64     | REX.W 03 /r      |      | ~49 03~ {{{modrm(69,01,101,001)}}} {{{displ}}}​~08~ | rbp += [TIB]                                                                        |
+| {{{c( 2)}}} ~addr@RBP = bgn@RBP~           | ADD r64, r/m64     | REX.W 03 /r      |      | ~49 03~ {{{modrm(69,01,101,001)}}} {{{displ(08)}}} | rbp += [TIB]                                                                        |
 | {{{c(11)}}}          ~+ [TIB];~            |                    |                  |      |                                                    |                                                                                     |
 | {{{c( 2)}}} ~return.~                      | RET                | C3               |      | ~C3~                                               | return                                                                              |
 
