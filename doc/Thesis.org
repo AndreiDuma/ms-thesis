@@ -47,9 +47,9 @@
 
 # --- Byte annotation macros.
 #+MACRO: modrm   ~$1~​$^{\text{\tiny ModR/M}}_{\text{\tiny $2·$3·$4}}$
-#+MACRO:   sib   $^{\text{\tiny    SIB}}_{\text{\tiny $1·$2·$3}}$
+#+MACRO:   sib   ~$1~​$^{\text{\tiny    SIB}}_{\text{\tiny $1·$2·$3}}$
 #+MACRO: offset  _~$1~_​$_{\text{\tiny $2}}$
-#+MACRO: displ   $^{\text{\tiny +}}$
+#+MACRO: displ   $^{\text{\tiny +}}$​_~$1~_
 #+MACRO: define  ~[99~ $^{d}$​~$1~ _~$2~_​~]~
 #+MACRO: compile ~[99~ $^{c}$​~$1~​$_{$2}$​~]~
 #+MACRO: execute ~[99~ $^{e}$​~$1~​$_{$2}$​~]~
@@ -438,7 +438,7 @@ Why this approach?
 |                                                  |                 |             | ~12~       |                                    |                       |
 
 
-*** Debugging utilities
+*** Debugging utilities                                            :noexport:
 
 #+CAPTION: Subroutine ~dbg~ dumps the working memory to ~STDOUT~.
 #+LABEL: tbl:forth:dbg
@@ -561,7 +561,7 @@ Why this approach?
 | {{{i(2)}}}   ~goto _beg.~                        | JNE _rel8_         | 75 _cb_          |      | ~75~ {{{offset(F0,00-10)}}}                               | -jump _beg if != |
 | {{{i(1)}}} ~return.~                             | RET                | C3               | ~10~ | ~C3~                                                      | return           |
 
-**** seek
+**** seek                                                          :noexport:
 
 #+CAPTION: Subroutine ~seek~ parses characters until it finds one in a given range.
 #+LABEL: tbl:forth:seek
@@ -598,7 +598,7 @@ Why this approach?
 | ~_end:~                                         |                    |                  | ~1F~ |                                                    | # _end:                                     |
 | {{{c(2)}}} ~return.~                            | RET                | C3               |      | ~C3~                                               | return                                      |
 
-**** PARSE
+**** PARSE                                                         :noexport:
 
 #+CAPTION: Subroutine ~PARSE~ returns the address and size of a newly parsed string.
 #+LABEL: tbl:forth:parse
@@ -634,7 +634,7 @@ Why this approach?
 | {{{c(11)}}}          ~+ [TIB];~            |                    |                  |      |                                                    |                                                                                     |
 | {{{c( 2)}}} ~return.~                      | RET                | C3               |      | ~C3~                                               | return                                                                              |
 
-**** pname
+**** pname                                                         :noexport:
 
 #+CAPTION: Subroutine ~pname~ TODO.
 #+LABEL: tbl:forth:pname
@@ -656,6 +656,96 @@ Why this approach?
 | ~high@DL ← 0x21;~                       | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~21~/                     | (cl, dl) = (..., BL+1) |
 | ~PARSE();~  /# Compiled call./          |                |            | {{{compile(50,P)}}}             | Call PARSE             |
 | ~return.~                               | RET            | C3         | ~C3~                            | return                 |
+
+**** [                                                             :noexport:
+
+#+CAPTION: Subroutine ~[~ TODO.
+#+LABEL: tbl:forth:lbracket
+#+ATTR_LATEX: :align l|ll|lH
+| *Pseudocode*                    | *Instruction* | *Opcode* | *Machine code*                                                                    | *Intention*          |
+|---------------------------------+---------------+----------+-----------------------------------------------------------------------------------+----------------------|
+| /# Define immediate:/ _~[~_     | /N/A/         | /N/A/    | {{{define(81,5B)}}}                                                               | define [             |
+| /# In/Out:    ~( -​- )~/         |               |          |                                                                                   |                      |
+| /#/                             |               |          |                                                                                   |                      |
+| /# *TODO*​/                      |               |          |                                                                                   |                      |
+|                                 |               |          |                                                                                   |                      |
+| /# Set interpreting (0) state./ |               |          |                                                                                   |                      |
+| ~push 0;~                       | PUSH /imm8/   | 6A /ib/  | ~6A~ /~00~/                                                                       | push 0(Interpreting) |
+| ~[STATE] ← pop;~                | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]          |
+| ~return.~                       | RET           | C3       | ~C3~                                                                              | return               |
+
+**** ]
+
+#+CAPTION: Subroutine ~]~ TODO.
+#+LABEL: tbl:forth:rbracket
+#+ATTR_LATEX: :align l|ll|lH
+| *Pseudocode*                 | *Instruction* | *Opcode* | *Machine code*                                                                    | *Intention*       |
+|------------------------------+---------------+----------+-----------------------------------------------------------------------------------+-------------------|
+| /# Define:/ _~[~_            | /N/A/         | /N/A/    | {{{define(01,5D)}}}                                                               | define ]          |
+| /# In/Out: ~( -​- )~/         |               |          |                                                                                   |                   |
+| /#/                          |               |          |                                                                                   |                   |
+| /# *TODO*​/                   |               |          |                                                                                   |                   |
+|                              |               |          |                                                                                   |                   |
+| /# Set compiling (1) state./ |               |          |                                                                                   |                   |
+| ~push 1;~                    | PUSH /imm8/   | 6A /ib/  | ~6A~ /~01~/                                                                       | push 1(Compiling) |
+| ~[STATE] ← pop;~             | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]       |
+| ~return.~                    | RET           | C3       | ~C3~                                                                              | return            |
+
+**** \
+
+#+CAPTION: Subroutine ~\~ TODO.
+#+LABEL: tbl:forth:backslash
+#+ATTR_LATEX: :align l|ll|lH
+| *Pseudocode*                     | *Instruction*  | *Opcode*    | *Machine code*                                                                       | *Intention* |
+|----------------------------------+----------------+-------------+--------------------------------------------------------------------------------------+-------------|
+| /# Define immediate:/ _~\~_      | /N/A/          | /N/A/       | {{{define(81,5C)}}}                                                                  | define \    |
+| /# In/Out: ~( "ccc<eol>" -​- )~/  |                |             |                                                                                      |             |
+| /#/                              |                |             |                                                                                      |             |
+| /# *TODO*​/                       |                |             |                                                                                      |             |
+|                                  |                |             |                                                                                      |             |
+| ~RAX ← [#IN];~                   | MOV r64, r/m64 | REX.W 8B /r | ~48 8B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(00 00 00 10)}}} | rax = [#IN] |
+| ~[>IN] ← RAX;~                   | MOV r/m64, r64 | REX.W 89 /r | ~48 89~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(10 00 00 10)}}} | [>IN] = rax |
+| ~return.~                        | RET            | C3          | ~C3~                                                                                 | return      |
+
+**** (
+
+#+CAPTION: Subroutine ~(~ TODO.
+#+LABEL: tbl:forth:lparen
+#+ATTR_LATEX: :align l|ll|lH
+| *Pseudocode*                        | *Instruction*  | *Opcode*   | *Machine code*      | *Intention*                                                                 |
+|-------------------------------------+----------------+------------+---------------------+-----------------------------------------------------------------------------|
+| /# Define immediate:/ _~(~_         | /N/A/          | /N/A/      | {{{define(81,28)}}} | define (                                                                    |
+| /# In/Out: ~( "ccc<rparen>" -​- )~/  |                |            |                     |                                                                             |
+| /#/                                 |                |            |                     |                                                                             |
+| /# *TODO*​/                          |                |            |                     |                                                                             |
+|                                     |                |            |                     |                                                                             |
+| ~low@CL ← ')';~                     | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~29~/         |                                                                             |
+| ~high@DL ← ')' + 1;~                | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~2A~/         | (cl, dl) = (RP, RP+1)                                                       |
+| ~PARSE();~  /# Compiled call./      | /N/A/          | /N/A/      | {{{compile(50,P)}}} | Call PARSE            Forth 2012 implies comment ends at rparen or newline. |
+| ~return.~                           | RET            | C3         | ~C3~                | return                                                                      |
+
+**** :
+
+#+CAPTION: Subroutine ~:~ TODO.
+#+LABEL: tbl:forth:colon
+#+ATTR_LATEX: :align l|ll|lH
+| *Pseudocode*                              | *Instruction*     | *Opcode*          | *Machine code*                            | *Intention*                            |
+|-------------------------------------------+-------------------+-------------------+-------------------------------------------+----------------------------------------|
+| /# Define:/ _~:~_ ~(colon)~               | ---               | ---               | {{{define(01,3A)}}}                       | define :                               |
+| /# In/Out: ~( "<spaces>ccc<space>" -​- )~/ |                   |                   |                                           |                                        |
+| /#/                                       |                   |                   |                                           |                                        |
+| /# *TODO*​/                                |                   |                   |                                           |                                        |
+|                                           |                   |                   |                                           |                                        |
+| ~pname();~  /# Compiled call./            | ---               | ---               | {{{compile(70,p)}}}                       | Call pname  (See Forth 2012 Table 2.1) |
+| ~RSI ← RBP;~                              | MOV r/m64, r64    | REX.W 89 /r       | ~48 89~ {{{modrm(EE,11,101,110)}}}        | rsi = rbp                              |
+| ~RDX ← LATEST;~                           | MOV r32, /imm32/  | B8+rd /id/        | ~BA~ /~28 00 00 10~/                      | rdx = Latest                           |
+| ~Head();~  /# Compiled call./             | ---               | ---               | {{{compile(48,H)}}}                       | Call Head                              |
+| ~RCX ← [RDX];~                            | MOV r64, r/m64    | REX.W 8B /r       | ~48 8B~ {{{modrm(0A,00,001,010)}}}        | rcx = [rdx]                            |
+| ~RCX += 16;~                              | ADD r/m64, /imm8/ | 9REX.W 83 /​0 /ib/ | ~48 83~ {{{modrm(C1,11,000,001)}}} /~10~/ | rcx += 10                              |
+| ~[RCX]~ \vert{}​~=~ ~0x40;~                      | OR r/m8, /imm8/   | 80 /1 /ib/        | ~80~ {{{modrm(09,00,001,001)}}} /~40~/    | [rcx] ¦= 40 HIDDEN                     |
+| ~rbracket();~  /# Compiled call./         | ---               | ---               | {{{compile(5D,])}}}                       | Call ]                                 |
+| ~return.~                                 | RET               | C3                | ~C3~                                      | return                                 |
+
 
 
 * Notes                                                            :noexport:
