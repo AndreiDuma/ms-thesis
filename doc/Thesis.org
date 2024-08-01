@@ -48,7 +48,7 @@
 # --- Byte annotation macros.
 #+MACRO: modrm   $^{\text{\tiny ModR/M}}_{\text{\tiny $1·$2·$3}}$
 #+MACRO:   sib   $^{\text{\tiny    SIB}}_{\text{\tiny $1·$2·$3}}$
-#+MACRO: offset  $_{\text{\tiny $1}}_$
+#+MACRO: offset  _~$1~_​$_{\text{\tiny $2}}$
 #+MACRO: displ   $^{\text{\tiny +}}$
 #+MACRO: define  ~[99~ $^{d}$​~$1~ _~$2~_​~]~
 #+MACRO: compile ~[99~ $^{c}$​~$1~​$_{$2}$​~]~
@@ -253,55 +253,55 @@ Why this approach?
 #+CAPTION: The binary interpreter routine and loop.
 #+LABEL: tbl:forth:bi
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                                  | *Instruction*  | *Opcode*    | *&*  | *Machine code*                          | *Intention*             |
-|-----------------------------------------------+----------------+-------------+------+-----------------------------------------+-------------------------|
-| ~_bi:~                                        |                |             | ~82~ |                                         |                         |
-| {{{i(1)}}} /# Loop the binary interpreter./   |                |             |      |                                         |                         |
-| {{{i(1)}}} ~call bi().~                       | CALL rel32     | E8 cb[fn:1] |      | ~E8~ _~02 00 00 00~_​{{{offset(89-87)}}} | call bi()               |
-| {{{i(1)}}} ~goto _bi.~                        | JMP rel8       | EB cb       | ~87~ | ~EB~ _~F9~_​{{{offset(82-89)}}}          | jump _bi                |
-| ~bi():~                                       |                |             | ~89~ |                                         |                         |
-| {{{i(1)}}} /# Read next byte from ~INPUT~./   |                |             |      |                                         |                         |
-| {{{i(1)}}} ~chr@AL ← [INPUT@RSI++];~          | LODS m8        | AC          |      | ~AC~                                    | al = [rsi++]            |
-| {{{i(1)}}} /# Does it start a command?/       |                |             |      |                                         |                         |
-| {{{i(1)}}} ~if chr@AL = 0x99:~                | CMP AL, imm8   | 3C ib       |      | ~3C~ /~99~/                             | cmp al, 99(command)     |
-| {{{i(2)}}}     ~goto _command.~               | JE rel8        | 74 cb       |      | ~74~ _~02~_​{{{offset(90-8E)}}}          | jump _command if ==     |
-| {{{i(1)}}} /# If not, just copy the byte/     |                |             |      |                                         |                         |
-| {{{i(1)}}} /# to ~OUTPUT~ and return./        |                |             |      |                                         |                         |
-| {{{i(1)}}} ~[OUTPUT@RDI++] <- chr@AL;~        | STOS m8        | AA          | ~8E~ | ~AA~                                    | [rdi++] = al (xmit)     |
-| {{{i(1)}}} ~return.~                          | RET            | C3          |      | ~C3~                                    | return                  |
-| ~_command:~                                   |                |             | ~90~ |                                         |                         |
-| {{{i(1)}}} /# Global variable ~LATEST~./      |                |             |      |                                         |                         |
-| {{{i(1)}}} ~LATEST@RDX ← 0x10000028;~         | MOV r32, imm32 | B8+rd id    |      | ~BA~ /~28 00 00 10~/                    | rdx = Latest            |
-| {{{i(1)}}} /# Read command argument./         |                |             |      |                                         |                         |
-| {{{i(1)}}} ~arg@AL ← [INPUT@RSI++];~          | LODS m8        | AC          |      | ~AC~                                    | al = [rsi++] (argument) |
-| {{{i(1)}}} /# Command type by argument:/      |                |             |      |                                         |                         |
-| {{{i(1)}}} /# – ~0bx00xxxxx~: define;/        |                |             |      |                                         |                         |
-| {{{i(1)}}} /# – ~0b011xxxxx~: compile;/       |                |             |      |                                         |                         |
-| {{{i(1)}}} /# – ~0b111xxxxx~: execute./       |                |             |      |                                         |                         |
-| {{{i(1)}}} ~if arg & 0b01100000 = 0:~         | TEST AL, imm8  | A8 ib       |      | ~A8~ /~60~/                             | al & 60(graphic)?       |
-| {{{i(2)}}}     /# Define a new word./         |                |             |      |                                         |                         |
-| {{{i(2)}}}     ~goto Head.~                   | JZ rel8        | 74 cb       |      | ~74~ _~31~_​{{{offset(CB-9A)}}}          | jump Head if zero       |
-| {{{i(1)}}} /# Get latest dictionary entry./   |                |             | ~9A~ |                                         |                         |
-| {{{i(1)}}} ~entry@RBX ← *LATEST;~             | MOV r64, r/m64 | REX.W 8B /r |      | ~48 8B 1A~​{{{modrm(00,011,010)}}}       | rbx = [rdx]             |
-| ~_find1:~                                     |                |             | ~9D~ |                                         |                         |
-| {{{i(1)}}} ~save arg@AL on the stack;~        | PUSH r64       | 50+rd       |      | ~50~                                    | push al                 |
-| {{{i(1)}}} ~chr@AL &= 0b0111111;~             | AND AL, imm8   | 24 ib       |      | ~24 7F~                                 | al &= 7F                |
-| {{{i(1)}}} ~if char@AL = [entry + 11]:~       | CMP r8, r/m8   | REX 3A /r   |      | ~3A 43 11~​{{{modrm(00,010,001)}}}       | cmp al, [rbx+11]        |
-| {{{i(2)}}}     /# We found an entry whose/    |                |             |      |                                         |                         |
-| {{{i(2)}}}     /# name begins with ~chr~./    |                |             |      |                                         |                         |
-| {{{i(2)}}}     ~restore arg@AL;~              | POP r64        | 58+rd       |      | ~58~                                    | pop al                  |
-| {{{i(2)}}}     ~goto _match.~                 | JE rel8        | 74 cb       |      | ~74~ ~06~​{{{offset(AC-A6)}}}            | jump _match if ==       |
-| {{{i(1)}}} /# Follow entry's link pointer/    |                |             | ~A6~ |                                         |                         |
-| {{{i(1)}}} /# to previous entry and repeat./  |                |             |      |                                         |                         |
-| {{{i(1)}}} ~entry ← [entry + 8];~             | MOV r64, r/m64 | REX.W 8B /r |      | ~48 8B 5B~​{{{modrm(01,011,011)}}} ~08~  | rbx = [rbx+8]           |
-| {{{i(1)}}} ~goto _find1.~                     | JMP rel8       | EB cb       |      | ~EB~ _~F1~_​{{{offset(9D-AC)}}}          | jump _find1             |
-| ~_match:~                                     |                |             | ~AC~ |                                         |                         |
-| {{{i(1)}}} ~if arg & 0b1000000 = 0:~          | TEST AL, imm8  | A8 ib       |      | ~A8~ /~80~/                             | al & 80(exec) ?         |
-| {{{i(2)}}}     /# Compile./                   |                |             |      |                                         |                         |
-| {{{i(2)}}}     ~goto COMPL.~                  | JZ rel8        | 74 cb       |      | ~74~ _~09~_​{{{offset(B9-B0)}}}          | jump COMPL if zero      |
-| {{{i(1)}}} /# Execute: jump to entry's code./ |                |             | ~B0~ |                                         |                         |
-| {{{i(1)}}} ~goto [entry@RBX].~                | JMP r/m64      | REX FF /4   |      | ~FF 23~​{{{modrm(00,100,011)}}}          | jump [rbx] (exec)       |
-|                                               |                |             | ~B2~ |                                         |                         |
+| *Pseudocode*                                  | *Instruction*  | *Opcode*    | *&*  | *Machine code*                         | *Intention*             |
+|-----------------------------------------------+----------------+-------------+------+----------------------------------------+-------------------------|
+| ~_bi:~                                        |                |             | ~82~ |                                        |                         |
+| {{{i(1)}}} /# Loop the binary interpreter./   |                |             |      |                                        |                         |
+| {{{i(1)}}} ~call bi().~                       | CALL rel32     | E8 cb[fn:1] |      | ~E8~ {{{offset(02 00 00 00,89-87)}}}   | call bi()               |
+| {{{i(1)}}} ~goto _bi.~                        | JMP rel8       | EB cb       | ~87~ | ~EB~ {{{offset(F9,82-89)}}}            | jump _bi                |
+| ~bi():~                                       |                |             | ~89~ |                                        |                         |
+| {{{i(1)}}} /# Read next byte from ~INPUT~./   |                |             |      |                                        |                         |
+| {{{i(1)}}} ~chr@AL ← [INPUT@RSI++];~          | LODS m8        | AC          |      | ~AC~                                   | al = [rsi++]            |
+| {{{i(1)}}} /# Does it start a command?/       |                |             |      |                                        |                         |
+| {{{i(1)}}} ~if chr@AL = 0x99:~                | CMP AL, imm8   | 3C ib       |      | ~3C~ /~99~/                            | cmp al, 99(command)     |
+| {{{i(2)}}}     ~goto _command.~               | JE rel8        | 74 cb       |      | ~74~ {{{offset(02,90-8E)}}}            | jump _command if ==     |
+| {{{i(1)}}} /# If not, just copy the byte/     |                |             |      |                                        |                         |
+| {{{i(1)}}} /# to ~OUTPUT~ and return./        |                |             |      |                                        |                         |
+| {{{i(1)}}} ~[OUTPUT@RDI++] <- chr@AL;~        | STOS m8        | AA          | ~8E~ | ~AA~                                   | [rdi++] = al (xmit)     |
+| {{{i(1)}}} ~return.~                          | RET            | C3          |      | ~C3~                                   | return                  |
+| ~_command:~                                   |                |             | ~90~ |                                        |                         |
+| {{{i(1)}}} /# Global variable ~LATEST~./      |                |             |      |                                        |                         |
+| {{{i(1)}}} ~LATEST@RDX ← 0x10000028;~         | MOV r32, imm32 | B8+rd id    |      | ~BA~ /~28 00 00 10~/                   | rdx = Latest            |
+| {{{i(1)}}} /# Read command argument./         |                |             |      |                                        |                         |
+| {{{i(1)}}} ~arg@AL ← [INPUT@RSI++];~          | LODS m8        | AC          |      | ~AC~                                   | al = [rsi++] (argument) |
+| {{{i(1)}}} /# Command type by argument:/      |                |             |      |                                        |                         |
+| {{{i(1)}}} /# – ~0bx00xxxxx~: define;/        |                |             |      |                                        |                         |
+| {{{i(1)}}} /# – ~0b011xxxxx~: compile;/       |                |             |      |                                        |                         |
+| {{{i(1)}}} /# – ~0b111xxxxx~: execute./       |                |             |      |                                        |                         |
+| {{{i(1)}}} ~if arg & 0b01100000 = 0:~         | TEST AL, imm8  | A8 ib       |      | ~A8~ /~60~/                            | al & 60(graphic)?       |
+| {{{i(2)}}}     /# Define a new word./         |                |             |      |                                        |                         |
+| {{{i(2)}}}     ~goto Head.~                   | JZ rel8        | 74 cb       |      | ~74~ {{{offset(31,CB-9A)}}}            | jump Head if zero       |
+| {{{i(1)}}} /# Get latest dictionary entry./   |                |             | ~9A~ |                                        |                         |
+| {{{i(1)}}} ~entry@RBX ← *LATEST;~             | MOV r64, r/m64 | REX.W 8B /r |      | ~48 8B 1A~​{{{modrm(00,011,010)}}}      | rbx = [rdx]             |
+| ~_find1:~                                     |                |             | ~9D~ |                                        |                         |
+| {{{i(1)}}} ~save arg@AL on the stack;~        | PUSH r64       | 50+rd       |      | ~50~                                   | push al                 |
+| {{{i(1)}}} ~chr@AL &= 0b0111111;~             | AND AL, imm8   | 24 ib       |      | ~24 7F~                                | al &= 7F                |
+| {{{i(1)}}} ~if char@AL = [entry + 11]:~       | CMP r8, r/m8   | REX 3A /r   |      | ~3A 43 11~​{{{modrm(00,010,001)}}}      | cmp al, [rbx+11]        |
+| {{{i(2)}}}     /# We found an entry whose/    |                |             |      |                                        |                         |
+| {{{i(2)}}}     /# name begins with ~chr~./    |                |             |      |                                        |                         |
+| {{{i(2)}}}     ~restore arg@AL;~              | POP r64        | 58+rd       |      | ~58~                                   | pop al                  |
+| {{{i(2)}}}     ~goto _match.~                 | JE rel8        | 74 cb       |      | ~74~ {{{offset(06,AC-A6)}}}            | jump _match if ==       |
+| {{{i(1)}}} /# Follow entry's link pointer/    |                |             | ~A6~ |                                        |                         |
+| {{{i(1)}}} /# to previous entry and repeat./  |                |             |      |                                        |                         |
+| {{{i(1)}}} ~entry ← [entry + 8];~             | MOV r64, r/m64 | REX.W 8B /r |      | ~48 8B 5B~​{{{modrm(01,011,011)}}} ~08~ | rbx = [rbx+8]           |
+| {{{i(1)}}} ~goto _find1.~                     | JMP rel8       | EB cb       |      | ~EB~ {{{offset(F1,9D-AC)}}}            | jump _find1             |
+| ~_match:~                                     |                |             | ~AC~ |                                        |                         |
+| {{{i(1)}}} ~if arg & 0b1000000 = 0:~          | TEST AL, imm8  | A8 ib       |      | ~A8~ /~80~/                            | al & 80(exec) ?         |
+| {{{i(2)}}}     /# Compile./                   |                |             |      |                                        |                         |
+| {{{i(2)}}}     ~goto COMPL.~                  | JZ rel8        | 74 cb       |      | ~74~ {{{offset(09,B9-B0)}}}            | jump COMPL if zero      |
+| {{{i(1)}}} /# Execute: jump to entry's code./ |                |             | ~B0~ |                                        |                         |
+| {{{i(1)}}} ~goto [entry@RBX].~                | JMP r/m64      | REX FF /4   |      | ~FF 23~​{{{modrm(00,100,011)}}}         | jump [rbx] (exec)       |
+|                                               |                |             | ~B2~ |                                        |                         |
 
 
 *** Subroutine COMPL                                               :noexport:
@@ -425,14 +425,14 @@ Why this approach?
 | {{{i(1)}}}{{{c(14)}}}    ~u@RDX);~               | SYSCALL         | 0F 05       |            | ~0F 05~                           | syscall               |
 | {{{i(1)}}} ~if ret@RAX < 0:~                     | TEST r/m64, r64 | REX.W 85 /r |            | ~48 85 C0~​{{{modrm(11,000,000)}}} | cmp rax, 0            |
 | {{{i(2)}}} /# An error occured./                 |                 |             |            |                                   |                       |
-| {{{i(2)}}}     ~goto _end;~                      | JL rel8         | 7C cb       |            | ~7C~ _~08~_​{{{offset(11-09)}}}    | +jump _end if <       |
+| {{{i(2)}}}     ~goto _end;~                      | JL rel8         | 7C cb       |            | ~7C~ {{{offset(08,11-09)}}}       | +jump _end if <       |
 | {{{i(1)}}} /# Advance by ~ret~ (printed) bytes./ |                 |             | ~09~       |                                   |                       |
 | {{{i(1)}}} ~addr@RSI += ret@RAX;~                | ADD r/m64, r64  | REX.W 01 /r |            | ~48 01 C6~​{{{modrm(11,000,110)}}} | rsi(buf) += rax       |
 | {{{i(1)}}} /# Fewer bytes left to print./        |                 |             |            |                                   |                       |
 | {{{i(1)}}} ~u@RDX -= ret@RAX;~                   | SUB r/m64, r64  | REX.W 29 /r |            | ~48 29 C2~​{{{modrm(11,000,010)}}} | rdx(count) -= rax     |
 | {{{i(1)}}} ~if count > 0:~                       |                 |             |            |                                   |                       |
 | {{{i(2)}}}     /# We still have bytes to print./ |                 |             |            |                                   |                       |
-| {{{i(2)}}}     ~goto _beg;~                      | JG rel8         | 7F cb       |            | ~7F~ _~EF~_​{{{offset(00-11)}}}    | -jump _beg if >       |
+| {{{i(2)}}}     ~goto _beg;~                      | JG rel8         | 7F cb       |            | ~7F~ {{{offset(EF,00-11)}}}       | -jump _beg if >       |
 | ~_end:~                                          |                 |             | ~11~       |                                   |                       |
 | {{{i(1)}}} ~return.~                             | RET             | C3          |            | ~C3~                              | return                |
 |                                                  |                 |             | ~12~       |                                   |                       |
@@ -558,7 +558,7 @@ Why this approach?
 | {{{i(1)}}} ~RAX += [#IN];~                       | ADD r64, r/m64     | REX.W 03 /r      |      | ~49 03 01~​{{{modrm(00,000,001)}}}                        | rax += [#IN]     |
 | {{{i(1)}}} /# Newline character?/                |                    |                  |      |                                                          |                  |
 | {{{i(1)}}} ~if [RAX-1] != 0x0A:~                 | CMP r/m8, /imm8/   | 80 /​7 /ib/       |      | ~80 78~​{{{modrm(01,111,000)}}} {{{displ}}}​~FF~ /~0A~/    | cmp [rax-1], LF  |
-| {{{i(2)}}}   ~goto _beg.~                        | JNE _rel8_         | 75 _cb_          |      | ~75~ _~F0~_​{{{offset(00-10)}}}                           | -jump _beg if != |
+| {{{i(2)}}}   ~goto _beg.~                        | JNE _rel8_         | 75 _cb_          |      | ~75~ {{{offset(F0,00-10)}}}                              | -jump _beg if != |
 | {{{i(1)}}} ~return.~                             | RET                | C3               | ~10~ | ~C3~                                                     | return           |
 
 **** seek
@@ -583,7 +583,7 @@ Why this approach?
 | {{{c(2)}}} /# Is parse area empty?/             |                    |                  |      |                                                   |                                             |
 | {{{c(2)}}} ~RAX ← [>IN];~                       | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B 41~​{{{modrm(01,000,001)}}} {{{displ}}}​~10~ | rax = [>IN]                                 |
 | {{{c(2)}}} ~if RAX~ \ge{{{unsigned}}} ~[#IN]:~  | CMP r64, r/m64     | REX.W 3B /r      |      | ~49 3B 01~​{{{modrm(00,000,001)}}}                 | cmp rax, [#IN]                              |
-| {{{c(4)}}}   ~goto _end.~                       | JAE _rel8_         | 73 _cb_          |      | ~73~ _~16~_​{{{offset(1F-09)}}}                    | +jump _end if U>=                           |
+| {{{c(4)}}}   ~goto _end.~                       | JAE _rel8_         | 73 _cb_          |      | ~73~ {{{offset(16,1F-09)}}}                       | +jump _end if U>=                           |
 | {{{c(2)}}} /# Get current character./           |                    |                  | ~09~ |                                                   |                                             |
 | {{{c(2)}}} ~RAX ← [TIB];~                       | MOV r64, r/m64     | REX.W 8B /r      |      | ~49 8B 41~​{{{modrm(01,000,001)}}} {{{displ}}}​~08~ | rax = [TIB]                                 |
 | {{{c(2)}}} ~RAX += [>IN];~                      | ADD r64, r/m64     | REX.W 03 /r      |      | ~49 03 41~​{{{modrm(01,000,001)}}} {{{displ}}}​~10~ | rax += [>IN]                                |
@@ -591,10 +591,10 @@ Why this approach?
 | {{{c(2)}}} /# Is ~chr~ in ~[low, high)~?/       |                    |                  |      |                                                   |                                             |
 | {{{c(2)}}} ~AL -= low@CL;~                      | SUB r8, r/m8       | 2A /r            |      | ~2A C1~​{{{modrm(11,000,001)}}}                    | al -= cl                                    |
 | {{{c(2)}}} ~if AL~ \lt{{{unsigned}}} ~high@DL:~ | CMP r8, r/m8       | 3A /r            |      | ~3A C2~​{{{modrm(11,000,010)}}}                    | cmp al, dl                                  |
-| {{{c(4)}}}   ~goto _end.~                       | JB _rel8_          | 72 _cb_          |      | ~72~ _~06~_​{{{offset(1F-19)}}}                    | +jump _end if U<                            |
+| {{{c(4)}}}   ~goto _end.~                       | JB _rel8_          | 72 _cb_          |      | ~72~ {{{offset(06,1F-19)}}}                       | +jump _end if U<                            |
 | {{{c(2)}}} /# Go to next character./            |                    |                  | ~19~ |                                                   |                                             |
 | {{{c(2)}}} ~[>IN]++;~                           | INC r/m64          | REX.W FF /0      |      | ~49 FF 41~​{{{modrm(01,000,001)}}} {{{displ}}}​~10~ | [>IN]++                                     |
-| {{{c(2)}}} ~goto _beg.~                         | JMP _rel8_         | EB _cb_          |      | ~EB~ _~E1~_​{{{offset(00-1F)}}}                    | -jump _beg                                  |
+| {{{c(2)}}} ~goto _beg.~                         | JMP _rel8_         | EB _cb_          |      | ~EB~ {{{offset(E1,00-1F)}}}                       | -jump _beg                                  |
 | ~_end:~                                         |                    |                  | ~1F~ |                                                   | # _end:                                     |
 | {{{c(2)}}} ~return.~                            | RET                | C3               |      | ~C3~                                              | return                                      |
 
@@ -623,7 +623,7 @@ Why this approach?
 | {{{c( 2)}}} /# Did ~seek()~ encounter the/ |                    |                  |      |                                                   |                                                                                     |
 | {{{c( 2)}}} /# end of the parse area?/     |                    |                  |      |                                                   |                                                                                     |
 | {{{c( 2)}}} ~if parse area empty:~         |                    |                  |      |                                                   |                                                                                     |
-| {{{c( 4)}}}   ~goto _end.~                 | JAE _rel8_         | 73 _cb_          |      | ~73~ _~04~_​{{{offset(04-00)}}}                    | +jump _end if U>=                                                                   |
+| {{{c( 4)}}}   ~goto _end.~                 | JAE _rel8_         | 73 _cb_          |      | ~73~ {{{offset(04,04-00)}}}                       | +jump _end if U>=                                                                   |
 | {{{c( 2)}}} ~[>IN]++;~  /# ???/            | INC r/m64          | REX.W FF /0      | ~00~ | ~49 FF 41~​{{{modrm(01,000,001)}}} {{{displ}}}​~10~ | [>IN]++                                                                             |
 | ~_end:~                                    |                    |                  | ~04~ |                                                   | # _end:                                                                             |
 | {{{c( 2)}}} /# Compute address and/        |                    |                  |      |                                                   |                                                                                     |
@@ -649,11 +649,11 @@ Why this approach?
 | /# -- addr: where ccc begins/           |                |            |                                 |                        |
 | /# -- u: length of ccc/                 |                |            |                                 |                        |
 |                                         |                |            |                                 |                        |
-| ~low@CL ← 0x21;~   /# ??/               | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ _~21~_                     |                        |
-| ~high@DL ← 0x7F;~  /# ??/               | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ _~7F~_                     | (cl, dl) = (BL+1, ...) |
+| ~low@CL ← 0x21;~   /# ??/               | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~21~/                     |                        |
+| ~high@DL ← 0x7F;~  /# ??/               | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~7F~/                     | (cl, dl) = (BL+1, ...) |
 | ~seek();~  /# Compiled call./           | /N/A/          | /N/A/      | {{{compile(73,s)}}}             | Call seek              |
-| ~low@CL ← 0x7F;~                        | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ _~7F~_                     |                        |
-| ~high@DL ← 0x21;~                       | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ _~21~_                     | (cl, dl) = (..., BL+1) |
+| ~low@CL ← 0x7F;~                        | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~7F~/                     |                        |
+| ~high@DL ← 0x21;~                       | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~21~/                     | (cl, dl) = (..., BL+1) |
 | ~PARSE();~  /# Compiled call./          |                |            | {{{compile(50,P)}}}             | Call PARSE             |
 | ~return.~                               | RET            | C3         | ~C3~                            | return                 |
 
