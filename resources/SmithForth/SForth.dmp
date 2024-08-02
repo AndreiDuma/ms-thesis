@@ -397,8 +397,6 @@ BA 28 00 00 10          # rdx = Latest              mov r32, imm32      B8+rd id
 99 5D                   # Call ]
 C3                      # return                    ret                 C3
 
-===============================================================================================================================================
-
 99 81 3B ################ ; ( C: -- ) semicolon IMMEDIATE ========================================
 B0 C3                   # al = opcode ret           mov r8, imm8        B0+rb ib
 AA                      # [rdi++] = al              stos m8             AA
@@ -420,6 +418,8 @@ B8 6A 41 8F 07 AA       # eax = push x ; pop [r15]  push i8 ; pop r/m64 6A ib;RE
 41 8A 07 AB             # al = [r15] ; compile      mov r8, r/m8        REX 8A /r       00 000 111
 49 83 C7 08             # r15 += 8                  add r/m64, imm8     REX.W 83 /0 ib  11 000 111
 C3                      # return                    ret                 C3
+
+===============================================================================================================================================
 
 99 03 78 74 3D ########## xt= ( rbp=addr rax=u rbx=xt -- rbx=xt rax=? rdi=? eflags ) rbx == 0 or unhidden and matches
 48 85 DB                # rbx(xt) ?                 test r/m64, r64     REX.W 85 /r     11 011 011

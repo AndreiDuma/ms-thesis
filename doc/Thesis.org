@@ -323,16 +323,16 @@ Why this approach?
 |                                                                                             |               |          |      |                                 |                                                    |
 | /# 1. Write opcode of CALL (0x99)./                                                         |               |          |      |                                 |                                                    |
 | ~op@AL ← 0xFF;~                                                                             | MOV r8, imm8  | B0+rb ib | ~B9~ | ~B0~ /FF/                       | compile: call r/m64 (FF /2, 00 010 100, 00 100 101 |
-| ~[output@RDI++] ← op@AL;~                                                                   | STOS m8       | AA       |      | ~AA~                            |                                                    |
+| ~[OUTPUT@RDI++] ← op@AL;~                                                                   | STOS m8       | AA       |      | ~AA~                            |                                                    |
 | /# 2. Write ModR/M byte (0x14)./                                                            |               |          |      |                                 |                                                    |
 | ~modrm@AL ← 0x14;~                                                                          | MOV r8, imm8  | B0+rb ib |      | ~B0~ /14/                       | al = _                                             |
-| ~[output@RDI++] ← op@AL;~                                                                   | STOS m8       | AA       |      | ~AA~                            |                                                    |
+| ~[OUTPUT@RDI++] ← op@AL;~                                                                   | STOS m8       | AA       |      | ~AA~                            |                                                    |
 | /# 3. Write SIB byte (0x25)./                                                               |               |          |      |                                 |                                                    |
 | ~sib@AL ← 0x25;~                                                                            | MOV r8, imm8  | B0+rb ib |      | ~B0~ /25/                       | [rdi++] = al                                       |
-| ~[output@RDI++] ← op@AL;~                                                                   | STOS m8       | AA       |      | ~AA~                            |                                                    |
+| ~[OUTPUT@RDI++] ← op@AL;~                                                                   | STOS m8       | AA       |      | ~AA~                            |                                                    |
 | /# 4. Write 4-byte code address./                                                           |               |          |      |                                 |                                                    |
 | ~code@EAX ← xt@EBX;~                                                                        | XCHG EAX, r32 | 90+rd    |      | ~93~                            | eax = ebx                                          |
-| ~[output@RDI++4] ← op@EAX;~                                                                 | STOS m32      | AB       |      | ~AB~                            | [rdi(++4)] = eax                                   |
+| ~[OUTPUT@RDI++4] ← op@EAX;~                                                                 | STOS m32      | AB       |      | ~AB~                            | [rdi(++4)] = eax                                   |
 |                                                                                             |               |          |      |                                 |                                                    |
 | ~return.~  /# From binary interpreter./                                                     | RET           | C3       |      | ~C3~                            | return                                             |
 |                                                                                             |               |          | ~C5~ |                                 |                                                    |
@@ -756,7 +756,7 @@ Why this approach?
 **** ;
 
 #+CAPTION: Subroutine ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting.
-#+LABEL: tbl:forth:colon
+#+LABEL: tbl:forth:semicolon
 #+ATTR_LATEX: :align l|ll|lH
 | *Pseudocode*                              | *Instruction*     | *Opcode*         | *Machine code*                                              | *Intention*          |
 |-------------------------------------------+-------------------+------------------+-------------------------------------------------------------+----------------------|
@@ -780,6 +780,83 @@ Why this approach?
 | /# Switch to interpreting state./         |                   |                  |                                                             |                      |
 | ~lbracket();~  /# Compiled call./         |                   |                  | {{{compile(5B,[)}}}                                         | Call [               |
 | ~return.~                                 | RET               | C3               | ~C3~                                                        | return               |
+
+**** .
+
+#+CAPTION: Subroutine ~'.'~ TODO.
+#+LABEL: tbl:forth:dot
+#+ATTR_LATEX: :align l|ll|lH
+| *Pseudocode*                     | *Instruction*     | *Opcode*         | *Machine code*                          | *Intention*  |
+| /# Define:/ _~.~_                | ---               | ---              | {{{define(01,2E)}}}                     | define .     |
+| /# In/Out: ~( chr -​- )~/         |                   |                  |                                         |              |
+| /#/                              |                   |                  |                                         |              |
+| /# Non-standard name for ~C,~./  |                   |                  |                                         |              |
+| /#/                              |                   |                  |                                         |              |
+| /# Pop a byte off the stack and/ |                   |                  |                                         |              |
+| /# write it to ~OUTPUT~./        |                   |                  |                                         |              |
+|                                  |                   |                  |                                         |              |
+| ~AL ← [R15]~                     | MOV r8, r/m8      | REX 8A /r        | ~41 8A~ {{{modrm(07,00,000,111)}}}      | al = [r15]   |
+| ~R15 += 8;~                      | ADD r/m64, /imm8/ | REX.W 83 /0 /ib/ | ~49 83~ {{{modrm(C7,11,000,111)}}} /08/ | r15 += 8     |
+| ~[RDI++] ← AL;~                  | STOS m8           | AA               | ~AA~                                    | [rdi++] = al |
+| ~return.~                        | RET               | C3               | ~C3~                                    | return       |
+
+**** LIT
+
+#+CAPTION: Subroutine ~'LIT'~ compiles a literal byte into a word definition.
+#+LABEL: tbl:forth:lit
+#+ATTR_LATEX: :align l|ll|lH
+| *Pseudocode*                                                | *Instruction*     | *Opcode*         | *Machine code*                          | *Intention*             |
+|-------------------------------------------------------------+-------------------+------------------+-----------------------------------------+-------------------------|
+| /# Define immediate:/ _~LIT~_                               | ---               | ---              | {{{define(83,4C 49 54)}}}               | define LIT              |
+| /# In/Out: ~( C: x -​- ) ( -- x )~/                          |                   |                  |                                         |                         |
+| /#/                                                         |                   |                  |                                         |                         |
+| /# Pop a byte off the data stack at compile time/           |                   |                  |                                         |                         |
+| /# Compile it as the immediate byte of a PUSH/              |                   |                  |                                         |                         |
+| /# instruction that inserts it on the data stack/           |                   |                  |                                         |                         |
+| /# when the word being defined is executed./                |                   |                  |                                         |                         |
+|                                                             |                   |                  |                                         |                         |
+| /# Let ~lit~ be the top byte on the data stack./            |                   |                  |                                         |                         |
+| /# We will generate three instructions that will/           |                   |                  |                                         |                         |
+| /# effectively push ~lit~ on the data stack at/             |                   |                  |                                         |                         |
+| /# execution time:/                                         |                   |                  |                                         |                         |
+| /# – a SUB instruction that allocates a slot on/            |                   |                  |                                         |                         |
+| /# the data stack;                                          |                   |                  |                                         |                         |
+| /# – a pair of PUSH & POP instructions that copy/           |                   |                  |                                         |                         |
+| /# ~lit~ to the newly allocated slot./                      |                   |                  |                                         |                         |
+|                                                             |                   |                  |                                         |                         |
+| /# 1. SUB instruction:/                                     |                   |                  |                                         |                         |
+| /# – effect: ~R15 -= 8;~/                                   |                   |                  |                                         |                         |
+| /# – instruction: SUB r/m64, imm8/                          |                   |                  |                                         |                         |
+| /# – opcode: REX.W 83 /5 ib/                                |                   |                  |                                         |                         |
+| /# – machine code: ~49 83~ {{{modrm(EF,11,101,111)}}} ~08~/ |                   |                  |                                         |                         |
+| ~EAX ← 0x08EF8349;~                                         | MOV r32, /imm32/  | B8+rd /id/       | ~B8~ /49 83 EF 08/                      | eax = "r15 -= 8"        |
+| ~[OUTPUT@RDI++4] ← EAX;~                                    | STOS m32          | AB               | ~AB~                                    | [rdi(++4)] = eax        |
+|                                                             |                   |                  |                                         |                         |
+| /# 2. PUSH instruction:/                                    |                   |                  |                                         |                         |
+| /# – effect: ~push lit;~/                                   |                   |                  |                                         |                         |
+| /# – instruction: PUSH imm8/                                |                   |                  |                                         |                         |
+| /# – opcode: 6A ib/                                         |                   |                  |                                         |                         |
+| /# – machine code: ~6A ??~ (imm. ignored for now)/          |                   |                  |                                         |                         |
+| /# Here we only write 0x6A to ~OUTPUT~. Note that/          |                   |                  |                                         |                         |
+| /# the three bytes of the next instruction are also/        |                   |                  |                                         |                         |
+| /# loaded in EAX at this step, but not yet written./        |                   |                  |                                         |                         |
+| ~EAX ← 0x078F416A;~                                         | MOV r32, /imm32/  | B8+rd /id/       | ~B8~ /6A 41 8F 07/                      | eax = push x; pop [r15] |
+| ~[OUTPUT@RDI++] ← AL;~  /# Writes only 0x6A./               | STOS m8           | AA               | ~AA~                                    | [rdi++] = al            |
+|                                                             |                   |                  |                                         |                         |
+| /# 3. POP instruction:/                                     |                   |                  |                                         |                         |
+| /# – effect: ~[R15] ← pop;~/                                |                   |                  |                                         |                         |
+| /# – instruction: POP r/m64/                                |                   |                  |                                         |                         |
+| /# – opcode: REX 8F /0/                                     |                   |                  |                                         |                         |
+| /# – machine code: ~41 8F~ {{{modrm(07,00,000,111)}}}/      |                   |                  |                                         |                         |
+| /# Here we write the immediate byte of the PUSH/            |                   |                  |                                         |                         |
+| /# instruction (in AL) and the POP instruction/             |                   |                  |                                         |                         |
+| /# (in the rest of EAX)./                                   |                   |                  |                                         |                         |
+| ~AL ← [stack@R15];~                                         | MOV r8, r/m8      | REX 8A /r        | ~41 8A~ {{{modrm(07,00,000,111)}}}      | al = [r15]              |
+| ~[OUTPUT@RDI++4] ← EAX;~                                    |                   |                  | ~AB~                                    | [rdi(++4)] = eax        |
+|                                                             |                   |                  |                                         |                         |
+| /# Pop ~lit~ off the data stack./                           |                   |                  |                                         |                         |
+| ~stack@R15 += 8;~                                           | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~49 83~ {{{modrm(C7,11,000,111)}}} /08/ | r15 += 8                |
+| ~return.~                                                   | RET               | C3               | ~C3~                                    | return                  |
 
 
 * Notes                                                            :noexport:
