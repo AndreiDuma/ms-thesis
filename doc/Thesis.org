@@ -571,7 +571,7 @@ Why this approach?
 | /# Define:/ _~seek~_                            | /N/A/              | /N/A/            |      | {{{define(04,73 65 65 6B)}}}                       | define seek                                 |
 | /# In/Out:    ~( low@CL high@DL~/               |                    |                  |      |                                                    |                                             |
 | /# {{{c(8)}}} ​~"ccc"~/                          |                    |                  |      |                                                    |                                             |
-| /# {{{c(5)}}}​ ~-​- eflags )~/                    |                    |                  |      |                                                    |                                             |
+| /# {{{c(5)}}}​ ~-​- FLAGS )~/               |                    |                  |      |                                                    |                                             |
 | /#/                                             |                    |                  |      |                                                    |                                             |
 | /# Advance ~>IN~ until next/                    |                    |                  |      |                                                    |                                             |
 | /# char is within ~[low, high)~/                |                    |                  |      |                                                    |                                             |
@@ -674,7 +674,7 @@ Why this approach?
 | ~[STATE] ← pop;~                  | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]          |
 | ~return.~                         | RET           | C3       | ~C3~                                                                              | return               |
 
-**** ]
+**** ]                                                             :noexport:
 
 #+CAPTION: Subroutine ~']'~ changes Forth's ~STATE~ to compiling.
 #+LABEL: tbl:forth:rbracket
@@ -691,7 +691,7 @@ Why this approach?
 | ~[STATE] ← pop;~               | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]       |
 | ~return.~                      | RET           | C3       | ~C3~                                                                              | return            |
 
-**** \
+**** \                                                             :noexport:
 
 #+CAPTION: Subroutine ~'\'~ implements line comments.
 #+LABEL: tbl:forth:backslash
@@ -708,7 +708,7 @@ Why this approach?
 | ~[>IN] ← RAX;~                  | MOV r/m64, r64 | REX.W 89 /r | ~48 89~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(10 00 00 10)}}} | [>IN] = rax |
 | ~return.~                       | RET            | C3          | ~C3~                                                                                 | return      |
 
-**** (
+**** (                                                             :noexport:
 
 #+CAPTION: Subroutine ~'('~ implements inline comments (ending with a corresponding ~')'~).
 #+LABEL: tbl:forth:lparen
@@ -725,7 +725,7 @@ Why this approach?
 | ~PARSE();~  /# Compiled call./             | /N/A/          | /N/A/      | {{{compile(50,P)}}} | Call PARSE            Forth 2012 implies comment ends at rparen or newline. |
 | ~return.~                                  | RET            | C3         | ~C3~                | return                                                                      |
 
-**** :
+**** :                                                             :noexport:
 
 #+CAPTION: Subroutine ~:~ (colon) begins compiling a word after setting up its dictionary entry.
 #+LABEL: tbl:forth:colon
@@ -753,7 +753,7 @@ Why this approach?
 | ~rbracket();~  /# Compiled call./         | ---               | ---               | {{{compile(5D,])}}}                       | Call ]                                 |
 | ~return.~                                 | RET               | C3                | ~C3~                                      | return                                 |
 
-**** ;
+**** ;                                                             :noexport:
 
 #+CAPTION: Subroutine ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting.
 #+LABEL: tbl:forth:semicolon
@@ -781,7 +781,7 @@ Why this approach?
 | ~lbracket();~  /# Compiled call./         |                   |                  | {{{compile(5B,[)}}}                                         | Call [               |
 | ~return.~                                 | RET               | C3               | ~C3~                                                        | return               |
 
-**** .
+**** .                                                             :noexport:
 
 #+CAPTION: Subroutine ~'.'~ TODO.
 #+LABEL: tbl:forth:dot
@@ -800,7 +800,7 @@ Why this approach?
 | ~[RDI++] ← AL;~                  | STOS m8           | AA               | ~AA~                                    | [rdi++] = al |
 | ~return.~                        | RET               | C3               | ~C3~                                    | return       |
 
-**** LIT
+**** LIT                                                           :noexport:
 
 #+CAPTION: Subroutine ~'LIT'~ compiles a literal byte into a word definition.
 #+LABEL: tbl:forth:lit
@@ -858,9 +858,63 @@ Why this approach?
 | ~stack@R15 += 8;~                                           | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~49 83~ {{{modrm(C7,11,000,111)}}} /08/ | r15 += 8                |
 | ~return.~                                                   | RET               | C3               | ~C3~                                    | return                  |
 
+**** xt=
+
+#+CAPTION: Subroutine ~'xt='~ compares an execution token's name with a given string.
+#+LABEL: tbl:forth:xt=
+#+ATTR_LATEX: :align l|ll|l|lH
+| *Pseudocode*                                       | *Instruction*     | *Opcode*         | *&*  | *Machine code*                                     | *Intention*             |
+|----------------------------------------------------+-------------------+------------------+------+----------------------------------------------------+-------------------------|
+| /# Define:/ _~xt=~_                                | ---               | ---              |      | {{{define(03,78 74 3D)}}}                          | define xt=              |
+| /# In/Out:    ~( addr@RBP u@RAX xt@RBX~/           |                   |                  |      |                                                    |                         |
+| /# {{{c(6)}}}​~-​- xt@RBX ?@RAX ?@RDI~/              |                   |                  |      |                                                    |                         |
+| /# {{{c(8)}}}   ~FLAGS )~/                         |                   |                  |      |                                                    |                         |
+| /#/                                                |                   |                  |      |                                                    |                         |
+| /# Checks if execution token ~xt~ is/              |                   |                  |      |                                                    |                         |
+| /# either zero or is not hidden and/               |                   |                  |      |                                                    |                         |
+| /# its name matches the string given/              |                   |                  |      |                                                    |                         |
+| /# by address ~addr~ and length ~u~./              |                   |                  |      |                                                    |                         |
+|                                                    |                   |                  |      |                                                    |                         |
+| {{{c(2)}}} /# Return if ~xt~ is zero (~ZF~ set)./  |                   |                  |      |                                                    |                         |
+| {{{c(2)}}} ~if xt@RBX & xt@RBX != 0:~              | TEST r/m64, r64   | REX.W 85 /r      |      | ~48 85~ {{{modrm(DB,11,011,011)}}}                 | rbx(xt) ?               |
+| {{{c(4)}}}   ~goto _nonzero;~                      | JNZ _rel8_        | 75 _cb_          |      | ~75~ {{{offset(01,01-00)}}}                        | +jump _nonzero if != 0  |
+| {{{c(2)}}} ~return.~                               | RET               | C3               | ~00~ | ~C3~                                               | return                  |
+| ~_nonzero:~                                        |                   |                  | ~01~ |                                                    | _nonzero:               |
+| {{{c(2)}}} /# Save ~u~ in RCX; to be used later./  |                   |                  |      |                                                    |                         |
+| {{{c(2)}}} ~u@RCX ← u@RAX;~                        | MOV r64, r/m64    | REX.W 8B /r      |      | ~48 8B~ {{{modrm(C8,11,001,000)}}}                 | rcx = rax(u)            |
+| {{{c(2)}}} /# Point RSI to the flag field./        |                   |                  |      |                                                    |                         |
+| {{{c(2)}}} ~RSI ← xt@RBX + 0x10;~                  | LEA r64,m         | REX.W 8D /r      |      | ~48 8D~ {{{modrm(73,01,110,011)}}} {{{displ(10)}}} | rsi = rbx(xt) + 10      |
+| {{{c(2)}}} /# Extract flag and advance RSI/        |                   |                  |      |                                                    |                         |
+| {{{c(2)}}} /# to the name field (used later)./     |                   |                  |      |                                                    |                         |
+| {{{c(2)}}} ~flag@AL ← [RSI++];~                    | LODS m8           | AC               |      | ~AC~                                               | al = [rsi++]            |
+| {{{c(2)}}} /# Return if hidden word (~ZF~ unset)./ |                   |                  |      |                                                    |                         |
+| {{{c(2)}}} ~if flag@AL & 0x40 = 0:~                | TEST AL, /imm8/   | A8 /ib/          |      | ~A8~ /~40~/                                        | al & 40(HIDDEN) ?       |
+| {{{c(4)}}}   ~goto _unhidden;~                     | JZ _rel8_         | 74 _cb_          |      | ~74~ {{{offset(01,0E-0D)}}}                        | +jump _unhidden if == 0 |
+| {{{c(2)}}} ~return.~                               | RET               | C3               | ~0D~ | ~C3~                                               | return                  |
+| ~_unhidden:~                                       |                   |                  | ~0E~ |                                                    | _unhidden:              |
+| {{{c(2)}}} /# Keep only name length in RAX./       |                   |                  |      |                                                    |                         |
+| {{{c(2)}}} ~length@RAX ← flag@RAX & 0x1F;~         | AND r/m64, /imm8/ | REX.W 83 /​4 /ib/ |      | ~48 83~ {{{modrm(E0,11,100,000)}}} /~1F~/          | rax &= 1F(Length)       |
+| {{{c(2)}}} /# Return if length doesn't match/      |                   |                  |      |                                                    |                         |
+| {{{c(2)}}} /# (~ZF~ unset)./                       |                   |                  |      |                                                    |                         |
+| {{{c(2)}}} ~if length@RAX = u@RCX:~                | CMP r/m64, r64    | REX.W 39 /r      |      | ~48 39~ {{{modrm(C8,11,001,000)}}}                 | cmp rax, rcx            |
+| {{{c(4)}}}   ~goto _lengthEq;~                     | JE _rel8_         | 74 _cb_          |      | ~74~ {{{offset(01,18-17)}}}                        | +jump _lengthEq if ==   |
+| {{{c(2)}}} ~return.~                               | RET               | C3               | ~17~ | ~C3~                                               | return                  |
+| ~_lengthEq:~                                       |                   |                  | ~18~ |                                                    | _lengthEq:              |
+| {{{c(2)}}} /# Compare ~addr~ and ~name@RSI~/       |                   |                  |      |                                                    |                         |
+| {{{c(2)}}} /# upto length ~u~./                    |                   |                  |      |                                                    |                         |
+| {{{c(2)}}} ~addr@RDI ← addr@RBP;~                  | MOV r64, r/m64    | REX.W 8B /r      |      | ~48 8B~ {{{modrm(FD,11,111,101)}}}                 | rdi = rbp               |
+| {{{c(2)}}} ~strncmp(name@RSI,~                     |                   |                  |      |                                                    |                         |
+| {{{c(10)}}}        ~addr@RDI,~                     |                   |                  |      |                                                    |                         |
+| {{{c(10)}}}        ~u@RCX);~  /# (Un)sets ~ZF~./   | REPE CMPS m8, m8  | F3 A6            |      | ~F3 A6~                                            | strings equal ?         |
+| {{{c(2)}}} ~return.~                               | RET               | C3               |      | ~C3~                                               | return                  |
+
 
 * Notes                                                            :noexport:
 
+*** Sections that I should include in the thesis
+- Call graph of the subroutines to show how they are related.
+- Comparison between SmithForth, sectorforth, milliForth, other (?).
+  
 *** Useful Sections in the Intel Manual
 
 Volume 2:

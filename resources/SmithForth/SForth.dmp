@@ -419,8 +419,6 @@ B8 6A 41 8F 07 AA       # eax = push x ; pop [r15]  push i8 ; pop r/m64 6A ib;RE
 49 83 C7 08             # r15 += 8                  add r/m64, imm8     REX.W 83 /0 ib  11 000 111
 C3                      # return                    ret                 C3
 
-===============================================================================================================================================
-
 99 03 78 74 3D ########## xt= ( rbp=addr rax=u rbx=xt -- rbx=xt rax=? rdi=? eflags ) rbx == 0 or unhidden and matches
 48 85 DB                # rbx(xt) ?                 test r/m64, r64     REX.W 85 /r     11 011 011
 75 01                   #+jump _nonzero if != 0     jnz rel8            75 cb
@@ -441,6 +439,8 @@ C3                      # return                    ret                 C3
 48 8B FD                # rdi = rbp                 mov r64, r/m64      REX.W 8B /r     11 111 101
 F3 A6                   # strings equal ?           repe cmps m8, m8    F3 A6
 C3                      # return                    ret                 C3
+
+===============================================================================================================================================
 
 99 04 46 49 4E 44 ####### FIND ( rbp=addr rax=u -- rbp=addr rax=u rbx=xt ) xt==0 if not found ====
 48 8B 1C 25 28 00 00 10 # rbx = [Latest]            mov r64, r/m64      REX.W 8B /r     00 011 100  00 100 101
