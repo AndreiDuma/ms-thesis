@@ -802,7 +802,7 @@ Why this approach?
 
 **** LIT                                                           :noexport:
 
-#+CAPTION: Subroutine ~'LIT'~ compiles a literal byte into a word definition.
+#+CAPTION: Subroutine ~LIT~ compiles a literal byte into a word definition.
 #+LABEL: tbl:forth:lit
 #+ATTR_LATEX: :align l|ll|lH
 | *Pseudocode*                                                | *Instruction*     | *Opcode*         | *Machine code*                          | *Intention*             |
@@ -858,17 +858,17 @@ Why this approach?
 | ~stack@R15 += 8;~                                           | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~49 83~ {{{modrm(C7,11,000,111)}}} /08/ | r15 += 8                |
 | ~return.~                                                   | RET               | C3               | ~C3~                                    | return                  |
 
-**** xt=
+**** xt=                                                           :noexport:
 
-#+CAPTION: Subroutine ~'xt='~ compares an execution token's name with a given string.
+#+CAPTION: Subroutine ~xt=~ compares an execution token's name with a given string.
 #+LABEL: tbl:forth:xt=
 #+ATTR_LATEX: :align l|ll|l|lH
 | *Pseudocode*                                       | *Instruction*     | *Opcode*         | *&*  | *Machine code*                                     | *Intention*             |
 |----------------------------------------------------+-------------------+------------------+------+----------------------------------------------------+-------------------------|
 | /# Define:/ _~xt=~_                                | ---               | ---              |      | {{{define(03,78 74 3D)}}}                          | define xt=              |
 | /# In/Out:    ~( addr@RBP u@RAX xt@RBX~/           |                   |                  |      |                                                    |                         |
-| /# {{{c(6)}}}​~-​- xt@RBX ?@RAX ?@RDI~/              |                   |                  |      |                                                    |                         |
-| /# {{{c(8)}}}   ~FLAGS )~/                         |                   |                  |      |                                                    |                         |
+| /# {{{c(6)}}}​~-​- xt@RBX FLAGS~/                    |                   |                  |      |                                                    |                         |
+| /# {{{c(8)}}}   ~?@RAX ?@RDI )~/                   |                   |                  |      |                                                    |                         |
 | /#/                                                |                   |                  |      |                                                    |                         |
 | /# Checks if execution token ~xt~ is/              |                   |                  |      |                                                    |                         |
 | /# either zero or is not hidden and/               |                   |                  |      |                                                    |                         |
@@ -908,10 +908,53 @@ Why this approach?
 | {{{c(10)}}}        ~u@RCX);~  /# (Un)sets ~ZF~./   | REPE CMPS m8, m8  | F3 A6            |      | ~F3 A6~                                            | strings equal ?         |
 | {{{c(2)}}} ~return.~                               | RET               | C3               |      | ~C3~                                               | return                  |
 
+**** FIND
+
+#+CAPTION: Subroutine ~FIND~ searches the dictionary for a word matching a given name.
+#+LABEL: tbl:forth:find
+#+ATTR_LATEX: :align l|ll|l|lH
+| *Pseudocode*                               | *Instruction*  | *Opcode*    | *&*  | *Machine code*                                              | *Intention*      |
+|--------------------------------------------+----------------+-------------+------+-------------------------------------------------------------+------------------|
+| /# Define:/ _~FIND~_                       | ---            | ---         |      | {{{define(04,46 49 4E 44)}}}                                | define FIND      |
+| /# In/Out:    ~( addr@RBP u@RAX~/          |                |             |      |                                                             |                  |
+| /# {{{c(6)}}}​~-​- addr@RBP u@RAX~/          |                |             |      |                                                             |                  |
+| /# {{{c(8)}}}   ~xt@RBX )~/                |                |             |      |                                                             |                  |
+| /#/                                        |                |             |      |                                                             |                  |
+| /# Search the dictionary for a/            |                |             |      |                                                             |                  |
+| /# word with name matching/                |                |             |      |                                                             |                  |
+| /# ~addr~​/​~u~. Return ~xt = 0~ if/         |                |             |      |                                                             |                  |
+| /# no matching word is found./             |                |             |      |                                                             |                  |
+|                                            |                |             |      |                                                             |                  |
+| {{{c(2)}}} /# Begin search at ~LATEST~./   |                |             |      |                                                             |                  |
+| {{{c(2)}}} ~xt@RBX ← [LATEST];~            | MOV r64, r/m64 | REX.W 8B /r |      | ~48 8B~ {{{modrm(1C,00,011,100)}}} {{{sib(25,00,100,101)}}} | rbx = [Latest]   |
+|                                            |                |             |      | \hookrightarrow {{{c(2)}}} {{{displ(28 00 00 10)}}}         |                  |
+| ~_beg:~                                    |                |             | ~00~ |                                                             | # _beg:          |
+| {{{c(2)}}} ~call FIND();~                  | CALL _rel32_   | E8 _cd_     |      | ~E8~ {{{offset(03 00 00 00,05-02)}}}                        | +call (FIND)     |
+| {{{c(2)}}} ~if !ZF:~                       |                |             | ~05~ |                                                             |                  |
+| {{{c(4)}}}   ~goto _beg;~                  | JNE _rel8_     | 75 _cb_     |      | ~75~ {{{offset(F9,00-07)}}}                                 | -jump _beg if != |
+| {{{c(2)}}} ~return.~                       | RET            | C3          | ~07~ | ~C3~                                                        | return           |
+| ~FIND():~                                  |                |             | ~08~ |                                                             | (FIND):          |
+| {{{c(2)}}} /# Save registers./             |                |             |      |                                                             |                  |
+| {{{c(2)}}} ~push RAX;~                     | PUSH r64       | 50+rd       |      | ~50~                                                        | push rax         |
+| {{{c(2)}}} ~push RDI;~                     | PUSH r64       | 50+rd       |      | ~57~                                                        | push rdi         |
+| {{{c(2)}}} /# Does ~xt~ match ~addr~​/​~u~?/ |                |             |      |                                                             |                  |
+| {{{c(2)}}} ~call xt=();~ /# Compiled./     | ---            | ---         |      | {{{compile(78,x)}}}                                         | Call xt=         |
+| {{{c(2)}}} ~pop RDI;~                      | POP r64        | 58+rd       |      | ~5F~                                                        | pop rdi          |
+| {{{c(2)}}} ~pop RAX;~                      | POP r64        | 58+rd       |      | ~58~                                                        | pop rax          |
+| {{{c(2)}}} /# If matched, we're done!/     |                |             |      |                                                             |                  |
+| {{{c(2)}}} /# Otherwise, follow ~xt~'s/    |                |             |      |                                                             |                  |
+| {{{c(2)}}} /# link pointer./               |                |             |      |                                                             |                  |
+| {{{c(2)}}} ~if ZF:~  /# Set by ~xt=()~./   | JE _rel8_      | 74 _cb_     |      | ~74~ {{{offset(04,14-10)}}}                                 | +jump _end if == |
+| {{{c(4)}}}   ~goto _end;~                  |                |             | ~10~ |                                                             |                  |
+| {{{c(2)}}} ~RBX ← [RBX+8];~                | MOV r64, r/m64 | REX.W 8B /r |      | ~48 8B~ {{{modrm(5B,01,011,011)}}} {{{displ(08)}}}          | rbx = [rbx+8]    |
+| ~_end:~                                    |                |             | ~14~ |                                                             | # _end:          |
+| {{{c(2)}}} ~return.~                       | RET            | C3          |      | ~C3~                                                        | return           |
+
 
 * Notes                                                            :noexport:
 
 *** Sections that I should include in the thesis
+- Legend explaining the typographic conventions.
 - Call graph of the subroutines to show how they are related.
 - Comparison between SmithForth, sectorforth, milliForth, other (?).
   
