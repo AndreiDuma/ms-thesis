@@ -50,11 +50,14 @@
 #+MACRO:   sib   ~$1~​$^{\text{\tiny    SIB}}_{\text{\tiny $1·$2·$3}}$
 #+MACRO: offset  _~$1~_​$_{\text{\tiny $2}}$
 #+MACRO: displ   $^{\text{\tiny +}}$​_~$1~_
+
+# --- Byte interpreter macros.
 #+MACRO: define  ~[99~ $^{d}$​~$1~ _~$2~_​~]~
 #+MACRO: compile ~[99~ $^{c}$​~$1~​$_{$2}$​~]~
 #+MACRO: execute ~[99~ $^{e}$​~$1~​$_{$2}$​~]~
 
 # -- Other annotation macros.
+#+MACRO: addr     (eval (if (string-equal $1 "00") (format "$\\overline{\\texttt{%s}}$" $1) (format "\\texttt{%s}" $1)))
 #+MACRO: unsigned $^{u}$
 
 # Additional options are set in `.dir-locals.el`.
@@ -820,7 +823,7 @@ Why this approach?
 | /# effectively push ~lit~ on the data stack at/             |                   |                  |                                         |                         |
 | /# execution time:/                                         |                   |                  |                                         |                         |
 | /# – a SUB instruction that allocates a slot on/            |                   |                  |                                         |                         |
-| /# the data stack;                                          |                   |                  |                                         |                         |
+| /# the data stack;/                                         |                   |                  |                                         |                         |
 | /# – a pair of PUSH & POP instructions that copy/           |                   |                  |                                         |                         |
 | /# ~lit~ to the newly allocated slot./                      |                   |                  |                                         |                         |
 |                                                             |                   |                  |                                         |                         |
@@ -908,7 +911,7 @@ Why this approach?
 | {{{c(10)}}}        ~u@RCX);~  /# (Un)sets ~ZF~./   | REPE CMPS m8, m8  | F3 A6            |      | ~F3 A6~                                            | strings equal ?         |
 | {{{c(2)}}} ~return.~                               | RET               | C3               |      | ~C3~                                               | return                  |
 
-**** FIND
+**** FIND                                                          :noexport:
 
 #+CAPTION: Subroutine ~FIND~ searches the dictionary for a word matching a given name.
 #+LABEL: tbl:forth:find
@@ -950,11 +953,62 @@ Why this approach?
 | ~_end:~                                    |                |             | ~14~ |                                                             | # _end:          |
 | {{{c(2)}}} ~return.~                       | RET            | C3          |      | ~C3~                                                        | return           |
 
+**** Num
+
+#+CAPTION: Subroutine ~Num~ parses a character string as a number and returns it on the stack.
+#+LABEL: tbl:forth:num
+#+ATTR_LATEX: :align l|ll|l|lH
+| *Pseudocode*                             | *Instruction*     | *Opcode*         | *&*            | *Machine code*                            | *Intention*        |
+|------------------------------------------+-------------------+------------------+----------------+-------------------------------------------+--------------------|
+| /# Define:/ _~Num~_                      | ---               | ---              |                | {{{define(03,4E 75 6D)}}}                 | define Num         |
+| /# In/Out:    ~( addr@RBP u@RAX~/        |                   |                  |                |                                           |                    |
+| /# {{{c(6)}}}​~-​- n )~/                   |                   |                  |                |                                           |                    |
+| /#/                                      |                   |                  |                |                                           |                    |
+| /# Parse string given by ~addr~​/​~u~/     |                   |                  |                |                                           |                    |
+| /# as a number and return it on/         |                   |                  |                |                                           |                    |
+| /# the data stack./                      |                   |                  |                |                                           |                    |
+|                                          |                   |                  |                |                                           |                    |
+| {{{c(2)}}} /# Allocate stack space for/  |                   |                  |                |                                           |                    |
+| {{{c(2)}}} /# the parsed number./        |                   |                  |                |                                           |                    |
+| {{{c(2)}}} ~stack@R15 -= 8;~             | SUB r/m64, /imm8/ | REX.W 83 /​5 /ib/ |                | ~49 83~ {{{modrm(EF,11,101,111)}}} /~08~/ | r15 -= 8           |
+| {{{c(2)}}} ~[stack@R15] ← 0;~            | AND r/m64, /imm8/ | REX.W 83 /​4 /ib/ |                | ~49 83~ {{{modrm(27,00,100,111)}}} /~00~/ | [r15] = 0          |
+| {{{c(2)}}} ~u@RCX ← u@RAX;~              | MOV r/m64, r64    | REX.W 89 /r      |                | ~48 89~ {{{modrm(C1,11,000,001)}}}        | rcx = rax          |
+| {{{c(2)}}} ~addr@RSI ← addr@RBP;~        | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(F5,11,110,101)}}}        | rsi = rbp          |
+| ~_beg:~                                  |                   |                  | {{{addr(00)}}} |                                           | # _beg:            |
+| {{{c(2)}}} /# Parse one digit./          |                   |                  |                |                                           |                    |
+| {{{c(2)}}} ~call Num();~                 | CALL _rel32_      | E8 _cd_          |                | ~E8~ {{{offset(03 00 00 00,08-05)}}}      | +call (Num)        |
+| {{{c(2)}}} /# Repeat while there are/    |                   |                  |                |                                           |                    |
+| {{{c(2)}}} /# unparsed characters left./ |                   |                  |                |                                           |                    |
+| {{{c(2)}}} ~if --u@RCX != 0:~            |                   |                  | {{{addr(05)}}} |                                           |                    |
+| {{{c(4)}}}   ~goto _beg;~                | LOOP _rel8_       | E2 _cb_          |                | ~E2~ {{{offset(F9,00-07)}}}               | -jump beg if --rcx |
+| {{{c(2)}}} ~return.~                     | RET               | C3               | {{{addr(07)}}} | ~C3~                                      | return             |
+| ~Num():~                                 |                   |                  | {{{addr(08)}}} |                                           | (Num)              |
+| {{{c(2)}}} ~chr@AL ← [addr@RSI++];~      | LODS m8           | AC               |                | ~AC~                                      | al = [rsi++]       |
+| {{{c(2)}}} ~if chr@AL < 'A':~            | CMP AL, /imm8/    | 3C /ib/          |                | ~3C~ /~41~/                               | cmp al, 'A'        |
+| {{{c(4)}}}   /# It's a digit./           |                   |                  |                |                                           |                    |
+| {{{c(4)}}}   ~goto _digit;~              | JL _rel8_         | 7C _cb_          |                | ~7C~ {{{offset(02,02-00)}}}               | +jump _digit if <  |
+| {{{c(2)}}} /# It's a letter./            |                   |                  | {{{addr(00)}}} |                                           | # _letter:         |
+| {{{c(2)}}} ~chr@AL -= 7;~                | SUB AL, /imm8/    | 2C /ib/          |                | ~2C~ /~07~/                               | al -= 7            |
+| ~_digit:~                                |                   |                  | {{{addr(02)}}} |                                           | # _digit:          |
+| {{{c(2)}}} ~digit@AL = chr@AL - '0';~    | SUB AL, /imm8/    | 2C /ib/          |                | ~2C~ /~30~/                               | al -= 30           |
+| {{{c(2)}}} /# Multiply by base and add/  |                   |                  |                |                                           |                    |
+| {{{c(2)}}} /# the new digit./            |                   |                  |                |                                           |                    |
+| {{{c(2)}}} ~[stack@R15] <<= 4~;          | SAL r/m64, /imm8/ | REX.W C1 /​4 /ib/ |                | ~49 C1~ {{{modrm(27,00,100,111)}}} /~04~/ | [r15] <<= 4        |
+| {{{c(2)}}} ~[stack@R15]~ \vert​~= digit@RAX;~ | OR r/m64, r64     | REX.W 09 /r      |                | ~49 09~ {{{modrm(07,00,000,111)}}}        | [r15] \vert= rax       |
+| {{{c(2)}}} ~return.~                     | RET               | C3               |                | ~C3~                                      | return             |
+
 
 * Notes                                                            :noexport:
 
+*** TODOs
+- [ ] Convert all *&* columns to use the ~addr~ macro.
+  + [ ] Find places where it makes sense to restart count.
+- [ ] Add a ~rex~ macro to annotate the REX byte?
+- [ ] Properly align /In/Out/ sections.
+  
 *** Sections that I should include in the thesis
 - Legend explaining the typographic conventions.
+  - Do it by column for the code tables.
 - Call graph of the subroutines to show how they are related.
 - Comparison between SmithForth, sectorforth, milliForth, other (?).
   
@@ -979,6 +1033,11 @@ and that "the simplicity of the integer subset permits basic student
 exercises". This is probably the ideal ISA to target after
 =x86-64=. All work done for x86 could be relegated to an appendix so
 that it's not wasted.
+
+*** RISC-V Forth implementations
+- https://github.com/jjyr/jonesforth_riscv
+- https://github.com/theandrew168/derzforth
+- https://github.com/mcmenaminadrian/riscyforth
 
 
 * Footnotes
