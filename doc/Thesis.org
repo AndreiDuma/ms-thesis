@@ -953,7 +953,7 @@ Why this approach?
 | ~_end:~                                    |                |             | ~14~ |                                                             | # _end:          |
 | {{{c(2)}}} ~return.~                       | RET            | C3          |      | ~C3~                                                        | return           |
 
-**** Num
+**** Num                                                           :noexport:
 
 #+CAPTION: Subroutine ~Num~ parses a character string as a number and returns it on the stack.
 #+LABEL: tbl:forth:num
@@ -996,6 +996,45 @@ Why this approach?
 | {{{c(2)}}} ~[stack@R15] <<= 4~;          | SAL r/m64, /imm8/ | REX.W C1 /​4 /ib/ |                | ~49 C1~ {{{modrm(27,00,100,111)}}} /~04~/ | [r15] <<= 4        |
 | {{{c(2)}}} ~[stack@R15]~ \vert​~= digit@RAX;~ | OR r/m64, r64     | REX.W 09 /r      |                | ~49 09~ {{{modrm(07,00,000,111)}}}        | [r15] \vert= rax       |
 | {{{c(2)}}} ~return.~                     | RET               | C3               |                | ~C3~                                      | return             |
+
+**** miss
+
+#+CAPTION: Subroutine ~miss~ attempts parsing a word as a number, optionally compiling it as a literal.
+#+LABEL: tbl:forth:miss
+#+ATTR_LATEX: :align l|ll|l|lH
+| *Pseudocode*                             | *Instruction*     | *Opcode*    | *&*            | *Machine code*                                           | *Intention*           |
+|------------------------------------------+-------------------+-------------+----------------+----------------------------------------------------------+-----------------------|
+| /# Define:/ _~miss~_                     | ---               | ---         |                | {{{define(04,6D 69 73 73)}}}                             | define miss           |
+| /# In/Out:     ~( addr@RBP u@RAX~/       |                   |             |                |                                                          |                       |
+| /#{{{c(9)}}}    ~xt@RXB~/                |                   |             |                |                                                          |                       |
+| /#{{{c(6)}}}​~-​- [n] xt@RXB )~/           |                   |             |                |                                                          |                       |
+| /#/                                      |                   |             |                |                                                          |                       |
+| /# If ~xt~ is zero, try parsing/         |                   |             |                |                                                          |                       |
+| /# the string given by ~addr~​/​~u~/       |                   |             |                |                                                          |                       |
+| /# as a number. If successful/           |                   |             |                |                                                          |                       |
+| /# and if we're in compiling/            |                   |             |                |                                                          |                       |
+| /# state, compile the number/            |                   |             |                |                                                          |                       |
+| /# as a literal./                        |                   |             |                |                                                          |                       |
+|                                          |                   |             |                |                                                          |                       |
+| {{{c(2)}}} ~if xt@RBX = 0:~              | TEST r/m64, r64   | REX.W 85 /r |                | ~48 85~ {{{modrm(DB,11,011,011)}}}                       | rbx(xt) ?             |
+| {{{c(4)}}}   ~goto miss();~              | JZ _rel8_         | 74 _cb_     |                | ~74~ {{{offset(01,01-00)}}}                              | +jump (miss) if == 0  |
+| {{{c(2)}}} ~return.~                     | RET               | C3          | {{{addr(00)}}} | ~C3~                                                     | return                |
+| ~miss():~                                |                   |             | {{{addr(01)}}} |                                                          | (miss)                |
+| {{{c(2)}}} /# We shouldn't call ~Num()~/ |                   |             |                |                                                          |                       |
+| {{{c(2)}}} /# with ~u~ equal to zero./   |                   |             |                |                                                          |                       |
+| {{{c(2)}}} ~if u@RAX != 0:~              | TEST r/m64, r64   | REX.W 85 /r |                | ~48 85~ {{{modrm(C0,11,000,000)}}}                       | rax(u) ?              |
+| {{{c(4)}}}   ~goto _nonempty;~           | JNE _rel8_        | 75 _cb_     |                | ~75~ {{{offset(01,01-00)}}}                              | +jump _nonempty if != |
+| {{{c(2)}}} ~return.~                     | RET               | C3          | {{{addr(00)}}} | ~C3~                                                     | return                |
+| ~_nonempty:~                             |                   |             | {{{addr(01)}}} |                                                          | # _nonempty:          |
+| {{{c(2)}}} ~Num();~  /# Compiled./       |                   |             |                | {{{compile(4E,N)}}}                                      | Call Num              |
+| {{{c(2)}}} ~if [STATE] & 1 != 0:~        | TEST r/m8, /imm8/ | F6 /​0 /ib/  |                | ~F6~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,000,100)}}} | [STATE] ?             |
+| {{{c(4)}}}   /# Compile top of stack/    |                   |             |                | \hookrightarrow {{{displ(20 00 00 10)}}} /~01~/          |                       |
+| {{{c(4)}}}   /# number as literal./      |                   |             |                |                                                          |                       |
+| {{{c(4)}}}   ~goto _lit;~                | JNZ _rel8_        | 75 _cb_     |                | ~75~ {{{offset(01,01-00)}}}                              | +jump _lit if != 0    |
+| {{{c(2)}}} ~return.~                     | RET               | C3          | {{{addr(00)}}} | ~C3~                                                     | return                |
+| ~_lit:~                                  |                   |             | {{{addr(01)}}} |                                                          | # _lit:               |
+| {{{c(2)}}} ~LIT();~  /# Compiled./       |                   |             |                | {{{compile(4C,L)}}}                                      | Call LIT              |
+| {{{c(2)}}} ~return.~                     | RET               | C3          |                | ~C3~                                                     | return                |
 
 
 * Notes                                                            :noexport:
