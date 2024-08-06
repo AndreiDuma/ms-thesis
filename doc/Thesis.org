@@ -1138,6 +1138,35 @@ Why this approach?
 | {{{c(2)}}} ~call exec;~  /# Compiled./    |                 |             |                | {{{compile(65,e)}}}                                      | Call exec           |
 | {{{c(2)}}} ~return.~                      | RET             | C3          |                | ~C3~                                                     | return              |
 
+*** SVAL
+
+#+CAPTION: Subroutine ~SVAL~ ???.
+#+LABEL: tbl:forth:SVAL
+#+ATTR_LATEX: :align l|ll|l|lH
+| *Pseudocode*                                      | *Instruction*  | *Opcode*    | *&*            | *Machine code*                                              | *Intention*     |
+|---------------------------------------------------+----------------+-------------+----------------+-------------------------------------------------------------+-----------------|
+| /# Define:/ _~SVAL~_                              | ---            | ---         |                | {{{define(04,53 56 41 4C)}}}                                | define SVAL     |
+| /# In/Out: ~( i*x -- j*x )~/                      |                |             |                |                                                             |                 |
+| /#/                                               |                |             |                |                                                             |                 |
+| /# ???/                                           |                |             |                |                                                             |                 |
+| /# ???/                                           |                |             |                |                                                             |                 |
+|                                                   |                |             |                |                                                             |                 |
+| ~_SVAL:~                                          |                |             | {{{addr(00)}}} |                                                             |                 |
+| {{{c(2)}}} ~call SVAL();~                         | CALL _rel32_   | E8 _cd_     |                | ~E8~ {{{offset(03 00 00 00,08-05)}}}                        | +call (SVAL)    |
+| {{{c(2)}}} ~if ???:~                              |                |             | {{{addr(05)}}} |                                                             |                 |
+| {{{c(4)}}}   ~goto _SVAL;~                        | JL _rel8_      | 7C _cb_     |                | ~7C~ {{{offset(F9,00-07)}}}                                 | -jump SVAL if < |
+| {{{c(2)}}} ~return.~                              | RET            | C3          | {{{addr(07)}}} | ~C3~                                                        | return          |
+| ~SVAL():~                                         |                |             | {{{addr(08)}}} |                                                             | (SVAL)          |
+| {{{c(2)}}} ~call pname;~  {{{c(0)}}}​/# Compiled./ |                |             |                | {{{compile(70,p)}}}                                         | Call pname      |
+| {{{c(2)}}} ~call FIND;~   {{{c(1)}}}​/# Compiled./ |                |             |                | {{{compile(46,F)}}}                                         | Call FIND       |
+| {{{c(2)}}} ~call miss;~   {{{c(1)}}}​/# Compiled./ |                |             |                | {{{compile(6D,m)}}}                                         | Call miss       |
+| {{{c(2)}}} ~call hit;~    {{{c(2)}}}​/# Compiled./ |                |             |                | {{{compile(68,h)}}}                                         | Call hit        |
+| {{{c(2)}}} ~RAX ← [>IN];~                         | MOV r64, r/m64 | REX.W 8B /r |                | ~48 8B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | rax = [>IN]     |
+|                                                   |                |             |                | \hookrightarrow {{{i(0)}}} {{{displ(10 00 00 10)}}}         |                 |
+| {{{c(2)}}} ~???~                                  | CMP r64, r/m64 | REX.W 3B /r |                | ~48 3B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | cmp rax, [#IN]  |
+|                                                   |                |             |                | \hookrightarrow {{{i(0)}}} {{{displ(00 00 00 10)}}}         |                 |
+| {{{c(2)}}} ~return.~                              | RET            | C3          |                | ~C3~                                                        | return          |
+
 
 * Notes                                                            :noexport:
 
