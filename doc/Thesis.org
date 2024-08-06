@@ -1067,46 +1067,76 @@ Why this approach?
 
 **** exec
 
-#+CAPTION: Subroutine ~exec~ ???.
+#+CAPTION: Subroutine ~exec~ executes a word if interpreting or if it's immediate.
 #+LABEL: tbl:forth:exec
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                           | *Instruction*  | *Opcode* | *&*            | *Machine code*               | *Intention*        |
-|----------------------------------------+----------------+----------+----------------+------------------------------+--------------------|
-| /# Define:/ _~exec~_                   | ---            | ---      |                | {{{define(04,65 78 65 63)}}} | define exec        |
-| /# In/Out: ~( AL xt@RBX -- )~/         |                |          |                |                              |                    |
-| /#/                                    |                |          |                |                              |                    |
-| /# iff al != 1/                        |                |          |                |                              |                    |
-| /# ???/                                |                |          |                |                              |                    |
-| /# ???/                                |                |          |                |                              |                    |
-|                                        |                |          |                |                              |                    |
-| {{{c(2)}}} ~if AL != 1:~               | CMP AL, /imm8/ | 3C /ib/  |                | ~3C~ /~01~/                  | cmp al, 1          |
-| {{{c(4)}}}   ~goto exec().~            | JNE _rel8_     | 75 _cb_  |                | ~75~ {{{offset(01,01-00)}}}  | +jump (exec) if != |
-| {{{c(2)}}} ~return.~                   | RET            | C3       | {{{addr(00)}}} | ~C3~                         | return             |
-| ~exec():~                              |                |          | {{{addr(01)}}} |                              | (exec)             |
-| {{{c(2)}}} ~call EXEC;~  /# Compiled./ |                |          |                | {{{compile(45,E)}}}          | Call EXEC          |
-| {{{c(2)}}} ~return.~                   | RET            | C3       |                | ~C3~                         | return             |
+| *Pseudocode*                                    | *Instruction*  | *Opcode* | *&*            | *Machine code*               | *Intention*        |
+|-------------------------------------------------+----------------+----------+----------------+------------------------------+--------------------|
+| /# Define:/ _~exec~_                            | ---            | ---      |                | {{{define(04,65 78 65 63)}}} | define exec        |
+| /# In/Out: ~( imm+state@AL xt@RBX -- )~/        |                |          |                |                              |                    |
+| /#/                                             |                |          |                |                              |                    |
+| /# Execute ~xt~ if we're in interpreting state/ |                |          |                |                              |                    |
+| /# or if it's immediate. In other words,/       |                |          |                |                              |                    |
+| /# don't execute if we're both compiling/       |                |          |                |                              |                    |
+| /# and the word is not immediate./              |                |          |                |                              |                    |
+|                                                 |                |          |                |                              |                    |
+| {{{c(2)}}} ~if imm+state@AL != 1:~              | CMP AL, /imm8/ | 3C /ib/  |                | ~3C~ /~01~/                  | cmp al, 1          |
+| {{{c(4)}}}   ~goto exec().~                     | JNE _rel8_     | 75 _cb_  |                | ~75~ {{{offset(01,01-00)}}}  | +jump (exec) if != |
+| {{{c(2)}}} ~return.~                            | RET            | C3       | {{{addr(00)}}} | ~C3~                         | return             |
+| ~exec():~                                       |                |          | {{{addr(01)}}} |                              | (exec)             |
+| {{{c(2)}}} ~call EXEC;~  /# Compiled./          |                |          |                | {{{compile(45,E)}}}          | Call EXEC          |
+| {{{c(2)}}} ~return.~                            | RET            | C3       |                | ~C3~                         | return             |
 
 **** compl
 
-#+CAPTION: Subroutine ~compl~ ???.
+#+CAPTION: Subroutine ~compl~ compiles a word in compiling state if it's not immediate.
 #+LABEL: tbl:forth:compl
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                            | *Instruction*  | *Opcode*   | *&*            | *Machine code*                  | *Intention*         |
-|-----------------------------------------+----------------+------------+----------------+---------------------------------+---------------------|
-| /# Define:/ _~compl~_                   | ---            | ---        |                | {{{define(05,63 6F 6D 70 6C)}}} | define compl        |
-| /# In/Out: ~( AL -- AL )~/              |                |            |                |                                 |                     |
-| /#/                                     |                |            |                |                                 |                     |
-| /# iff al == 1/                         |                |            |                |                                 |                     |
-| /# ???/                                 |                |            |                |                                 |                     |
-| /# ???/                                 |                |            |                |                                 |                     |
-|                                         |                |            |                |                                 |                     |
-| {{{c(2)}}} ~if AL == 1:~                | CMP AL, /imm8/ | 3C /ib/    |                | ~3C~ /~01~/                     | cmp al, 1           |
-| {{{c(4)}}}   ~goto compl().~            | JE _rel8_      | 74 _cb_    |                | ~74~ {{{offset(01,01-00)}}}     | +jump (compl) if == |
-| {{{c(2)}}} ~return.~                    | RET            | C3         | {{{addr(00)}}} | ~C3~                            | return              |
-| ~compl():~                              |                |            | {{{addr(01)}}} |                                 | (compl)             |
-| {{{c(2)}}} ~call COMPL;~  /# Compiled./ |                |            |                | {{{compile(43)}}}               | Call COMPL          |
-| {{{c(2)}}} ~AL ← 1;~                    | MOV r8, /imm8/ | B0+rb /ib/ |                | ~B0~ /~01~/                     | al = 1              |
-| {{{c(2)}}} ~return.~                    | RET            | C3         |                | ~C3~                            | return              |
+| *Pseudocode*                                | *Instruction*  | *Opcode*   | *&*            | *Machine code*                  | *Intention*         |
+|---------------------------------------------+----------------+------------+----------------+---------------------------------+---------------------|
+| /# Define:/ _~compl~_                       | ---            | ---        |                | {{{define(05,63 6F 6D 70 6C)}}} | define compl        |
+| /# In/Out:    ~( imm+state@AL xt@RBX~/      |                |            |                |                                 |                     |
+| /# {{{c(5)}}} ~-- imm+state@AL xt@RBX )~/   |                |            |                |                                 |                     |
+| /#/                                         |                |            |                |                                 |                     |
+| /# Compile ~xt~ in the current definition/  |                |            |                |                                 |                     |
+| /# if we're in compiling state and ~xt~ is/ |                |            |                |                                 |                     |
+| /# not immediate./                          |                |            |                |                                 |                     |
+|                                             |                |            |                |                                 |                     |
+| {{{c(2)}}} ~if imm+state@AL = 1:~           | CMP AL, /imm8/ | 3C /ib/    |                | ~3C~ /~01~/                     | cmp al, 1           |
+| {{{c(4)}}}   ~goto compl().~                | JE _rel8_      | 74 _cb_    |                | ~74~ {{{offset(01,01-00)}}}     | +jump (compl) if == |
+| {{{c(2)}}} ~return.~                        | RET            | C3         | {{{addr(00)}}} | ~C3~                            | return              |
+| ~compl():~                                  |                |            | {{{addr(01)}}} |                                 | (compl)             |
+| {{{c(2)}}} ~call COMPL;~  /# Compiled./     |                |            |                | {{{compile(43)}}}               | Call COMPL          |
+| {{{c(2)}}} /# Restore AL after ~COMPL~./    |                |            |                |                                 |                     |
+| {{{c(2)}}} ~imm+state@AL ← 1;~              | MOV r8, /imm8/ | B0+rb /ib/ |                | ~B0~ /~01~/                     | al = 1              |
+| {{{c(2)}}} ~return.~                        | RET            | C3         |                | ~C3~                            | return              |
+
+**** hit
+
+#+CAPTION: Subroutine ~hit~ ???.
+#+LABEL: tbl:forth:hit
+#+ATTR_LATEX: :align l|ll|l|lH
+| *Pseudocode*                              | *Instruction*   | *Opcode*    | *&*            | *Machine code*                                           | *Intention*         |
+|-------------------------------------------+-----------------+-------------+----------------+----------------------------------------------------------+---------------------|
+| /# Define:/ _~hit~_                       | ---             | ---         |                | {{{define(03,68 69 74)}}}                                | define hit          |
+| /# In/Out: ~( xt@RBX -- )~/               |                 |             |                |                                                          |                     |
+| /#/                                       |                 |             |                |                                                          |                     |
+| /# ???/                                   |                 |             |                |                                                          |                     |
+| /# ???/                                   |                 |             |                |                                                          |                     |
+|                                           |                 |             |                |                                                          |                     |
+| {{{c(2)}}} ~if xt@RBX != 0:~              | TEST r/m64, r64 | REX.W 85 /r |                | ~48 85~ {{{modrm(DB,11,011,011)}}}                       | rbx(xt) ?           |
+| {{{c(4)}}}   ~goto hit().~                | JNZ _rel8_      | 75 _cb_     |                | ~75~ {{{offset(01,01-00)}}}                              | +jump (hit) if != 0 |
+| {{{c(2)}}} ~return.~                      | RET             | C3          | {{{addr(00)}}} | ~C3~                                                     | return              |
+| ~hit():~                                  |                 |             | {{{addr(01)}}} |                                                          | (hit)               |
+| {{{c(2)}}} /# Combine word's immediate/   |                 |             |                |                                                          |                     |
+| {{{c(2)}}} /# flag with current state./   |                 |             |                |                                                          |                     |
+| {{{c(2)}}} ~flag@AL ← [xt@RBX+10];~       | MOV r8, r/m8    | REX 8A /r   |                | ~40 8A~ {{{modrm(43,01,000,011)}}} {{{displ(10)}}}       | al = [rbx+10]       |
+| {{{c(2)}}} ~imm@AL &= 0x80;~              | AND AL, /imm8/  | 24 /ib/     |                | ~24~ /~80~/                                              | al &= 80(IMMEDIATE) |
+| {{{c(2)}}} ~imm+state@AL~ \vert​~=~ ~[STATE];~ | OR r8, r/m8     | 0A /r       |                | ~0A~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | al \vert= [STATE]       |
+|                                           |                 |             |                | \hookrightarrow {{{i(0)}}} {{{displ(20 00 00 10)}}}      |                     |
+| {{{c(2)}}} ~call compl;~  /# Compiled./   |                 |             |                | {{{compile(63,c)}}}                                      | Call compl          |
+| {{{c(2)}}} ~call exec;~  /# Compiled./    |                 |             |                | {{{compile(65,e)}}}                                      | Call exec           |
+| {{{c(2)}}} ~return.~                      | RET             | C3          |                | ~C3~                                                     | return              |
 
 
 * Notes                                                            :noexport:
@@ -1120,6 +1150,7 @@ Why this approach?
 - [ ] Check there's no ~???~ or ~TODO~ left.
 - [ ] If supported, make all subroutine table labels case-sensitive.
 - [ ] Check that compiled calls don't end in ~()~.
+- [ ] Align ~\hookrightarrow~ properly.
   
 *** Sections that I should include in the thesis
 - Legend explaining the typographic conventions.
