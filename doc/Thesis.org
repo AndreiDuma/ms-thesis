@@ -1034,7 +1034,7 @@ Why this approach?
 | {{{c(2)}}} ~call LIT();~  /# Compiled./  |                   |             |                | {{{compile(4C,L)}}}                                      | Call LIT              |
 | {{{c(2)}}} ~return.~                     | RET               | C3          |                | ~C3~                                                     | return                |
 
-**** EXEC
+**** EXEC                                                          :noexport:
 
 #+CAPTION: Subroutine ~EXEC~ ???.
 #+LABEL: tbl:forth:EXEC
@@ -1065,6 +1065,49 @@ Why this approach?
 | ~call [RCX];~                   | CALL r/m64       | FF /2      | ~FF~ {{{modrm(D1,11,010,001)}}} | call rcx     |
 | ~return.~                       | RET              | C3         | ~C3~                            | return       |
 
+**** exec
+
+#+CAPTION: Subroutine ~exec~ ???.
+#+LABEL: tbl:forth:exec
+#+ATTR_LATEX: :align l|ll|l|lH
+| *Pseudocode*                           | *Instruction*  | *Opcode* | *&*            | *Machine code*               | *Intention*        |
+|----------------------------------------+----------------+----------+----------------+------------------------------+--------------------|
+| /# Define:/ _~exec~_                   | ---            | ---      |                | {{{define(04,65 78 65 63)}}} | define exec        |
+| /# In/Out: ~( AL xt@RBX -- )~/         |                |          |                |                              |                    |
+| /#/                                    |                |          |                |                              |                    |
+| /# iff al != 1/                        |                |          |                |                              |                    |
+| /# ???/                                |                |          |                |                              |                    |
+| /# ???/                                |                |          |                |                              |                    |
+|                                        |                |          |                |                              |                    |
+| {{{c(2)}}} ~if AL != 1:~               | CMP AL, /imm8/ | 3C /ib/  |                | ~3C~ /~01~/                  | cmp al, 1          |
+| {{{c(4)}}}   ~goto exec().~            | JNE _rel8_     | 75 _cb_  |                | ~75~ {{{offset(01,01-00)}}}  | +jump (exec) if != |
+| {{{c(2)}}} ~return.~                   | RET            | C3       | {{{addr(00)}}} | ~C3~                         | return             |
+| ~exec():~                              |                |          | {{{addr(01)}}} |                              | (exec)             |
+| {{{c(2)}}} ~call EXEC;~  /# Compiled./ |                |          |                | {{{compile(45,E)}}}          | Call EXEC          |
+| {{{c(2)}}} ~return.~                   | RET            | C3       |                | ~C3~                         | return             |
+
+**** compl
+
+#+CAPTION: Subroutine ~compl~ ???.
+#+LABEL: tbl:forth:compl
+#+ATTR_LATEX: :align l|ll|l|lH
+| *Pseudocode*                            | *Instruction*  | *Opcode*   | *&*            | *Machine code*                  | *Intention*         |
+|-----------------------------------------+----------------+------------+----------------+---------------------------------+---------------------|
+| /# Define:/ _~compl~_                   | ---            | ---        |                | {{{define(05,63 6F 6D 70 6C)}}} | define compl        |
+| /# In/Out: ~( AL -- AL )~/              |                |            |                |                                 |                     |
+| /#/                                     |                |            |                |                                 |                     |
+| /# iff al == 1/                         |                |            |                |                                 |                     |
+| /# ???/                                 |                |            |                |                                 |                     |
+| /# ???/                                 |                |            |                |                                 |                     |
+|                                         |                |            |                |                                 |                     |
+| {{{c(2)}}} ~if AL == 1:~                | CMP AL, /imm8/ | 3C /ib/    |                | ~3C~ /~01~/                     | cmp al, 1           |
+| {{{c(4)}}}   ~goto compl().~            | JE _rel8_      | 74 _cb_    |                | ~74~ {{{offset(01,01-00)}}}     | +jump (compl) if == |
+| {{{c(2)}}} ~return.~                    | RET            | C3         | {{{addr(00)}}} | ~C3~                            | return              |
+| ~compl():~                              |                |            | {{{addr(01)}}} |                                 | (compl)             |
+| {{{c(2)}}} ~call COMPL;~  /# Compiled./ |                |            |                | {{{compile(43)}}}               | Call COMPL          |
+| {{{c(2)}}} ~AL ← 1;~                    | MOV r8, /imm8/ | B0+rb /ib/ |                | ~B0~ /~01~/                     | al = 1              |
+| {{{c(2)}}} ~return.~                    | RET            | C3         |                | ~C3~                            | return              |
+
 
 * Notes                                                            :noexport:
 
@@ -1076,6 +1119,7 @@ Why this approach?
 - [ ] Check all returns/gotos end with ~.~ and all calls with ~;~.
 - [ ] Check there's no ~???~ or ~TODO~ left.
 - [ ] If supported, make all subroutine table labels case-sensitive.
+- [ ] Check that compiled calls don't end in ~()~.
   
 *** Sections that I should include in the thesis
 - Legend explaining the typographic conventions.
