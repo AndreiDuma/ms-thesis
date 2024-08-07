@@ -260,7 +260,7 @@ Why this approach?
 |-----------------------------------------------+----------------+-------------+----------------+-----------------------------------------+-------------------------|
 | ~_bi:~                                        |                |             | {{{addr(82)}}} |                                         |                         |
 | {{{i(1)}}} /# Loop the binary interpreter./   |                |             |                |                                         |                         |
-| {{{i(1)}}} ~call bi().~                       | CALL rel32     | E8 cb[fn:1] |                | ~E8~ {{{offset(02 00 00 00,89-87)}}}    | call bi()               |
+| {{{i(1)}}} ~call bi();~                       | CALL rel32     | E8 cb[fn:1] |                | ~E8~ {{{offset(02 00 00 00,89-87)}}}    | call bi()               |
 | {{{i(1)}}} ~goto _bi.~                        | JMP rel8       | EB cb       | {{{addr(87)}}} | ~EB~ {{{offset(F9,82-89)}}}             | jump _bi                |
 | ~bi():~                                       |                |             | {{{addr(89)}}} |                                         |                         |
 | {{{i(1)}}} /# Read next byte from ~INPUT~./   |                |             |                |                                         |                         |
@@ -377,7 +377,7 @@ Why this approach?
 | /#{{{c(3)}}}code that follows at ~INPUT~./ |                 |                |                |                                         |               |
 | ~code@RCX ← [LATEST@RDX];~                 | MOV r64, r/m64  | REX.W 8B /r    |                | ~48 8B~ {{{modrm(0A,00,001,010)}}}      | rcx = [rdx]   |
 | ~[code@RCX] ← INPUT@RDI;~                  | MOV r/m64, r64  | REX.W 89 /r    |                | ~48 89~ {{{modrm(39,00,111,001)}}}      | [rcx] = rdi   |
-| ~return;~  /# From binary interpreter./    | RET             | C3             |                | ~C3~                                    | return        |
+| ~return.~  /# From binary interpreter./    | RET             | C3             |                | ~C3~                                    | return        |
 
 
 *** Subroutine BYE                                                 :noexport:
@@ -425,14 +425,14 @@ Why this approach?
 | {{{i(1)}}}{{{c(14)}}}    ~u@RDX);~               | SYSCALL         | 0F 05       |                      | ~0F 05~                            | syscall               |
 | {{{i(1)}}} ~if ret@RAX < 0:~                     | TEST r/m64, r64 | REX.W 85 /r |                      | ~48 85~ {{{modrm(C0,11,000,000)}}} | cmp rax, 0            |
 | {{{i(2)}}} /# An error occured./                 |                 |             |                      |                                    |                       |
-| {{{i(2)}}}     ~goto _end;~                      | JL rel8         | 7C cb       |                      | ~7C~ {{{offset(08,11-09)}}}        | +jump _end if <       |
+| {{{i(2)}}}     ~goto _end.~                      | JL rel8         | 7C cb       |                      | ~7C~ {{{offset(08,11-09)}}}        | +jump _end if <       |
 | {{{i(1)}}} /# Advance by ~ret~ (printed) bytes./ |                 |             | {{{addr(09)}}}       |                                    |                       |
 | {{{i(1)}}} ~addr@RSI += ret@RAX;~                | ADD r/m64, r64  | REX.W 01 /r |                      | ~48 01~ {{{modrm(C6,11,000,110)}}} | rsi(buf) += rax       |
 | {{{i(1)}}} /# Fewer bytes left to print./        |                 |             |                      |                                    |                       |
 | {{{i(1)}}} ~u@RDX -= ret@RAX;~                   | SUB r/m64, r64  | REX.W 29 /r |                      | ~48 29~ {{{modrm(C2,11,000,010)}}} | rdx(count) -= rax     |
 | {{{i(1)}}} ~if count > 0:~                       |                 |             |                      |                                    |                       |
 | {{{i(2)}}}     /# We still have bytes to print./ |                 |             |                      |                                    |                       |
-| {{{i(2)}}}     ~goto _beg;~                      | JG rel8         | 7F cb       |                      | ~7F~ {{{offset(EF,00-11)}}}        | -jump _beg if >       |
+| {{{i(2)}}}     ~goto _beg.~                      | JG rel8         | 7F cb       |                      | ~7F~ {{{offset(EF,00-11)}}}        | -jump _beg if >       |
 | ~_end:~                                          |                 |             | {{{addr(11)}}}       |                                    |                       |
 | {{{i(1)}}} ~return.~                             | RET             | C3          |                      | ~C3~                               | return                |
 
@@ -456,7 +456,7 @@ Why this approach?
 | ~addr@RSI ← 0x0FFFFFE0;~               | MOV r32, imm32 | B8+rd id | ~BE~ /~E0 FF FF 0F~/      | rsi = addr  |
 | ~u@RDX ← 0x0A00;~                      | MOV r32, imm32 | B8+rd id | ~BA~ /~00 0A 00 00~/      | rdx = u     |
 | /# Compile a CALL to ~TYPE(addr, u)~./ |                |          |                           |             |
-| ~TYPE();~  /# Compiled call./          | ---            | ---      | {{{compile(54,T)}}}       | Call TYPE   |
+| ~call TYPE();~  /# Compiled./          | ---            | ---      | {{{compile(54,T)}}}       | Call TYPE   |
 | /# Restore registers and return./      |                |          |                           |             |
 | ~restore OUTPUT@RDI;~                  | POP r64        | 58+rd    | ~5F~                      | pop rdi     |
 | ~restore INPUT@RSI;~                   | POP r64        | 58+rd    | ~5E~                      | pop rsi     |
@@ -496,7 +496,7 @@ Why this approach?
 | /# subroutine ~TYPE(addr, u)~./          |                 |                |                                       |                         |
 | ~addr@RSI ← RSP;~                        | MOV r64, r/m64  | REX.W 8B /r    | ~48 8B~ {{{modrm(F4,11,110,100)}}}    | rsi = rsp               |
 | ~u@RDX <- 0x80;~                         | MOV r32, imm32  | B8+rd id       | ~BA~ /~80 00 00 00~/                  | rdx = u                 |
-| ~TYPE();~  /# Compiled call./            | ---             | ---            | {{{compile(54,T)}}}                   | Call TYPE               |
+| ~call TYPE();~  /# Compiled./            | ---             | ---            | {{{compile(54,T)}}}                   | Call TYPE               |
 | /# Clean the stack./                     |                 |                |                                       |                         |
 | ~pop 16 quads;~                          | SUB r/m64, imm8 | REX.W 83 /5 ib | ~48 83~ {{{modrm(EC,11,101,100)}}} 80 | rsp -= -80              |
 | ~restore OUTPUT@RDI;~                    | POP r64         | 58+rd          | ~5F~                                  | pop rdi                 |
@@ -617,7 +617,7 @@ Why this approach?
 | {{{c( 2)}}} ~start@RBP ← [>IN];~           | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(69,01,101,001)}}} {{{displ(10)}}} | rbp = [>IN]                                                                         |
 | {{{c( 2)}}} /# Compile a call to ~seek()~/ |                    |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} /# that advances ~>IN~./       |                    |                  |                |                                                    |                                                                                     |
-| {{{c( 2)}}} ~seek();~  /# Compiled call./  | ---                | ---              |                | {{{compile(73,s)}}}                                | Call seek  (parse until 1st instance within [cl, dl) is parsed or parse area empty) |
+| {{{c( 2)}}} ~call seek();~  /# Compiled./  | ---                | ---              |                | {{{compile(73,s)}}}                                | Call seek  (parse until 1st instance within [cl, dl) is parsed or parse area empty) |
 | {{{c( 2)}}} ~end@RAX ← [>IN];~             | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | rax = [>IN]                                                                         |
 | {{{c( 2)}}} /# Did ~seek()~ encounter the/ |                    |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} /# end of the parse area?/     |                    |                  |                |                                                    |                                                                                     |
@@ -650,10 +650,10 @@ Why this approach?
 |                                         |                |            |                                 |                        |
 | ~low@CL ← 0x21;~   /# ??/               | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~21~/                     |                        |
 | ~high@DL ← 0x7F;~  /# ??/               | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~7F~/                     | (cl, dl) = (BL+1, ...) |
-| ~seek();~  /# Compiled call./           | ---            | ---        | {{{compile(73,s)}}}             | Call seek              |
+| ~call seek();~  /# Compiled./           | ---            | ---        | {{{compile(73,s)}}}             | Call seek              |
 | ~low@CL ← 0x7F;~                        | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~7F~/                     |                        |
 | ~high@DL ← 0x21;~                       | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~21~/                     | (cl, dl) = (..., BL+1) |
-| ~PARSE();~  /# Compiled call./          |                |            | {{{compile(50,P)}}}             | Call PARSE             |
+| ~call PARSE();~  /# Compiled./          |                |            | {{{compile(50,P)}}}             | Call PARSE             |
 | ~return.~                               | RET            | C3         | ~C3~                            | return                 |
 
 **** [                                                             :noexport:
@@ -721,7 +721,7 @@ Why this approach?
 |                                            |                |            |                     |                                                                             |
 | ~low@CL ← ')';~                            | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~29~/         |                                                                             |
 | ~high@DL ← ')' + 1;~                       | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~2A~/         | (cl, dl) = (RP, RP+1)                                                       |
-| ~PARSE();~  /# Compiled call./             | ---            | ---        | {{{compile(50,P)}}} | Call PARSE            Forth 2012 implies comment ends at rparen or newline. |
+| ~call PARSE();~  /# Compiled./             | ---            | ---        | {{{compile(50,P)}}} | Call PARSE            Forth 2012 implies comment ends at rparen or newline. |
 | ~return.~                                  | RET            | C3         | ~C3~                | return                                                                      |
 
 **** :                                                             :noexport:
@@ -737,10 +737,10 @@ Why this approach?
 | /# *TODO*​/                                |                   |                   |                                           |                                        |
 |                                           |                   |                   |                                           |                                        |
 | /# TODO./                                 |                   |                   |                                           |                                        |
-| ~pname();~  /# Compiled call./            | ---               | ---               | {{{compile(70,p)}}}                       | Call pname  (See Forth 2012 Table 2.1) |
+| ~call pname();~  /# Compiled./            | ---               | ---               | {{{compile(70,p)}}}                       | Call pname  (See Forth 2012 Table 2.1) |
 | ~RSI ← RBP;~                              | MOV r/m64, r64    | REX.W 89 /r       | ~48 89~ {{{modrm(EE,11,101,110)}}}        | rsi = rbp                              |
 | ~RDX ← LATEST;~                           | MOV r32, /imm32/  | B8+rd /id/        | ~BA~ /~28 00 00 10~/                      | rdx = Latest                           |
-| ~Head();~  /# Compiled call./             | ---               | ---               | {{{compile(48,H)}}}                       | Call Head                              |
+| ~call Head();~  /# Compiled./             | ---               | ---               | {{{compile(48,H)}}}                       | Call Head                              |
 |                                           |                   |                   |                                           |                                        |
 | /# Set the HIDDEN flag (~0x40~)/          |                   |                   |                                           |                                        |
 | /# on the dictionary entry./              |                   |                   |                                           |                                        |
@@ -749,7 +749,7 @@ Why this approach?
 | ~[RCX]~ \vert{}​~=~ ~0x40;~                      | OR r/m8, /imm8/   | 80 /​1 /ib/        | ~80~ {{{modrm(09,00,001,001)}}} /~40~/    | [rcx] ¦= 40 HIDDEN                     |
 |                                           |                   |                   |                                           |                                        |
 | /# Switch to compiling state./            |                   |                   |                                           |                                        |
-| ~rbracket();~  /# Compiled call./         | ---               | ---               | {{{compile(5D,])}}}                       | Call ]                                 |
+| ~call rbracket();~  /# Compiled./         | ---               | ---               | {{{compile(5D,])}}}                       | Call ]                                 |
 | ~return.~                                 | RET               | C3                | ~C3~                                      | return                                 |
 
 **** ;                                                             :noexport:
@@ -777,7 +777,7 @@ Why this approach?
 | ~[flagRCX] &= 0b10111111;~                | AND r/m8, /imm8/  | 80 /4 /ib/       | ~80~ {{{modrm(21,00,100,001)}}} /BF/                        | [rcx] &= BF(~HIDDEN) |
 |                                           |                   |                  |                                                             |                      |
 | /# Switch to interpreting state./         |                   |                  |                                                             |                      |
-| ~lbracket();~  /# Compiled call./         |                   |                  | {{{compile(5B,[)}}}                                         | Call [               |
+| ~call lbracket();~  /# Compiled./         |                   |                  | {{{compile(5B,[)}}}                                         | Call [               |
 | ~return.~                                 | RET               | C3               | ~C3~                                                        | return               |
 
 **** .                                                             :noexport:
@@ -944,7 +944,7 @@ Why this approach?
 | {{{c(2)}}} /# Otherwise, follow ~xt~'s/    |                |             |                |                                                             |                  |
 | {{{c(2)}}} /# link pointer./               |                |             |                |                                                             |                  |
 | {{{c(2)}}} ~if ZF:~  /# Set by ~xt=()~./   | JE _rel8_      | 74 _cb_     |                | ~74~ {{{offset(04,14-10)}}}                                 | +jump _end if == |
-| {{{c(4)}}}   ~goto _end;~                  |                |             | {{{addr(10)}}} |                                                             |                  |
+| {{{c(4)}}}   ~goto _end.~                  |                |             | {{{addr(10)}}} |                                                             |                  |
 | {{{c(2)}}} ~RBX ← [RBX+8];~                | MOV r64, r/m64 | REX.W 8B /r |                | ~48 8B~ {{{modrm(5B,01,011,011)}}} {{{displ(08)}}}          | rbx = [rbx+8]    |
 | ~_end:~                                    |                |             | {{{addr(14)}}} |                                                             | # _end:          |
 | {{{c(2)}}} ~return.~                       | RET            | C3          |                | ~C3~                                                        | return           |
@@ -1050,7 +1050,7 @@ Why this approach?
 | ~RDI ← RCX;~                    | MOV r/m32, r32   | 89 /r      | ~89~ {{{modrm(CF,11,001,111)}}} | rdi = rcx    |
 |                                 |                  |            |                                 |              |
 | /# Compile a CALL to ~xt~./     |                  |            |                                 |              |
-| ~call COMPL().~  /# Compiled./  |                  |            | {{{compile(43,C)}}}             | Call COMPL   |
+| ~call COMPL();~  /# Compiled./  |                  |            | {{{compile(43,C)}}}             | Call COMPL   |
 |                                 |                  |            |                                 |              |
 | /# Compile a RET instruction./  |                  |            |                                 |              |
 | ~AL ← 0xC3;~                    | MOV r8, /imm8/   | B0+rb /ib/ | ~B0~ /~C3~/                     | al = C3      |
@@ -1196,13 +1196,13 @@ Why this approach?
 - [X] Convert all *&* columns to use the ~addr~ macro.
 - [ ] Find places where it makes sense to restart address counts.
 - [X] Convert all /N/A/​s to ~---~.
-- [ ] Add a ~rex~ macro to annotate the REX byte?
-- [ ] Properly align /In/Out/ sections.
-- [ ] Check all returns/gotos end with ~.~ and all calls with ~;~.
-- [ ] Check there's no ~???~ or ~TODO~ left.
-- [ ] If supported, make all subroutine table labels case-sensitive.
+- [X] Check all returns/gotos end with ~.~ and all calls with ~;~.
 - [ ] Check that compiled calls don't end in ~()~.
+- [ ] Properly align /In/Out/ sections.
+- [ ] Add a ~rex~ macro to annotate the REX byte?
 - [ ] Align ~\hookrightarrow~ properly.
+- [ ] If supported, make all subroutine table labels case-sensitive.
+- [ ] Check there's no ~???~ or ~TODO~ left.
   
 *** Sections that I should include in the thesis
 - Legend explaining the typographic conventions.
