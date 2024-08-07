@@ -1,3 +1,24 @@
+%%% Forth %%%
+
+@Misc{sectorforth,
+  author =	 {Cesar Blum},
+  title =	 {sectorforth},
+  howpublished = {\url{https://github.com/cesarblum/sectorforth/}},
+}
+
+@Misc{milliForth,
+  title =	 {milliForth},
+  author =	 {https://github.com/fuzzballcat},
+  howpublished = {\url{https://github.com/fuzzballcat/milliForth}}
+}
+
+@Misc{SmithForth,
+  title =	 {SmithForth: A Forth for x86-64 personal computers},
+  title =	 {David Smith},
+  year =	 2022,
+  howpublished = {\url{https://dacvs.neocities.org/SF/}}
+}
+
 @Article{kogge82,
   author =	 "Peter M. Kogge",
   title =	 "An Architectural Trail to Threaded-Code Systems",
@@ -41,7 +62,102 @@
                   a little more space for the threaded code.}
 }
 
-@book{pratt75,
+%%% System V %%%
+
+@Manual{system_v_abi,
+  title =	 {{System V Application Binary Interface}},
+  institution =	 {The Santa Cruz Operation, Inc.},
+  year =	 1997,
+  howpublished =
+                  {\url{https://www.sco.com/developers/devspecs/gabi41.pdf}}
+}
+
+@Manual{system_v_abi_update,
+  title =	 {{System V Application Binary Interface -- Draft}},
+  institution =	 {Xinuos, Inc},
+  year =	 2013,
+  howpublished =
+                  {\url{https://www.sco.com/developers/gabi/latest/contents.html}},
+  month =	 {June}
+}
+
+@Manual{system_v_abi_amd64,
+  author =	 { Lu, H.J. and Matz, Michael and Girkar, Milind and
+                  Hubička, Jan and Jaeger, Andreas and Mitchell, Mark},
+  title =	 {{System V Application Binary Interface. AMD64
+                  Architecture Processor Supplement (Version 1.0)}},
+  year =	 2024
+}
+
+%%% Linux %%%
+
+@Misc{linux_system_calls_table,
+  title =	 {Linux System Call Table},
+  howpublished =
+                  {\url{https://www.chromium.org/chromium-os/developer-library/reference/linux-constants/syscalls/#x86_64-64-bit}}
+}
+
+%%% ELF files %%%
+
+@Misc{smith_handmade_executables,
+  title =	 {{Handmade Linux x86 executables}},
+  author =	 {David Smith},
+  year =	 2021,
+  howpublished =
+                  {\url{https://www.youtube.com/playlist?list=PLZCIHSjpQ12woLj0sjsnqDH8yVuXwTy3p}}
+}
+
+@Misc{raiter_teensy_elf_executables,
+  title =	 {A Whirlwind Tutorial on Creating Really Teensy ELF
+                  Executables for Linux},
+  author =	 {Brian Raiter},
+  year =	 1999,
+  howpublished =
+                  {\url{http://www.muppetlabs.com/~breadbox/software/tiny/teensy.html}},
+}
+
+%%% x86-64 %%%
+
+@Manual{intel_manual_volume_2,
+  title =	 {Intel® 64 and IA-32 Architectures Software
+                  Developer’s Manual. Volume 2 (2A, 2B, 2C, & 2D):
+                  Instruction Set Reference, A-Z},
+  publisher =	 {Intel Corporation},
+  year =	 2024,
+  howpublished =
+                  {\url{https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html}}
+}
+
+%%% RISC-V %%%
+
+@Misc{riscv_specifications,
+  title =	 {RISC-V Specifications},
+  howpublished = {https://riscv.org/technical/specifications/},
+}
+
+@Misc{riscv_ratified_extensions,
+  title =	 {RISC-V Ratified Extensions},
+  howpublished =
+                  {\url{https://wiki.riscv.org/display/HOME/Ratified+Extensions}},
+}
+
+%%% LISP %%%
+
+@Article{mccarthy1960lisp,
+  title =	 {Recursive functions of symbolic expressions and
+                  their computation by machine, part I},
+  author =	 {McCarthy, John},
+  journal =	 {Communications of the ACM},
+  volume =	 3,
+  number =	 4,
+  pages =	 {184--195},
+  year =	 1960,
+  publisher =	 {ACM New York, NY, USA}
+}
+
+%%% Other %%%
+
+@Book{pratt75,
   author =	 {Pratt, Terrence W.},
   title =	 {Programming Languages: Design and Implementation},
   year =	 1975,
@@ -76,105 +192,10 @@
                   interested in programming language designs.}
 }
 
-@Booklet{system_v_abi_amd64,
-  author =	 {Michael Matz, Jan Hubička, Andreas Jaeger, Mark
-                  Mitchell},
-  title =	 {System V Application Binary Interface. AMD64
-                  Architecture Processor Supplement. Draft Version
-                  0.99.6},
-  year =	 2012,
-  howpublished =
-                  {\url{https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf}}
-}
-
-@Misc{system_v_abi,
-  title =	 {System V Application Binary Interface},
-  institution =	 {The Santa Cruz Operation, Inc.},
-  year =	 1997,
-  howpublished =
-                  {\url{https://www.sco.com/developers/devspecs/gabi41.pdf}}
-}
-
-@Misc{system_v_abi_update,
-  title =	 {System V Application Binary Interface -- Draft},
-  institution =	 {Xinuos, Inc},
-  year =	 2013,
-  howpublished =
-                  {\url{https://www.sco.com/developers/gabi/latest/contents.html}},
-  month =	 {June}
-}
-
-@Manual{intel_manual_volume_2,
-  title =	 {Intel® 64 and IA-32 Architectures Software
-                  Developer’s Manual. Volume 2 (2A, 2B, 2C, & 2D):
-                  Instruction Set Reference, A-Z},
-  publisher =	 {Intel Corporation},
-  year =	 2024,
-  howpublished =
-                  {\url{https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html}}
-}
-
-@Misc{linux_system_calls_table,
-  title =	 {Linux System Call Table},
-  howpublished =
-                  {\url{https://www.chromium.org/chromium-os/developer-library/reference/linux-constants/syscalls/#x86_64-64-bit}}
-}
-
 @Misc{jargon_file,
   title =	 {The Jargon File, Version 4.4.7, 29 December 2003},
   author =	 {Raymond, Eric S and Steele, Guy L},
   howpublished =
                   {\url{http://jargon-file.org/archive/jargon-4.4.7.dos.txt}},
   year =	 2003,
-}
-
-@article{mccarthy1960lisp,
-  title =	 {Recursive functions of symbolic expressions and
-                  their computation by machine, part I},
-  author =	 {McCarthy, John},
-  journal =	 {Communications of the ACM},
-  volume =	 3,
-  number =	 4,
-  pages =	 {184--195},
-  year =	 1960,
-  publisher =	 {ACM New York, NY, USA}
-}
-
-@Misc{sectorforth,
-  author =	 {Cesar Blum},
-  title =	 {sectorforth},
-  howpublished = {\url{https://github.com/cesarblum/sectorforth/}},
-}
-
-@Misc{milliForth,
-  title =	 {milliForth},
-  author =	 {https://github.com/fuzzballcat},
-  howpublished = {\url{https://github.com/fuzzballcat/milliForth}}
-}
-
-@Misc{SmithForth,
-  title =	 {SmithForth: A Forth for x86-64 personal computers},
-  title =	 {David Smith},
-  year =	 2022,
-  howpublished = {\url{https://dacvs.neocities.org/SF/}}
-}
-
-@Misc{teensy_elf_executables,
-  title =	 {A Whirlwind Tutorial on Creating Really Teensy ELF
-                  Executables for Linux},
-  author =	 {Brian Raiter},
-  year =	 1999,
-  howpublished =
-                  {\url{http://www.muppetlabs.com/~breadbox/software/tiny/teensy.html}},
-}
-
-@Misc{riscv_specifications,
-  title =	 {RISC-V Specifications},
-  howpublished = {https://riscv.org/technical/specifications/},
-}
-
-@Misc{riscv_ratified_extensions,
-  title =	 {RISC-V Ratified Extensions},
-  howpublished =
-                  {\url{https://wiki.riscv.org/display/HOME/Ratified+Extensions}},
 }
