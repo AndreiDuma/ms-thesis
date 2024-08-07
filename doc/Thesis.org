@@ -456,7 +456,7 @@ Why this approach?
 | ~addr@RSI ← 0x0FFFFFE0;~               | MOV r32, imm32 | B8+rd id | ~BE~ /~E0 FF FF 0F~/      | rsi = addr  |
 | ~u@RDX ← 0x0A00;~                      | MOV r32, imm32 | B8+rd id | ~BA~ /~00 0A 00 00~/      | rdx = u     |
 | /# Compile a CALL to ~TYPE(addr, u)~./ |                |          |                           |             |
-| ~call TYPE();~  /# Compiled./          | ---            | ---      | {{{compile(54,T)}}}       | Call TYPE   |
+| ~call TYPE;~  /# Compiled./            | ---            | ---      | {{{compile(54,T)}}}       | Call TYPE   |
 | /# Restore registers and return./      |                |          |                           |             |
 | ~restore OUTPUT@RDI;~                  | POP r64        | 58+rd    | ~5F~                      | pop rdi     |
 | ~restore INPUT@RSI;~                   | POP r64        | 58+rd    | ~5E~                      | pop rsi     |
@@ -496,7 +496,7 @@ Why this approach?
 | /# subroutine ~TYPE(addr, u)~./          |                 |                |                                       |                         |
 | ~addr@RSI ← RSP;~                        | MOV r64, r/m64  | REX.W 8B /r    | ~48 8B~ {{{modrm(F4,11,110,100)}}}    | rsi = rsp               |
 | ~u@RDX <- 0x80;~                         | MOV r32, imm32  | B8+rd id       | ~BA~ /~80 00 00 00~/                  | rdx = u                 |
-| ~call TYPE();~  /# Compiled./            | ---             | ---            | {{{compile(54,T)}}}                   | Call TYPE               |
+| ~call TYPE;~  /# Compiled./              | ---             | ---            | {{{compile(54,T)}}}                   | Call TYPE               |
 | /# Clean the stack./                     |                 |                |                                       |                         |
 | ~pop 16 quads;~                          | SUB r/m64, imm8 | REX.W 83 /5 ib | ~48 83~ {{{modrm(EC,11,101,100)}}} 80 | rsp -= -80              |
 | ~restore OUTPUT@RDI;~                    | POP r64         | 58+rd          | ~5F~                                  | pop rdi                 |
@@ -615,9 +615,9 @@ Why this approach?
 |                                            |                    |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} ~VARS@R9 ← 0x10000000;~        | MOV r/m64, /imm32/ | REX.W C7 /​​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}} /~00 00 00 10~/ | r9 = VAR                                                                            |
 | {{{c( 2)}}} ~start@RBP ← [>IN];~           | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(69,01,101,001)}}} {{{displ(10)}}} | rbp = [>IN]                                                                         |
-| {{{c( 2)}}} /# Compile a call to ~seek()~/ |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 2)}}} /# Compile a call to ~seek~/   |                    |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} /# that advances ~>IN~./       |                    |                  |                |                                                    |                                                                                     |
-| {{{c( 2)}}} ~call seek();~  /# Compiled./  | ---                | ---              |                | {{{compile(73,s)}}}                                | Call seek  (parse until 1st instance within [cl, dl) is parsed or parse area empty) |
+| {{{c( 2)}}} ~call seek;~  /# Compiled./    | ---                | ---              |                | {{{compile(73,s)}}}                                | Call seek  (parse until 1st instance within [cl, dl) is parsed or parse area empty) |
 | {{{c( 2)}}} ~end@RAX ← [>IN];~             | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | rax = [>IN]                                                                         |
 | {{{c( 2)}}} /# Did ~seek()~ encounter the/ |                    |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} /# end of the parse area?/     |                    |                  |                |                                                    |                                                                                     |
@@ -650,10 +650,10 @@ Why this approach?
 |                                         |                |            |                                 |                        |
 | ~low@CL ← 0x21;~   /# ??/               | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~21~/                     |                        |
 | ~high@DL ← 0x7F;~  /# ??/               | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~7F~/                     | (cl, dl) = (BL+1, ...) |
-| ~call seek();~  /# Compiled./           | ---            | ---        | {{{compile(73,s)}}}             | Call seek              |
+| ~call seek;~  /# Compiled./             | ---            | ---        | {{{compile(73,s)}}}             | Call seek              |
 | ~low@CL ← 0x7F;~                        | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~7F~/                     |                        |
 | ~high@DL ← 0x21;~                       | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~21~/                     | (cl, dl) = (..., BL+1) |
-| ~call PARSE();~  /# Compiled./          |                |            | {{{compile(50,P)}}}             | Call PARSE             |
+| ~call PARSE;~  /# Compiled./            |                |            | {{{compile(50,P)}}}             | Call PARSE             |
 | ~return.~                               | RET            | C3         | ~C3~                            | return                 |
 
 **** [                                                             :noexport:
@@ -721,7 +721,7 @@ Why this approach?
 |                                            |                |            |                     |                                                                             |
 | ~low@CL ← ')';~                            | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~29~/         |                                                                             |
 | ~high@DL ← ')' + 1;~                       | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~2A~/         | (cl, dl) = (RP, RP+1)                                                       |
-| ~call PARSE();~  /# Compiled./             | ---            | ---        | {{{compile(50,P)}}} | Call PARSE            Forth 2012 implies comment ends at rparen or newline. |
+| ~call PARSE;~  /# Compiled./               | ---            | ---        | {{{compile(50,P)}}} | Call PARSE            Forth 2012 implies comment ends at rparen or newline. |
 | ~return.~                                  | RET            | C3         | ~C3~                | return                                                                      |
 
 **** :                                                             :noexport:
@@ -737,10 +737,10 @@ Why this approach?
 | /# *TODO*​/                                |                   |                   |                                           |                                        |
 |                                           |                   |                   |                                           |                                        |
 | /# TODO./                                 |                   |                   |                                           |                                        |
-| ~call pname();~  /# Compiled./            | ---               | ---               | {{{compile(70,p)}}}                       | Call pname  (See Forth 2012 Table 2.1) |
+| ~call pname;~  /# Compiled./              | ---               | ---               | {{{compile(70,p)}}}                       | Call pname  (See Forth 2012 Table 2.1) |
 | ~RSI ← RBP;~                              | MOV r/m64, r64    | REX.W 89 /r       | ~48 89~ {{{modrm(EE,11,101,110)}}}        | rsi = rbp                              |
 | ~RDX ← LATEST;~                           | MOV r32, /imm32/  | B8+rd /id/        | ~BA~ /~28 00 00 10~/                      | rdx = Latest                           |
-| ~call Head();~  /# Compiled./             | ---               | ---               | {{{compile(48,H)}}}                       | Call Head                              |
+| ~call Head;~  /# Compiled./               | ---               | ---               | {{{compile(48,H)}}}                       | Call Head                              |
 |                                           |                   |                   |                                           |                                        |
 | /# Set the HIDDEN flag (~0x40~)/          |                   |                   |                                           |                                        |
 | /# on the dictionary entry./              |                   |                   |                                           |                                        |
@@ -749,7 +749,7 @@ Why this approach?
 | ~[RCX]~ \vert{}​~=~ ~0x40;~                      | OR r/m8, /imm8/   | 80 /​1 /ib/        | ~80~ {{{modrm(09,00,001,001)}}} /~40~/    | [rcx] ¦= 40 HIDDEN                     |
 |                                           |                   |                   |                                           |                                        |
 | /# Switch to compiling state./            |                   |                   |                                           |                                        |
-| ~call rbracket();~  /# Compiled./         | ---               | ---               | {{{compile(5D,])}}}                       | Call ]                                 |
+| ~call rbracket;~  /# Compiled./           | ---               | ---               | {{{compile(5D,])}}}                       | Call ]                                 |
 | ~return.~                                 | RET               | C3                | ~C3~                                      | return                                 |
 
 **** ;                                                             :noexport:
@@ -777,7 +777,7 @@ Why this approach?
 | ~[flagRCX] &= 0b10111111;~                | AND r/m8, /imm8/  | 80 /4 /ib/       | ~80~ {{{modrm(21,00,100,001)}}} /BF/                        | [rcx] &= BF(~HIDDEN) |
 |                                           |                   |                  |                                                             |                      |
 | /# Switch to interpreting state./         |                   |                  |                                                             |                      |
-| ~call lbracket();~  /# Compiled./         |                   |                  | {{{compile(5B,[)}}}                                         | Call [               |
+| ~call lbracket;~  /# Compiled./           |                   |                  | {{{compile(5B,[)}}}                                         | Call [               |
 | ~return.~                                 | RET               | C3               | ~C3~                                                        | return               |
 
 **** .                                                             :noexport:
@@ -937,7 +937,7 @@ Why this approach?
 | {{{c(2)}}} ~push RAX;~                     | PUSH r64       | 50+rd       |                | ~50~                                                        | push rax         |
 | {{{c(2)}}} ~push RDI;~                     | PUSH r64       | 50+rd       |                | ~57~                                                        | push rdi         |
 | {{{c(2)}}} /# Does ~xt~ match ~addr~​/​~u~?/ |                |             |                |                                                             |                  |
-| {{{c(2)}}} ~call xt=();~ /# Compiled./     | ---            | ---         |                | {{{compile(78,x)}}}                                         | Call xt=         |
+| {{{c(2)}}} ~call xt=;~  /# Compiled./      | ---            | ---         |                | {{{compile(78,x)}}}                                         | Call xt=         |
 | {{{c(2)}}} ~pop RDI;~                      | POP r64        | 58+rd       |                | ~5F~                                                        | pop rdi          |
 | {{{c(2)}}} ~pop RAX;~                      | POP r64        | 58+rd       |                | ~58~                                                        | pop rax          |
 | {{{c(2)}}} /# If matched, we're done!/     |                |             |                |                                                             |                  |
@@ -998,39 +998,39 @@ Why this approach?
 #+CAPTION: Subroutine ~miss~ attempts parsing a word as a number, optionally compiling it as a literal.
 #+LABEL: tbl:forth:miss
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                             | *Instruction*     | *Opcode*    | *&*            | *Machine code*                                           | *Intention*           |
-|------------------------------------------+-------------------+-------------+----------------+----------------------------------------------------------+-----------------------|
-| /# Define:/ _~miss~_                     | ---               | ---         |                | {{{define(04,6D 69 73 73)}}}                             | define miss           |
-| /# In/Out:     ~( addr@RBP u@RAX~/       |                   |             |                |                                                          |                       |
-| /#{{{c(9)}}}    ~xt@RXB~/                |                   |             |                |                                                          |                       |
-| /#{{{c(6)}}}​~-​- [n] xt@RXB )~/           |                   |             |                |                                                          |                       |
-| /#/                                      |                   |             |                |                                                          |                       |
-| /# If ~xt~ is zero, try parsing/         |                   |             |                |                                                          |                       |
-| /# the string given by ~addr~​/​~u~/       |                   |             |                |                                                          |                       |
-| /# as a number. If successful/           |                   |             |                |                                                          |                       |
-| /# and if we're in compiling/            |                   |             |                |                                                          |                       |
-| /# state, compile the number/            |                   |             |                |                                                          |                       |
-| /# as a literal./                        |                   |             |                |                                                          |                       |
-|                                          |                   |             |                |                                                          |                       |
-| {{{c(2)}}} ~if xt@RBX = 0:~              | TEST r/m64, r64   | REX.W 85 /r |                | ~48 85~ {{{modrm(DB,11,011,011)}}}                       | rbx(xt) ?             |
-| {{{c(4)}}}   ~goto miss().~              | JZ _rel8_         | 74 _cb_     |                | ~74~ {{{offset(01,01-00)}}}                              | +jump (miss) if == 0  |
-| {{{c(2)}}} ~return.~                     | RET               | C3          | {{{addr(00)}}} | ~C3~                                                     | return                |
-| ~miss():~                                |                   |             | {{{addr(01)}}} |                                                          | (miss)                |
-| {{{c(2)}}} /# We shouldn't call ~Num()~/ |                   |             |                |                                                          |                       |
-| {{{c(2)}}} /# with ~u~ equal to zero./   |                   |             |                |                                                          |                       |
-| {{{c(2)}}} ~if u@RAX != 0:~              | TEST r/m64, r64   | REX.W 85 /r |                | ~48 85~ {{{modrm(C0,11,000,000)}}}                       | rax(u) ?              |
-| {{{c(4)}}}   ~goto _nonempty.~           | JNE _rel8_        | 75 _cb_     |                | ~75~ {{{offset(01,01-00)}}}                              | +jump _nonempty if != |
-| {{{c(2)}}} ~return.~                     | RET               | C3          | {{{addr(00)}}} | ~C3~                                                     | return                |
-| ~_nonempty:~                             |                   |             | {{{addr(01)}}} |                                                          | # _nonempty:          |
-| {{{c(2)}}} ~call Num();~  /# Compiled./  |                   |             |                | {{{compile(4E,N)}}}                                      | Call Num              |
-| {{{c(2)}}} ~if [STATE] & 1 != 0:~        | TEST r/m8, /imm8/ | F6 /​0 /ib/  |                | ~F6~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,000,100)}}} | [STATE] ?             |
-| {{{c(4)}}}   /# Compile top of stack/    |                   |             |                | \hookrightarrow {{{displ(20 00 00 10)}}} /~01~/          |                       |
-| {{{c(4)}}}   /# number as literal./      |                   |             |                |                                                          |                       |
-| {{{c(4)}}}   ~goto _lit.~                | JNZ _rel8_        | 75 _cb_     |                | ~75~ {{{offset(01,01-00)}}}                              | +jump _lit if != 0    |
-| {{{c(2)}}} ~return.~                     | RET               | C3          | {{{addr(00)}}} | ~C3~                                                     | return                |
-| ~_lit:~                                  |                   |             | {{{addr(01)}}} |                                                          | # _lit:               |
-| {{{c(2)}}} ~call LIT();~  /# Compiled./  |                   |             |                | {{{compile(4C,L)}}}                                      | Call LIT              |
-| {{{c(2)}}} ~return.~                     | RET               | C3          |                | ~C3~                                                     | return                |
+| *Pseudocode*                           | *Instruction*     | *Opcode*    | *&*            | *Machine code*                                           | *Intention*           |
+|----------------------------------------+-------------------+-------------+----------------+----------------------------------------------------------+-----------------------|
+| /# Define:/ _~miss~_                   | ---               | ---         |                | {{{define(04,6D 69 73 73)}}}                             | define miss           |
+| /# In/Out:     ~( addr@RBP u@RAX~/     |                   |             |                |                                                          |                       |
+| /#{{{c(9)}}}    ~xt@RXB~/              |                   |             |                |                                                          |                       |
+| /#{{{c(6)}}}​~-​- [n] xt@RXB )~/         |                   |             |                |                                                          |                       |
+| /#/                                    |                   |             |                |                                                          |                       |
+| /# If ~xt~ is zero, try parsing/       |                   |             |                |                                                          |                       |
+| /# the string given by ~addr~​/​~u~/     |                   |             |                |                                                          |                       |
+| /# as a number. If successful/         |                   |             |                |                                                          |                       |
+| /# and if we're in compiling/          |                   |             |                |                                                          |                       |
+| /# state, compile the number/          |                   |             |                |                                                          |                       |
+| /# as a literal./                      |                   |             |                |                                                          |                       |
+|                                        |                   |             |                |                                                          |                       |
+| {{{c(2)}}} ~if xt@RBX = 0:~            | TEST r/m64, r64   | REX.W 85 /r |                | ~48 85~ {{{modrm(DB,11,011,011)}}}                       | rbx(xt) ?             |
+| {{{c(4)}}}   ~goto miss().~            | JZ _rel8_         | 74 _cb_     |                | ~74~ {{{offset(01,01-00)}}}                              | +jump (miss) if == 0  |
+| {{{c(2)}}} ~return.~                   | RET               | C3          | {{{addr(00)}}} | ~C3~                                                     | return                |
+| ~miss():~                              |                   |             | {{{addr(01)}}} |                                                          | (miss)                |
+| {{{c(2)}}} /# We shouldn't call ~Num~/ |                   |             |                |                                                          |                       |
+| {{{c(2)}}} /# with ~u~ equal to zero./ |                   |             |                |                                                          |                       |
+| {{{c(2)}}} ~if u@RAX != 0:~            | TEST r/m64, r64   | REX.W 85 /r |                | ~48 85~ {{{modrm(C0,11,000,000)}}}                       | rax(u) ?              |
+| {{{c(4)}}}   ~goto _nonempty.~         | JNE _rel8_        | 75 _cb_     |                | ~75~ {{{offset(01,01-00)}}}                              | +jump _nonempty if != |
+| {{{c(2)}}} ~return.~                   | RET               | C3          | {{{addr(00)}}} | ~C3~                                                     | return                |
+| ~_nonempty:~                           |                   |             | {{{addr(01)}}} |                                                          | # _nonempty:          |
+| {{{c(2)}}} ~call Num;~  /# Compiled./  |                   |             |                | {{{compile(4E,N)}}}                                      | Call Num              |
+| {{{c(2)}}} ~if [STATE] & 1 != 0:~      | TEST r/m8, /imm8/ | F6 /​0 /ib/  |                | ~F6~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,000,100)}}} | [STATE] ?             |
+| {{{c(4)}}}   /# Compile top of stack/  |                   |             |                | \hookrightarrow {{{displ(20 00 00 10)}}} /~01~/          |                       |
+| {{{c(4)}}}   /# number as literal./    |                   |             |                |                                                          |                       |
+| {{{c(4)}}}   ~goto _lit.~              | JNZ _rel8_        | 75 _cb_     |                | ~75~ {{{offset(01,01-00)}}}                              | +jump _lit if != 0    |
+| {{{c(2)}}} ~return.~                   | RET               | C3          | {{{addr(00)}}} | ~C3~                                                     | return                |
+| ~_lit:~                                |                   |             | {{{addr(01)}}} |                                                          | # _lit:               |
+| {{{c(2)}}} ~call LIT;~  /# Compiled./  |                   |             |                | {{{compile(4C,L)}}}                                      | Call LIT              |
+| {{{c(2)}}} ~return.~                   | RET               | C3          |                | ~C3~                                                     | return                |
 
 **** EXEC                                                          :noexport:
 
@@ -1050,7 +1050,7 @@ Why this approach?
 | ~RDI ← RCX;~                    | MOV r/m32, r32   | 89 /r      | ~89~ {{{modrm(CF,11,001,111)}}} | rdi = rcx    |
 |                                 |                  |            |                                 |              |
 | /# Compile a CALL to ~xt~./     |                  |            |                                 |              |
-| ~call COMPL();~  /# Compiled./  |                  |            | {{{compile(43,C)}}}             | Call COMPL   |
+| ~call COMPL;~  /# Compiled./    |                  |            | {{{compile(43,C)}}}             | Call COMPL   |
 |                                 |                  |            |                                 |              |
 | /# Compile a RET instruction./  |                  |            |                                 |              |
 | ~AL ← 0xC3;~                    | MOV r8, /imm8/   | B0+rb /ib/ | ~B0~ /~C3~/                     | al = C3      |
