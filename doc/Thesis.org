@@ -38,9 +38,6 @@
 #+LATEX_HEADER: \usepackage{array}
 #+LATEX_HEADER: \newcolumntype{H}{>{\setbox0=\hbox\bgroup}c<{\egroup}@{}}
 
-# TODO: remove if not needed.
-#+LATEX_HEADER: \usepackage{unicode-math}
-
 # --- Indentation helper macros.
 #+MACRO: t   \hspace{1em}  # TODO: rewrite this one to use {{{c(x)}}}.
 #+MACRO: i   (eval (format "\\hspace{%sem}" $1))
@@ -91,7 +88,7 @@
 # \clearpage
 
 # Don't show TOC for now.
-# #+TOC: headlines 2
+#+TOC: headlines 2
 # \clearpage
 
 
@@ -229,9 +226,9 @@ Cite Chapter 4 (/Object Files/) of [cite:@system_v_abi].
 :LOGBOOK:
 - Note taken on [2024-07-27 Sat 13:49] \\
   Maybe collect all global variables in one place?
-- Note taken on [2024-07-29 Mon 10:23] \\
-  Maybe rename ~Head~ to ~DEFN~ (to resemble ~COMPL~)?
 :END:
+
+SmithForth [cite:@SmithForth].
 
 *** Global variables
 
@@ -1208,6 +1205,8 @@ use an overlined {{{addr(00)}}} when we do this again.
 
 
 * Bibliography
+
+References:
 
 #+PRINT_BIBLIOGRAPHY:
 

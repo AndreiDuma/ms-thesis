@@ -13,8 +13,8 @@
 }
 
 @Misc{SmithForth,
-  title =	 {SmithForth: A Forth for x86-64 personal computers},
-  title =	 {David Smith},
+  title =	 {{SmithForth: A Forth for x86-64 personal computers}},
+  author =	 {David Smith},
   year =	 2022,
   howpublished = {\url{https://dacvs.neocities.org/SF/}}
 }
@@ -64,29 +64,25 @@
 
 %%% System V %%%
 
-@Manual{system_v_abi,
-  title =	 {{System V Application Binary Interface}},
-  institution =	 {The Santa Cruz Operation, Inc.},
-  year =	 1997,
-  howpublished =
-                  {\url{https://www.sco.com/developers/devspecs/gabi41.pdf}}
+@Misc{system_v_abi,
+  title =	 {{System V Application Binary Interface
+                  (`gABI'). DRAFT Version, June 10, 2013}},
+  howpublished = {\\
+                  \href{https://www.sco.com/developers/gabi/latest/contents.html}},
+  note =	 {Accessed 24.11.2016},
+  annote =	 {1997 SCO version at:
+                  https://www.sco.com/developers/devspecs/gabi41.pdf},
 }
 
-@Manual{system_v_abi_update,
-  title =	 {{System V Application Binary Interface -- Draft}},
-  institution =	 {Xinuos, Inc},
-  year =	 2013,
-  howpublished =
-                  {\url{https://www.sco.com/developers/gabi/latest/contents.html}},
-  month =	 {June}
-}
-
-@Manual{system_v_abi_amd64,
+@Misc{system_v_abi_amd64,
+  title =	 {{System V Application Binary Interface. AMD64
+                  Architecture Processor Supplement (`psABI'). Version
+                  1.0, June 3, 2024}},
   author =	 { Lu, H.J. and Matz, Michael and Girkar, Milind and
                   Hubička, Jan and Jaeger, Andreas and Mitchell, Mark},
-  title =	 {{System V Application Binary Interface. AMD64
-                  Architecture Processor Supplement (Version 1.0)}},
-  year =	 2024
+  howpublished = {\url{https://gitlab.com/x86-psABIs/x86-64-ABI}},
+  annote =	 {PDF version at:
+                  https://gitlab.com/x86-psABIs/x86-64-ABI/-/jobs/artifacts/master/raw/x86-64-ABI/abi.pdf?job=build}
 }
 
 %%% Linux %%%
