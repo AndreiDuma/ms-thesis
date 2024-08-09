@@ -157,62 +157,62 @@
 # compile the word, only the first character of the name is provided, encoded
 # in the argument.
 #
-# MACHINE CODE ########## INTENTION ############ 78 INSTRUCTION ####### OPCODE ######## ModR/M #### SIB ######
-BE B2 00 40 00          #:rsi(input)  = 004000__    mov r32, imm32      B8+rd id
-BF 30 00 00 10          # rdi(output) = 10000030    mov r32, imm32      B8+rd id
+# MACHINE CODE ########## INTENTION ############ 78 INSTRUCTION ####### OPCODE ######## ModR/M #### SIB ####### NOTES ####
+BE B2 00 40 00          #:rsi(input)  = 004000__    mov r32, imm32      B8+rd id			        INPUT@RSI  <- 0x004000B2;  # Global variable INPUT.
+BF 30 00 00 10          # rdi(output) = 10000030    mov r32, imm32      B8+rd id			        OUTPUT@RDI <- 0x10000030;  # Global variable OUTPUT.
 
-######################### binary interpreter >>> 82 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-E8 02 00 00 00          #+call (bi)                 call rel32
-EB F9                   #-jump bi                89 jmp rel8            EB cb
+######################### binary interpreter >>> 82 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<		_beg:
+E8 02 00 00 00          #+call (bi)                 call rel32							  Call bi().  # Call the binary interpreter.
+EB F9                   #-jump bi                89 jmp rel8            EB cb				          goto _beg.  # Repeatedly.
 # # # # # # # # # # # # # (bi)                   89
-AC                      # al = [rsi++]              lods m8             AC
-3C 99                   # cmp al, 99(command)       cmp al, imm8        3C ib
-74 02                   #+jump _command if ==    8E je rel8             74 cb
-AA                      # [rdi++] = al (xmit)       stos m8             AA
-C3                      # return                    ret                 C3
-# _command:             #                        90
-BA 28 00 00 10          # rdx = Latest              mov r32, imm32      B8+rd id
-AC                      # al = [rsi++] (argument)   lods m8             AC
-A8 60                   # al & 60(graphic)?         test al, imm8       A8 ib
-74 31                   #+jump Head if zero      9A jz rel8             74 cb
-48 8B 1A                # rbx = [rdx]               mov r64, r/m64      REX.W 8B /r     00 011 010
-# _find1:               #                        9D
-50                      # push al                   push r64            50+rd
-24 7F                   # al &= 7F                  and al, imm8        24 ib
-3A 43 11                # cmp al, [rbx+11]          cmp r8, r/m8        REX 3A /r       01 000 011
-58                      # pop al                    pop r64             58+rd
-74 06                   #+jump _match if ==      A6 je rel8             74 cb
-48 8B 5B 08             # rbx = [rbx+8]             mov r64, r/m64      REX.W 8B /r     01 011 011
-EB F1                   #-jump _find1            AC jmp rel8            EB cb
-# _match:               #                        AC
-A8 80                   # al & 80(exec) ?           test al, imm8       A8 ib
-74 09                   #+jump COMPL if zero     B0 jz rel8             74 cb
-FF 23                   # jump [rbx] (exec)      B2 jmp r/m64           REX FF /4       00 100 011
+AC                      # al = [rsi++]              lods m8             AC				          chr@AL <- next byte in the input stream;
+3C 99                   # cmp al, 99(command)       cmp al, imm8        3C ib				          if chr is 99:
+74 02                   #+jump _command if ==    8E je rel8             74 cb				            goto _command.
+AA                      # [rdi++] = al (xmit)       stos m8             AA 				          Copy chr to output;
+C3                      # return                    ret                 C3				          Return.
+# _command:             #                        90								_command:
+BA 28 00 00 10          # rdx = Latest              mov r32, imm32      B8+rd id			          LATEST@RDX <- 0x10000028;  # Global variable LATEST.
+AC                      # al = [rsi++] (argument)   lods m8             AC    					  arg@AL <- next byte from input;
+A8 60                   # al & 60(graphic)?         test al, imm8       A8 ib					  if arg matches ?00?????:
+74 31                   #+jump Head if zero      9A jz rel8             74 cb					    goto Head.
+48 8B 1A                # rbx = [rdx]               mov r64, r/m64      REX.W 8B /r     00 011 010		  entry@RBX <- *LATEST;  # Latest dictionary entry.
+# _find1:               #                        9D 	     		      	 	       			_find1:
+50                      # push al                   push r64            50+rd					  Save arg on the stack;
+24 7F                   # al &= 7F                  and al, imm8        24 ib					  Zero arg's bit 7;  # AL ~ 0??????
+3A 43 11                # cmp al, [rbx+11]          cmp r8, r/m8        REX 3A /r       01 000 011		  if arg equals first character in entry's name:
+58                      # pop al                    pop r64             58+rd  		       			    Restore arg@AL;
+74 06                   #+jump _match if ==      A6 je rel8             74 cb					    goto _match.
+48 8B 5B 08             # rbx = [rbx+8]             mov r64, r/m64      REX.W 8B /r     01 011 011		  entry <- *(entry + 8);  # Follow through entry's link field.
+EB F1                   #-jump _find1            AC jmp rel8            EB cb 	 	       			  goto _find1.  # Loop, trying to match previous dictionary entry.
+# _match:               #                        AC 			   					_match:
+A8 80                   # al & 80(exec) ?           test al, imm8       A8 ib					  if arg ~ 0???????:
+74 09                   #+jump COMPL if zero     B0 jz rel8             74 cb					    goto COMPL.  # Compile.
+FF 23                   # jump [rbx] (exec)      B2 jmp r/m64           REX FF /4       00 100 011		  goto *entry.  # Execute by jumping to entry's code.
 
 ######################### Interpreter subroutines ################################################
 
 99 05 43 4F 4D 50 4C #### COMPL Forth's COMPILE, B9 ( ebx=xt -- )
-B0 FF AA                # compile >>>>>>>>>>>>>>>>> call r/m64          FF /2           00 010 100  00 100 101
-B0 14 AA                #     al = _                mov r8, imm8        B0+rb ib
-B0 25 AA                #         [rdi++] = al      stos m8             AA
+B0 FF AA                # compile >>>>>>>>>>>>>>>>> call r/m64          FF /2           00 010 100  00 100 101    Generate a CALL instruction to output: Here, the opcode;
+B0 14 AA                #     al = _                mov r8, imm8        B0+rb ib	       	       	   	  Here, the ModR/M byte;
+B0 25 AA                #         [rdi++] = al      stos m8             AA    					  Here, the SIB byte;
 93                      # eax = ebx                 xchg eax, r32       90+rd
-AB                      # [rdi(++4)] = eax          stos m32            AB
-C3                      # return                    ret                 C3
+AB                      # [rdi(++4)] = eax          stos m32            AB					  Finally, the 4-byte displacement (???) from EBX;
+C3                      # return                    ret                 C3					  Return (from binary interpreter).
 
 99 04 48 65 61 64 ####### Head ================= CB ( al=flag rdx=Latest rsi=addr -- rdx=Latest rsi=addr' )
-48 83 C7 0F             # rdi += 0F                 add r/m64, imm8     REX.W 83 /0 ib  11 000 111
-48 83 E7 F0             # rdi &= F0                 and r/m64, imm8     REX.W 83 /4 ib  11 100 111
-48 8B 0A                # rcx = [rdx]               mov r64, r/m64      REX.W 8B /r     00 001 010
-48 89 4F 08             # [rdi+8] = rcx             mov r/m64, r64      REX.W 89 /r     01 001 111
-48 89 3A                # [rdx] = rdi               mov r/m64, r64      REX.W 89 /r     00 111 010
-48 83 C7 10             # rdi += 10                 add r/m64, imm8     REX.W 83 /0 ib  11 000 111
-AA                      # [rdi++] = al              stos m8             AA
-91                      # ecx = eax                 xchg eax, r32       90+rd
-83 E1 1F                # ecx &= 1F                 and r/m32, imm8     83 /4 ib        11 100 001
-F3 A4                   # copy Name                 rep movs m8, m8     F3 A4
-48 8B 0A                # rcx = [rdx]               mov r64, r/m64      REX.W 8B /r     00 001 010
-48 89 39                # [rcx] = rdi               mov r/m64, r64      REX.W 89 /r     00 111 001
-C3                      # return                    ret                 C3
+48 83 C7 0F             # rdi += 0F                 add r/m64, imm8     REX.W 83 /0 ib  11 000 111                # Advance OUTPUT to a 16-bit aligned address.
+48 83 E7 F0             # rdi &= F0                 and r/m64, imm8     REX.W 83 /4 ib  11 100 111                entry <- OUTPUT;  # New dictionary entry.
+48 8B 0A                # rcx = [rdx]               mov r64, r/m64      REX.W 8B /r     00 001 010		  latest@RCX <- *LATEST;  # Cannot MOV memory to memory.
+48 89 4F 08             # [rdi+8] = rcx             mov r/m64, r64      REX.W 89 /r     01 001 111		  entry->link <- latest;  # Link new entry to previous entry.
+48 89 3A                # [rdx] = rdi               mov r/m64, r64      REX.W 89 /r     00 111 010		  *LATEST <- entry;  	# Update LATEST.
+48 83 C7 10             # rdi += 10                 add r/m64, imm8     REX.W 83 /0 ib  11 000 111		  # Copy arg@AL to entry's flag+length field.
+AA                      # [rdi++] = al              stos m8             AA					  entry->flag_length <- arg;
+91                      # ecx = eax                 xchg eax, r32       90+rd					  # Extract name length from AL.
+83 E1 1F                # ecx &= 1F                 and r/m32, imm8     83 /4 ib        11 100 001		  length@ECX <- arg % 32;  # Only keep bits 4-0.
+F3 A4                   # copy Name                 rep movs m8, m8     F3 A4 		       			  Copy length bytes from INPUT to entry->name.
+48 8B 0A                # rcx = [rdx]               mov r64, r/m64      REX.W 8B /r     00 001 010		  code@RCX <- *LATEST;  # Point code field to the machine code that follows in the input stream.
+48 89 39                # [rcx] = rdi               mov r/m64, r64      REX.W 89 /r     00 111 001		  entry->code <- INPUT;
+C3                      # return                    ret                 C3    	 	       			  Return (from binary interpreter).
 
 # ============= DICTIONARY FORMAT
 #
@@ -235,9 +235,9 @@ C3                      # return                    ret                 C3
 # C3                      # return                    ret                 C3
 
 99 03 42 59 45 ########## BYE ( -- ) =============================================================
-6A 3C 58                # rax = exit (no return)    push imm8; pop      6A ib ; 58+rd
-31 FF                   # rdi = stat                xor r/m32, r32      31 /r           11 111 111
-0F 05                   # syscall                   syscall             0F 05
+6A 3C 58                # rax = exit (no return)    push imm8; pop      6A ib ; 58+rd				RAX <- 0x3C;  # __NR_exit.
+31 FF                   # rdi = stat                xor r/m32, r32      31 /r           11 111 111		status@RDI <- 0;
+0F 05                   # syscall                   syscall             0F 05		       			Syscall exit(status).  # Goodbye, world.
 
 # 99 C2                   # BYE
 
@@ -247,18 +247,19 @@ C3                      # return                    ret                 C3
 #     syscall error numbers: /usr/include/asm-generic/errno-base.h
 #     mmap flag values: /usr/include/asm-generic/mman-common.h
 
-99 04 54 59 50 45 ####### TYPE ( rsi=addr rdx=u -- rsi=? rdi=? ) show memory [addr, addr+u) ======
-6A 01 5F                # rdi(fd) = stdout = 1      push imm8; pop      6A ib ; 58+rd
-# _beg:                 #                        00
-8B C7                   # rax = write = 1 = rdi     mov r32, r/m32      8B /r           11 000 111
-0F 05                   # syscall                   syscall             0F 05
-48 85 C0                # cmp rax, 0                test r/m64, r64     REX.W 85 /r     11 000 000
-7C 08                   #+jump _end if <         09 jl rel8             7C cb
-48 01 C6                # rsi(buf) += rax           add r/m64, r64      REX.W 01 /r     11 000 110
-48 29 C2                # rdx(cnt) -= rax           sub r/m64, r64      REX.W 29 /r     11 000 010
-7F EF                   #-jump _beg if >         11 jg rel8             7F cb
-# _end:                 #                        11
-C3                      # return                    ret                 C3
+99 04 54 59 50 45 ####### TYPE ( rsi=buf rdx=count -- rsi=? rdi=? ) show memory [addr, addr+u) ======
+6A 01 5F                # rdi(fd) = stdout = 1      push imm8; pop      6A ib ; 58+rd				  fd@RDI <- 1;  # STDOUT_FILENO.
+# _beg:                 #                        00 	       		      				        _beg:	
+8B C7                   # rax = write = 1 = rdi     mov r32, r/m32      8B /r           11 000 111		  RAX <- RDI;  # __NR_write, which is 1.
+0F 05                   # syscall                   syscall             0F 05		       			  Syscall write(fd@RDI, buf@RSI, count@RDX);
+48 85 C0                # cmp rax, 0                test r/m64, r64     REX.W 85 /r     11 000 000		  if ret@RAX < 0:  # An error occured.
+7C 08                   #+jump _end if <         09 jl rel8             7C cb 	 	       			    goto _end;
+48 01 C6                # rsi(buf) += rax           add r/m64, r64      REX.W 01 /r     11 000 110		  buf@RSI += ret;    # We printed ret bytes.
+48 29 C2                # rdx(count) -= rax         sub r/m64, r64      REX.W 29 /r     11 000 010		  count@RDX -= ret;  # Fewer bytes left to print.
+7F EF                   #-jump _beg if >         11 jg rel8             7F cb 	 	       			  if count > 0:
+   			       	       		       			   					    goto _beg;  # We still have some bytes to print.
+# _end:                 #                        11    			   					_end:
+C3                      # return                    ret                 C3					  Return.
 
 # ============= DEBUGGING
 #
@@ -276,27 +277,27 @@ C3                      # return                    ret                 C3
 # -- Inside a subroutine, leave early by inserting a return instruction RET = C3.
 
 99 03 64 62 67 ########## dbg ( -- ) show stack and data; use `./SForth | xxd -o 0x0fffffe0` =====
-56 57                   # push rsi, rdi             push r64            50+rd
-BE E0 FF FF 0F          # rsi = addr                mov r32, imm32      B8+rd id
-BA 00 0A 00 00          # rdx = u                   mov r32, imm32      B8+rd id
-99 54                   # Call TYPE
-5F 5E                   # pop rdi, rsi              pop r64             58+rd
-C3                      # return                    ret                 C3
+56 57                   # push rsi, rdi             push r64            50+rd					  Save RSI and RDI on the stack;
+BE E0 FF FF 0F          # rsi = addr                mov r32, imm32      B8+rd id				  addr@RSI <- 0x0FFFFFE0;
+BA 00 0A 00 00          # rdx = u                   mov r32, imm32      B8+rd id				  u@RDX <- 0x0A00;
+99 54                   # Call TYPE		    	     		      					  Call TYPE(addr, u);
+5F 5E                   # pop rdi, rsi              pop r64             58+rd					  Restore RSI and RDI;
+C3                      # return                    ret                 C3					  Return.
 
 # 99 E4 99 C2             # dbg BYE
 
 99 03 72 65 67 ########## reg ( -- ) show registers; use `./SForth | xxd` ========================
-56 57                   # push rsi, rdi             push r64            50+rd
-41 57 57 41 56 56       # push r15, rdi, r14, rsi   push r64            REX 50+rd
-41 55 55 41 54 54       # push r13, rbp, r12, rsp   push r64            REX 50+rd
-41 53 53 41 52 52       # push r11, rbx, r10, rdx   push r64            REX 50+rd
-41 51 51 41 50 50       # push r9 , rcx, r8 , rax   push r64            REX 50+rd
-48 8B F4                # rsi = rsp                 mov r64, r/m64      REX.W 8B /r     11 110 100
-BA 80 00 00 00          # rdx = u                   mov r32, imm32      B8+rd id
-99 54                   # Call TYPE
-48 83 EC 80             # rsp -= -80                sub r/m64, imm8     REX.W 83 /5 ib  11 101 100
-5F 5E                   # pop rdi, rsi              pop r64             58+rd
-C3                      # return                    ret                 C3
+56 57                   # push rsi, rdi             push r64            50+rd					  Save RSI and RDI on the stack;
+41 57 57 41 56 56       # push r15, rdi, r14, rsi   push r64            REX 50+rd				  Push 16 registers  | R15 | RDI |
+41 55 55 41 54 54       # push r13, rbp, r12, rsp   push r64            REX 50+rd				    so that they're  | R14 | RSI |
+41 53 53 41 52 52       # push r11, rbx, r10, rdx   push r64            REX 50+rd				    displayed like:  | ... | ... |
+41 51 51 41 50 50       # push r9 , rcx, r8 , rax   push r64            REX 50+rd				    	      	     | R8  | RAX |
+48 8B F4                # rsi = rsp                 mov r64, r/m64      REX.W 8B /r     11 110 100		  addr@RSI <- RSP;
+BA 80 00 00 00          # rdx = u                   mov r32, imm32      B8+rd id 	       			  u@RDX <- 0x80;
+99 54                   # Call TYPE		    	     		      					  Call TYPE(addr, u);  # Print top 16 quads on stack.
+48 83 EC 80             # rsp -= -80                sub r/m64, imm8     REX.W 83 /5 ib  11 101 100		  Pop the 16 registers (clean the stack);
+5F 5E                   # pop rdi, rsi              pop r64             58+rd					  Restore RSI and RDI;
+C3                      # return                    ret                 C3					  Return.
 
 # 99 F2 99 C2             # reg BYE
 
@@ -544,6 +545,8 @@ C3                      # return                    ret                 C3
 48 8B 04 25 10 00 00 10 # rax = [>IN]               mov r64, r/m64      REX.W 8B /r     00 000 100  00 100 101
 48 3B 04 25 00 00 00 10 # cmp rax, [#IN]            cmp r64, r/m64      REX.W 3B /r     00 000 100  00 100 101
 C3                      # return                    ret                 C3
+
+===============================================================================================================================================
 
 99 02 74 69 ############# ti ( -- ) text interpreter =============================================
 49 C7 C7 00 00 00 10    # r15(stack) = 10000000     mov r/m64, imm32    REX.W C7 /0 id  11 000 111
