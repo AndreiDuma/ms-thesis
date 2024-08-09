@@ -139,6 +139,31 @@ Why this approach?
 
 ** The Linux Environment
 
+RISC-V:
+- Idea:
+  https://www.codeproject.com/Tips/5383029/Run-Debian-RISC-V-In-QEMU-Virtual-Environment-For
+- dqib:
+  https://gitlab.com/giomasce/dqib/-/blob/master/README.md?ref_type=heads
+- Magic files from Apress book:
+  https://github.com/Apress/RISC-V-Assembly-Language-Programming/tree/main/Chapter%201/QEMU
+  
+
+Citations:
+- Alpine [cite:@linux_alpine]
+- Alpine/Docker/AMD64 [cite:@linux_alpine_docker_amd64]
+- Alpine/Docker/RISC-V [cite:@linux_alpine_docker_riscv]
+
+*** Docker
+#+begin_src sh
+  # Run factory Alpine image.
+  docker run --platform 'linux/riscv64'  \
+	     --volume /Users/andrei/dev/AndreiDuma/ms-thesis/:/forth/  \
+	     -it 'riscv64/alpine:3.20.2'
+
+  # Build.
+  docker build --platform 'linux/riscv64' -t 'riscv' .
+#+end_src
+
 *** Linux System Calls                                             :noexport:
 
 #+CAPTION: Calling convention for Linux system calls under =x86-64=.
@@ -168,7 +193,13 @@ Why this approach?
 
 *** ELF: The _E_​xecutable _F_​ile _F_​ormat
 
-Cite Chapter 4 (/Object Files/) of [cite:@system_v_abi].
+Citations:
+- *System V gABI*: Cite /Chapter 4 -- Object Files/ of [cite:/System V
+  Application Binary Interface/ @system_v_gabi].
+- *x86-64 psABI*: Cite /Chapter 4. Object Files/ of
+  [cite:@system_v_psabi_amd64].
+- *RISC-V psABI*: Cite /Chapter 8. ELF Object Files/ of [cite:/RISC-V
+  ABIs Specification/ @system_v_psabi_riscv].
 
 **** ELF File Header
 
@@ -207,18 +238,18 @@ Cite Chapter 4 (/Object Files/) of [cite:@system_v_abi].
 #+CAPTION: ELF program header.
 #+LABEL: tbl:elf-program-header
 #+ATTR_LATEX: :align l|l|l
-| *&*            | *File Header Bytes*                 | *Explanation*                                                                                       |
-|----------------+-------------------------------------+-----------------------------------------------------------------------------------------------------|
-| {{{addr(40)}}} | {{{b(0)}}}​~01 00 00 00~             | ~p_type~: Segment type; ~1~ → loadable.                                                             |
-|                | {{{b(4)}}}​~07 00 00 00~             | ~p_flags~: Segment-wise permissions; _1 → execute_, _2 → write_, _4 → read_.                        |
-|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_offset~: Offset of segment in file; we load the whole file, so ~0~.                              |
-|                | {{{b(0)}}}​~00 00 40 00 00 00 00 00~ | ~p_vaddr~: Virtual address of segment in memory; ~0x400000~ on ~x86-64~ [cite:@system_v_abi_amd64]. |
-|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_paddr~: Only used on systems where physical address is relevant.                                 |
-|                | {{{b(0)}}}​~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size of the segment in the file image (~TODO~).                                         |
-|                | {{{b(0)}}}​~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size of the segment in memory (\ge ~p_filesz~).                                            |
-|                | {{{b(0)}}}​~00 10 00 00 00 00 00 00~ | ~p_align~: Align segment to ~x86-64~ page size (4096 or ~0x1000~) [cite:@system_v_abi_amd64].       |
-|----------------+-------------------------------------+-----------------------------------------------------------------------------------------------------|
-| {{{addr(78)}}} |                                     |                                                                                                     |
+| *&*            | *File Header Bytes*                 | *Explanation*                                                                                         |
+|----------------+-------------------------------------+-------------------------------------------------------------------------------------------------------|
+| {{{addr(40)}}} | {{{b(0)}}}​~01 00 00 00~             | ~p_type~: Segment type; ~1~ → loadable.                                                               |
+|                | {{{b(4)}}}​~07 00 00 00~             | ~p_flags~: Segment-wise permissions; _1 → execute_, _2 → write_, _4 → read_.                          |
+|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_offset~: Offset of segment in file; we load the whole file, so ~0~.                                |
+|                | {{{b(0)}}}​~00 00 40 00 00 00 00 00~ | ~p_vaddr~: Virtual address of segment in memory; ~0x400000~ on ~x86-64~ [cite:@system_v_psabi_amd64]. |
+|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_paddr~: Only used on systems where physical address is relevant.                                   |
+|                | {{{b(0)}}}​~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size of the segment in the file image (~TODO~).                                           |
+|                | {{{b(0)}}}​~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size of the segment in memory (\ge ~p_filesz~).                                              |
+|                | {{{b(0)}}}​~00 10 00 00 00 00 00 00~ | ~p_align~: Align segment to ~x86-64~ page size (4096 or ~0x1000~) [cite:@system_v_psabi_amd64].       |
+|----------------+-------------------------------------+-------------------------------------------------------------------------------------------------------|
+| {{{addr(78)}}} |                                     |                                                                                                       |
 
 
 ** Implementing FORTH
@@ -228,7 +259,8 @@ Cite Chapter 4 (/Object Files/) of [cite:@system_v_abi].
   Maybe collect all global variables in one place?
 :END:
 
-SmithForth [cite:@SmithForth].
+Citations:
+- [cite:SmithForth @smith_forth].
 
 *** Global variables
 
