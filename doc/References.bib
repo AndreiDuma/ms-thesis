@@ -1,22 +1,45 @@
 %%% Forth %%%
 
-@Misc{sector_forth,
-  title =	 {sectorforth},
-  author =	 {Cesar Blum},
-  howpublished = {\url{https://github.com/cesarblum/sectorforth/}},
+@Book{brodie2004thinking,
+  title =	 {Thinking forth},
+  author =	 {Brodie, Leo},
+  year =	 2004,
+  publisher =	 {Punchy Publishing}
 }
 
-@Misc{milli_forth,
-  title =	 {milliForth},
-  author =	 {https://github.com/fuzzballcat},
-  howpublished = {\url{https://github.com/fuzzballcat/milliForth}}
+@Book{brodie1981starting,
+  title =	 {Starting forth},
+  author =	 {Brodie, Leo},
+  year =	 1981,
+  publisher =	 {Prentice-Hall}
 }
 
-@Misc{smith_forth,
+@book{loeliger1981threaded,
+  title =	 {Threaded Interpretive Languages},
+  author =	 {Loeliger, Ronald G.},
+  year =	 1981,
+  publisher =	 {McGraw-Hill, Inc.},
+  address =	 {USA},
+  isbn =	 {007038360X},
+}
+
+@Misc{smithforth,
   title =	 {{SmithForth: A Forth for x86-64 personal computers}},
   author =	 {David Smith},
   year =	 2022,
   howpublished = {\url{https://dacvs.neocities.org/SF/}}
+}
+
+@Misc{sectorforth,
+  title =	 {sectorforth},
+  author =	 {Blum, Cesar},
+  howpublished = {\url{https://github.com/cesarblum/sectorforth/}},
+}
+
+@Misc{milliforth,
+  title =	 {milliForth},
+  author =	 {https://github.com/fuzzballcat},
+  howpublished = {\url{https://github.com/fuzzballcat/milliForth}}
 }
 
 @Article{kogge82,
@@ -41,7 +64,7 @@
   year =	 2002,
   address =	 {Garmisch-Partenkirchen},
   url =
-                  {https://www.complang.tuwien.ac.at/papers/ertl02.ps.gz},
+                  {\url{https://www.complang.tuwien.ac.at/papers/ertl02.ps.gz}},
   abstract =	 {Forth has been traditionally implemented as indirect
                   threaded code, where the code for non-primitives is
                   the code-field address of the word. To get the
@@ -67,8 +90,8 @@
 @Misc{system_v_gabi,
   title =	 {{System V Application Binary Interface
                   (`gABI'). DRAFT Version, June 10, 2013}},
-  howpublished = {\\
-                  \href{https://www.sco.com/developers/gabi/latest/contents.html}},
+  howpublished = {
+                  \url{https://www.sco.com/developers/gabi/latest/contents.html}},
   note =	 {Accessed 24.11.2016},
   annote =	 {1997 SCO version at:
                   https://www.sco.com/developers/devspecs/gabi41.pdf},
@@ -94,12 +117,27 @@
   howpublished = {\url{https://riscv.org/technical/specifications/}},
 }
 
+@Article{elf_sti_1995,
+  title =	 {Executable and Linking Format (ELF) Specification
+                  Version 1.2},
+  author =	 {Standard, Tool Interface},
+  journal =	 {TIS Committee},
+  pages =	 {1--106},
+  year =	 1995
+}
+
 %%% Linux %%%
 
 @Misc{linux_system_calls_table,
   title =	 {Linux System Call Table},
   howpublished =
                   {\url{https://www.chromium.org/chromium-os/developer-library/reference/linux-constants/syscalls/#x86_64-64-bit}}
+}
+
+@Misc{linux_man_syscall,
+  title =	 {syscall(2) — Linux manual page - NOTES},
+  howpublished =
+                  {\url{https://man7.org/linux/man-pages/man2/syscall.2.html#NOTES}},
 }
 
 @Misc{linux_alpine,
@@ -150,12 +188,71 @@
                   {\url{https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html}}
 }
 
+@article{kerner2007history,
+  title =	 {A history of modern 64-bit computing},
+  author =	 {Kerner, Matthew and Padgett, Neil},
+  journal =	 {Preprint at
+                  https://courses.cs.washington.edu/courses/csep590/06au/projects/history-64-bit.pdf},
+  year =	 2007
+}
+
 %%% RISC-V %%%
+
+@book{patterson2017,
+  title =	 {The RISC-V Reader: An Open Architecture Atlas},
+  author =	 {Patterson, David and Waterman, Andrew},
+  year =	 2017,
+  isbn =	 0999249118,
+  publisher =	 {Strawberry Canyon},
+  edition =	 {1st},
+  abstract =	 {The RISC-V Reader is a concise introduction and
+                  reference for embedded systems programmers,
+                  students, and the curious to a modern, popular, open
+                  architecture. RISC-V spans from the cheapest 32-bit
+                  embedded microcontroller to the fastest 64-bit cloud
+                  computer. The text shows how RISC-V followed the
+                  good ideas of past architectures while avoiding
+                  their mistake.}
+}
+
+@Book{waterman2016,
+  title =	 {Design of the RISC-V instruction set architecture},
+  author =	 {Waterman, Andrew Shell},
+  year =	 2016,
+  publisher =	 {University of California, Berkeley}
+}
+
+@Misc{riscv_spec_vol_i,
+  title =	 {{The RISC-V Instruction Set Manual: Volume I
+                  (Unprivileged Architecture). Version 20240411}},
+  institution =	 {{RISC-V International}},
+  howpublished = {\url{https://riscv.org/technical/specifications/}},
+}
+
+@Misc{riscv_spec_vol_ii,
+  title =	 {{The RISC-V Instruction Set Manual: Volume II
+                  (Privileged Architecture). Version 20240411}},
+  institution =	 {{RISC-V International}},
+  howpublished = {\url{https://riscv.org/technical/specifications/}},
+}
 
 @Misc{riscv_ratified_extensions,
   title =	 {RISC-V Ratified Extensions},
   howpublished =
                   {\url{https://wiki.riscv.org/display/HOME/Ratified+Extensions}},
+}
+
+%%% QEMU %%%
+
+@inproceedings{bellard2005qemu,
+  title =	 {QEMU, a fast and portable dynamic translator.},
+  author =	 {Bellard, Fabrice},
+  booktitle =	 {USENIX annual technical conference, FREENIX Track},
+  volume =	 41,
+  number =	 46,
+  pages =	 {10--5555},
+  year =	 2005,
+  organization = {California, USA}
 }
 
 %%% LISP %%%

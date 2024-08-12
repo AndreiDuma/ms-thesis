@@ -107,89 +107,59 @@ What are the objectives of this thesis?
 #+end_comment
 
 
-** An Incremental Approach
+** SmithForth
 
-#+begin_comment
-Why this approach?
-- Reference inspiration paper: "An incremental approach to compiler
-  construction".
-#+end_comment
+Citations:
+- Leo Brodie: [cite:@brodie1981starting] and [cite:@brodie2004thinking]
+- Loeliger: [cite:@loeliger1981threaded]
+- [cite:SmithForth @smithforth] vs [cite:sectorforth @sectorforth] vs
+  [cite:milliForth @milliforth]
+- Anton Ertl: [cite:@ertl02]
 
 
-* Stage 1: A Forth Interpreter in Machine Code
+** The x86-64 Architecture
 
-** The =x86-64= Architecture                                       :noexport:
+Citations:
+- /A history of modern 64-bit computing/ [cite:@kerner2007history]
+- Intel Manual Volume 2 (Instruction Set Reference) [cite:@intel_manual_volume_2]
 
-#+CAPTION: Instruction prefixes.
-#+LABEL: tbl:instruction-prefixes
-| Prefix                | Hex |
-|-----------------------+-----|
-| REPNE/REPNZ           | F2  |
-| REP, REPE/REPZ        | F3  |
-| Operand-size override | 66  |
-| Address-size override | 67  |
+  
+** The RISC-V Architecture
 
-#+CAPTION: Useful =x86-64= instructions.
-#+LABEL: tbl:instructions
-| Mnemonic | Opcode (hex) |
-|----------+--------------|
-| CALL     | =E8=         |
-|          | =FF=         |
+Citations:
+- Patterson & Waterman: [cite:@patterson2017]
+- /Design of the RISC-V instruction set architecture/, PhD Thesis
+  [cite:@waterman2016]
+- RISC-V Instruction Set Manual: Volume I[cite:@riscv_spec_vol_i] and
+  Volume 2[cite:@riscv_spec_vol_ii]
+- RISC-V Ratified Extensions [cite:@riscv_ratified_extensions]
 
 
 ** The Linux Environment
 
-RISC-V:
-- Idea:
-  https://www.codeproject.com/Tips/5383029/Run-Debian-RISC-V-In-QEMU-Virtual-Environment-For
-- dqib:
-  https://gitlab.com/giomasce/dqib/-/blob/master/README.md?ref_type=heads
-- Magic files from Apress book:
-  https://github.com/Apress/RISC-V-Assembly-Language-Programming/tree/main/Chapter%201/QEMU
-  
+*** Linux System Calls
 
 Citations:
-- Alpine [cite:@linux_alpine]
-- Alpine/Docker/AMD64 [cite:@linux_alpine_docker_amd64]
-- Alpine/Docker/RISC-V [cite:@linux_alpine_docker_riscv]
+- Chromium's Linux System Call Table [cite:@linux_system_calls_table]
+- ~syscall(2)~ Linux manual page [cite:@linux_man_syscall]
 
-*** Docker
-#+begin_src sh
-  # Run factory Alpine image.
-  docker run --platform 'linux/riscv64'  \
-	     --volume /Users/andrei/dev/AndreiDuma/ms-thesis/:/forth/  \
-	     -it 'riscv64/alpine:3.20.2'
-
-  # Build.
-  docker build --platform 'linux/riscv64' -t 'riscv' .
-#+end_src
-
-*** Linux System Calls                                             :noexport:
-
-#+CAPTION: Calling convention for Linux system calls under =x86-64=.
+#+CAPTION: Calling convention for Linux system calls under =x86-64= and =riscv=.
 #+LABEL: tbl:syscall-calling-convention
-|------------+---------------------------------------------------------------------|
-| *Register* | *Usage*                                                             |
-|------------+---------------------------------------------------------------------|
-| RAX        | Syscall number (the identifier of the system call being requested). |
-|------------+---------------------------------------------------------------------|
-| RDI        | First argument to the syscall.                                      |
-| RSI        | Second argument to the syscall.                                     |
-| RDX        | Third argument to the syscall.                                      |
-| R10        | Fourth argument to the syscall.                                     |
-| R8         | Fifth argument to the syscall.                                      |
-| R9         | Sixth argument to the syscall.                                      |
-|------------+---------------------------------------------------------------------|
+#+ATTR_LATEX: :align c|c|c|c|ccccc
+| *Arch.*  | *Instr.*  | *Syscall #* | *Return* | *Arg. 1* | *Arg. 2* | *Arg. 3* | *Args. 4, 5, 6*   |
+|----------+-----------+------------+----------+----------+----------+----------+-------------------|
+| ~x86-64~ | ~syscall~ | ~rax~      | ~rax~    | ~rdi~    | ~rsi~    | ~rdx~    | ~r10~, ~r8~, ~r9~ |
+| ~riscv~  | ~ecall~   | ~a7~       | ~a0~     | ~a0~     | ~a1~     | ~a2~     | ~a3~, ~a4~, ~a5~  |
 
-#+CAPTION: Linux system calls used in this Forth implementation.
-#+LABEL: tbl:syscalls
-| *Syscall* | *Name* | *RAX*  | *RDI*               | *RSI*             | *RDX*          |
-|-----------+--------+--------+---------------------+-------------------+----------------|
-|         0 | read   | =0x00= | =unsigned int fd=   | =char *buf=       | =size_t count= |
-|         1 | write  | =0x01= | =unsigned int fd=   | =const char *buf= | =size_t count= |
-|        12 | brk    | =0x0C= | =unsigned long brk= | –                 | –              |
-|        60 | exit   | =0x3C= | =int error_code=    | –                 | –              |
-
+#+CAPTION: Used Linux system calls for ~x86-64~ and ~riscv~, with their signatures.
+#+LABEL: tbl:syscalls:x86-64
+#+ATTR_LATEX: :align l|c|c|llllll
+|         | *Syscall #* | *Syscall #* |                   |                   |                |
+| *Name*  | (~x86-64~)  | (~riscv~)   | *Arg. 1*          | *Arg. 2*          | *Arg. 3*       |
+|---------+-------------+-------------+-------------------+-------------------+----------------|
+| ~read~  | 0 (~0x00~)  | 63 (~0x3F~) | ~unsigned int fd~ | ~char *buf~       | ~size_t count~ |
+| ~write~ | 1 (~0x01~)  | 64 (~0x40~) | ~unsigned int fd~ | ~const char *buf~ | ~size_t count~ |
+| ~exit~  | 60 (~0x3C~) | 93 (~0x5D~) | ~int error_code~  | –                 | –              |
 
 *** ELF: The _E_​xecutable _F_​ile _F_​ormat
 
@@ -201,10 +171,28 @@ Citations:
 - *RISC-V psABI*: Cite /Chapter 8. ELF Object Files/ of [cite:/RISC-V
   ABIs Specification/ @system_v_psabi_riscv].
 
-**** ELF File Header
+*** Development environment
 
-#+CAPTION: ELF file header for an =x86-64= Linux executable.
-#+LABEL: tbl:elf-file-header
+Citations:
+- Bellard's original QEMU paper [cite:@bellard2005qemu]
+
+RISC-V on QEMU:
+- Idea:
+  https://www.codeproject.com/Tips/5383029/Run-Debian-RISC-V-In-QEMU-Virtual-Environment-For
+- dqib:
+  https://gitlab.com/giomasce/dqib/-/blob/master/README.md?ref_type=heads
+- Magic files from Apress book:
+  https://github.com/Apress/RISC-V-Assembly-Language-Programming/tree/main/Chapter%201/QEMU
+
+  
+* SmithForth Analysis and Porting to RISC-V
+
+** The ELF Header
+
+*** ELF File Header
+
+#+CAPTION: ELF file header for the =x86-64= Linux executable.
+#+LABEL: tbl:elf-file-header:x86
 #+ATTR_LATEX: :align l|l|l
 | *&*            | *File Header Bytes*                 | *Explanation*                                                                      |
 |----------------+-------------------------------------+------------------------------------------------------------------------------------|
@@ -218,6 +206,36 @@ Citations:
 |----------------+-------------------------------------+------------------------------------------------------------------------------------|
 |                | {{{b(0)}}}​~02 00~                   | ~e_type~: Object file type; ~2~ → executable.                                      |
 |                | {{{b(2)}}}​~3E 00~                   | ~e_machine~: Instruction set architecture; _~0x3E~ → ~x86-64~_, ~0xF3~ → ~RISC-V~. |
+|                | {{{b(4)}}}​~01 00 00 00~             | ~e_version~: ELF identification version; must be ~1~.                              |
+|                | {{{b(0)}}}​~78 00 10 00 00 00 00 00~ | ~e_entry~: Memory address of entry point (where process starts).                   |
+|                | {{{b(0)}}}​~40 00 00 00 00 00 00 00~ | ~e_phoff~: File offset of program headers; ~0x34~ → ~32-bit~, _~0x40~ → 64-bit_.   |
+|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~e_shoff~: File offset section headers (we don't have any sections).               |
+|----------------+-------------------------------------+------------------------------------------------------------------------------------|
+|                | {{{b(0)}}}​~00 00 00 00~             | ~e_flags~: 0 for the ~x86-64~ architecture.                                        |
+|                | {{{b(4)}}}​~40 00~                   | ~e_ehsize~: Size of this header; ~0x34~ → 32-bit, _~0x40~ → 64-bit_.               |
+|                | {{{b(6)}}}​~38 00~                   | ~e_phentsize~: Size of each program header; ~0x20~ → 32-bit, _~0x38~ → 64-bit_.    |
+|                | {{{b(0)}}}​~01 00~                   | ~e_phnum~: Number of program headers; here ~1~.                                    |
+|                | {{{b(2)}}}​~40 00~                   | ~e_shentsize~: Size of each section header; ~0x28~ → 32-bit, _~0x40~ → 64-bit_.    |
+|                | {{{b(4)}}}​~00 00~                   | ~e_shnum~: Number of section headers; here ~0~.                                    |
+|                | {{{b(6)}}}​~00 00~                   | ~e_shstrndx~: Index of section header containing section names; N/A.               |
+|----------------+-------------------------------------+------------------------------------------------------------------------------------|
+| {{{addr(40)}}} |                                     |                                                                                    |
+
+#+CAPTION: ELF file header for the =RISC-V= Linux executable.
+#+LABEL: tbl:elf-file-header:risc5
+#+ATTR_LATEX: :align l|l|l
+| *&*            | *File Header Bytes*                 | *Explanation*                                                                      |
+|----------------+-------------------------------------+------------------------------------------------------------------------------------|
+| {{{addr(00)}}} | {{{b(0)}}}​~7F 45 4C 46~             | ~e_ident[EI_MAG]~: ELF magic number.                                               |
+|                | {{{b(4)}}}​~02~                      | ~e_ident[EI_CLASS]~: ~1~ → 32-bit, _~2~ → 64-bit_.                                 |
+|                | {{{b(5)}}}​~01~                      | ~e_ident[EI_DATA]~: _~1~ → little-endian_, ~2~ → big-endian.                       |
+|                | {{{b(6)}}}​~01~                      | ~e_ident[EI_VERSION]~: ELF header version; must be ~1~.                            |
+|                | {{{b(7)}}}​~00~                      | ~e_ident[EI_OSABI]~: Target OS ABI; ~ELFOSABI_NONE~ (~0~) is fine for Linux.       |
+|                | {{{b(0)}}}​~00~                      | ~e_ident[EI_ABIVERSION]~: ABI version; should be ~0~ for Linux.                    |
+|                | {{{b(1)}}}​~00 00 00 00 00 00 00~    | ~e_ident[EI_PAD]~: Padding; unused; should be ~0~.                                 |
+|----------------+-------------------------------------+------------------------------------------------------------------------------------|
+|                | {{{b(0)}}}​~02 00~                   | ~e_type~: Object file type; ~2~ → executable.                                      |
+|                | {{{b(2)}}}​~F3 00~                   | ~e_machine~: Instruction set architecture; ~0x3E~ → ~x86-64~, _~0xF3~ → ~RISC-V~_. |
 |                | {{{b(4)}}}​~01 00 00 00~             | ~e_version~: ELF identification version; must be ~1~.                              |
 |                | {{{b(0)}}}​~78 00 40 00 00 00 00 00~ | ~e_entry~: Memory address of entry point (where process starts).                   |
 |                | {{{b(0)}}}​~40 00 00 00 00 00 00 00~ | ~e_phoff~: File offset of program headers; ~0x34~ → ~32-bit~, _~0x40~ → 64-bit_.   |
@@ -233,9 +251,9 @@ Citations:
 |----------------+-------------------------------------+------------------------------------------------------------------------------------|
 | {{{addr(40)}}} |                                     |                                                                                    |
 
-**** ELF Program Header
+*** ELF Program Header
 
-#+CAPTION: ELF program header.
+#+CAPTION: ELF program header (~x86-64~).
 #+LABEL: tbl:elf-program-header
 #+ATTR_LATEX: :align l|l|l
 | *&*            | *File Header Bytes*                 | *Explanation*                                                                                         |
@@ -246,24 +264,33 @@ Citations:
 |                | {{{b(0)}}}​~00 00 40 00 00 00 00 00~ | ~p_vaddr~: Virtual address of segment in memory; ~0x400000~ on ~x86-64~ [cite:@system_v_psabi_amd64]. |
 |                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_paddr~: Only used on systems where physical address is relevant.                                   |
 |                | {{{b(0)}}}​~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size of the segment in the file image (~TODO~).                                           |
-|                | {{{b(0)}}}​~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size of the segment in memory (\ge ~p_filesz~).                                              |
+|                | {{{b(0)}}}​~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size of the segment in memory (\ge ~p_filesz~).                                            |
 |                | {{{b(0)}}}​~00 10 00 00 00 00 00 00~ | ~p_align~: Align segment to ~x86-64~ page size (4096 or ~0x1000~) [cite:@system_v_psabi_amd64].       |
 |----------------+-------------------------------------+-------------------------------------------------------------------------------------------------------|
 | {{{addr(78)}}} |                                     |                                                                                                       |
 
+#+CAPTION: ELF program header (~RV64I~).
+#+LABEL: tbl:elf-program-header
+#+ATTR_LATEX: :align l|l|l
+| *&*            | *File Header Bytes*                 | *Explanation*                                                                              |
+|----------------+-------------------------------------+--------------------------------------------------------------------------------------------|
+| {{{addr(40)}}} | {{{b(0)}}}​~01 00 00 00~             | ~p_type~: Segment type; ~1~ → loadable.                                                    |
+|                | {{{b(4)}}}​~07 00 00 00~             | ~p_flags~: Segment-wise permissions; _1 → execute_, _2 → write_, _4 → read_.               |
+|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_offset~: Offset of segment in file; we load the whole file, so ~0~.                     |
+|                | {{{b(0)}}}​~00 00 01 00 00 00 00 00~ | ~p_vaddr~: Virtual address of segment in memory; we can use 0 in RISC-V.                   |
+|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_paddr~: Only used on systems where physical address is relevant.                        |
+|                | {{{b(0)}}}​~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size of the segment in the file image (~TODO~).                                |
+|                | {{{b(0)}}}​~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size of the segment in memory (\ge ~p_filesz~).                                 |
+|                | {{{b(0)}}}​~00 10 00 00 00 00 00 00~ | ~p_align~: Align segment to RISC-V page size (4096 or ~0x1000~) [cite:@riscv_spec_vol_ii]. |
+|----------------+-------------------------------------+--------------------------------------------------------------------------------------------|
+| {{{addr(78)}}} |                                     |                                                                                            |
 
-** Implementing FORTH
 
-:LOGBOOK:
-- Note taken on [2024-07-27 Sat 13:49] \\
-  Maybe collect all global variables in one place?
-:END:
+** Global variables
 
-Citations:
-- [cite:SmithForth @smith_forth].
-
-*** Global variables
-
+#+CAPTION: All global variables used by SmithForth.
+#+LABEL: tbl:globals
+#+ATTR_LATEX: :align l|l|l
 | *Variable* | *Register*​/​*Address*   | *Contents*                                                    |
 |------------+------------------------+---------------------------------------------------------------|
 | ~INPUT~    | ~RSI~                  | Source address of binary interpreter data and commands.       |
@@ -274,9 +301,8 @@ Citations:
 | ~STATE~    | ~0x10000020 (VARS+32)~ | Either ~0~ (/interpreting/ state) or ~1~ (/compiling/ state). |
 | ~LATEST~   | ~0x10000028 (VARS+40)~ | The execution token (/xt/) of the latest defined Forth word.  |
 
-
-#+CAPTION: Global variables =INPUT= and =OUTPUT=.
-#+LABEL: tbl:forth:globals
+#+CAPTION: Initialize global variables =INPUT= and =OUTPUT=.
+#+LABEL: tbl:forth:init-io
 #+ATTR_LATEX: :align l|ll|l|l
 | *Pseudocode*                  | *Instruction*    | *Opcode*   | *&*            | *Machine code*       |
 |-------------------------------+------------------+------------+----------------+----------------------|
@@ -287,7 +313,9 @@ Citations:
 |                               |                  |            | {{{addr(82)}}} |                      |
 
 
-*** Binary interpreter                                             :noexport:
+** Binary interpreter
+
+*** The binary interpreter loop
 
 #+CAPTION: The binary interpreter routine and loop.
 #+LABEL: tbl:forth:bi
@@ -342,7 +370,7 @@ Citations:
 | {{{i(1)}}} ~goto [entry@RBX].~                | JMP r/m64        | REX FF /4     |                | ~FF~ {{{modrm(23,00,100,011)}}}         | jump [rbx] (exec)       |
 |                                               |                  |               | {{{addr(B2)}}} |                                         |                         |
 
-**** COMPL                                                         :noexport:
+*** Subroutine ~COMPL~                                             :noexport:
 
 #+CAPTION: =COMPL=, the FORTH compiler.
 #+LABEL: tbl:forth:compl
@@ -375,7 +403,7 @@ Citations:
 | ~return.~  /# From binary interpreter./                                                     | RET            | C3         |                | ~C3~                            | return                                             |
 |                                                                                             |                |            | {{{addr(C5)}}} |                                 |                                                    |
 
-**** Head                                                          :noexport:
+*** Subroutine ~Head~                                              :noexport:
 
 #+CAPTION: Subroutine =Head= defines new words in the dictionary.
 #+LABEL: tbl:forth:head
@@ -416,7 +444,9 @@ Citations:
 | ~return.~  /# From binary interpreter./    | RET               | C3               |                | ~C3~                                    | return        |
 
 
-*** Subroutine BYE                                                 :noexport:
+** A way out
+
+*** Subroutine ~BYE~                                               :noexport:
 
 #+CAPTION: Subroutine ~BYE~ terminates the program by performing an ~exit~ syscall.
 #+LABEL: tbl:forth:bye
@@ -434,11 +464,14 @@ Citations:
 |                                    |                |          |                                 |                        |
 
 
-*** Subroutine TYPE                                                :noexport:
+** Debugging utilities
+
 :LOGBOOK:
 - Note taken on [2024-07-29 Mon 13:19] \\
   Why not save ~RSI~ and ~RDI~ inside ~TYPE~ rather than at call sites?
 :END:
+
+*** Subroutine ~TYPE~                                              :noexport:
 
 #+CAPTION: Subroutine ~TYPE~ dumps a memory range to ~STDOUT~.
 #+LABEL: tbl:forth:type
@@ -472,8 +505,7 @@ Citations:
 | ~_end:~                                          |                 |             | {{{addr(11)}}}       |                                    |                       |
 | {{{i(1)}}} ~return.~                             | RET             | C3          |                      | ~C3~                               | return                |
 
-
-*** Debugging utilities                                            :noexport:
+*** Subroutine ~dbg~                                               :noexport:
 
 #+CAPTION: Subroutine ~dbg~ dumps the working memory to ~STDOUT~.
 #+LABEL: tbl:forth:dbg
@@ -498,6 +530,8 @@ Citations:
 | ~restore INPUT@RSI;~                   | POP r64          | 58+rd      | ~5E~                      | pop rsi     |
 | ~return.~                              | RET              | C3         | ~C3~                      | return      |
 |                                        |                  |            |                           |             |
+
+*** Subroutine ~reg~                                               :noexport:
 
 #+CAPTION: Subroutine ~reg~ dumps the registers to ~STDOUT~.
 #+LABEL: tbl:forth:reg
@@ -541,7 +575,7 @@ Citations:
 |                                          |                   |                  |                                       |                         |
 
 
-*** Text interpreter
+** Text interpreter
 
 # ============= TEXT INTERPRETER
 #
@@ -557,7 +591,7 @@ Citations:
 # In Forth, to parse is to remove from the input stream. As a line is parsed, [>IN] increases from 0 to [#IN].
 # Forth's "parse area" is the part of the line not yet parsed.
 
-**** REFILL                                                        :noexport:
+*** Subroutine ~REFILL~                                            :noexport:
 
 #+CAPTION: Subroutine ~REFILL~ TODO.
 #+LABEL: tbl:forth:refill
@@ -596,7 +630,7 @@ Citations:
 | {{{i(2)}}}   ~goto _beg.~                        | JNE _rel8_         | 75 _cb_          |                | ~75~ {{{offset(F0,00-10)}}}                               | -jump _beg if != |
 | {{{i(1)}}} ~return.~                             | RET                | C3               | {{{addr(10)}}} | ~C3~                                                      | return           |
 
-**** seek                                                          :noexport:
+*** Subroutine ~seek~                                              :noexport:
 
 #+CAPTION: Subroutine ~seek~ parses characters until it finds one in a given range.
 #+LABEL: tbl:forth:seek
@@ -633,7 +667,7 @@ Citations:
 | ~_end:~                                       |                    |                  | {{{addr(1F)}}} |                                                    | # _end:                                     |
 | {{{c(2)}}} ~return.~                          | RET                | C3               |                | ~C3~                                               | return                                      |
 
-**** PARSE                                                         :noexport:
+*** Subroutine ~PARSE~                                             :noexport:
 
 #+CAPTION: Subroutine ~PARSE~ returns the address and size of a newly parsed string.
 #+LABEL: tbl:forth:parse
@@ -669,7 +703,7 @@ Citations:
 | {{{c(11)}}}          ~+ [TIB];~            |                    |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} ~return.~                      | RET                | C3               |                | ~C3~                                               | return                                                                              |
 
-**** pname                                                         :noexport:
+*** Subroutine ~pname~                                             :noexport:
 
 #+CAPTION: Subroutine ~pname~ TODO.
 #+LABEL: tbl:forth:pname
@@ -692,7 +726,7 @@ Citations:
 | ~call PARSE;~  /# Compiled./            |                |            | {{{compile(50,P)}}}             | Call PARSE             |
 | ~return.~                               | RET            | C3         | ~C3~                            | return                 |
 
-**** [                                                             :noexport:
+*** Subroutine ~[~                                                 :noexport:
 
 #+CAPTION: Subroutine ~'['~ changes Forth's ~STATE~ to interpreting.
 #+LABEL: tbl:forth:lbracket
@@ -709,7 +743,7 @@ Citations:
 | ~[STATE] ← pop;~                  | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]          |
 | ~return.~                         | RET           | C3       | ~C3~                                                                              | return               |
 
-**** ]                                                             :noexport:
+*** Subroutine ~]~                                                 :noexport:
 
 #+CAPTION: Subroutine ~']'~ changes Forth's ~STATE~ to compiling.
 #+LABEL: tbl:forth:rbracket
@@ -726,7 +760,7 @@ Citations:
 | ~[STATE] ← pop;~               | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]       |
 | ~return.~                      | RET           | C3       | ~C3~                                                                              | return            |
 
-**** \                                                             :noexport:
+*** Subroutine ~\~                                                 :noexport:
 
 #+CAPTION: Subroutine ~'\'~ implements line comments.
 #+LABEL: tbl:forth:backslash
@@ -743,7 +777,7 @@ Citations:
 | ~[>IN] ← RAX;~                  | MOV r/m64, r64 | REX.W 89 /r | ~48 89~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(10 00 00 10)}}} | [>IN] = rax |
 | ~return.~                       | RET            | C3          | ~C3~                                                                                 | return      |
 
-**** (                                                             :noexport:
+*** Subroutine ~(~                                                 :noexport:
 
 #+CAPTION: Subroutine ~'('~ implements inline comments (ending with a corresponding ~')'~).
 #+LABEL: tbl:forth:lparen
@@ -760,7 +794,7 @@ Citations:
 | ~call PARSE;~  /# Compiled./               | ---            | ---        | {{{compile(50,P)}}} | Call PARSE            Forth 2012 implies comment ends at rparen or newline. |
 | ~return.~                                  | RET            | C3         | ~C3~                | return                                                                      |
 
-**** :                                                             :noexport:
+*** Subroutine ~:~                                                 :noexport:
 
 #+CAPTION: Subroutine ~:~ (colon) begins compiling a word after setting up its dictionary entry.
 #+LABEL: tbl:forth:colon
@@ -788,7 +822,7 @@ Citations:
 | ~call rbracket;~  /# Compiled./           | ---               | ---               | {{{compile(5D,])}}}                       | Call ]                                 |
 | ~return.~                                 | RET               | C3                | ~C3~                                      | return                                 |
 
-**** ;                                                             :noexport:
+*** Subroutine ~;~                                                 :noexport:
 
 #+CAPTION: Subroutine ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting.
 #+LABEL: tbl:forth:semicolon
@@ -816,7 +850,7 @@ Citations:
 | ~call lbracket;~  /# Compiled./           |                   |                  | {{{compile(5B,[)}}}                                         | Call [               |
 | ~return.~                                 | RET               | C3               | ~C3~                                                        | return               |
 
-**** .                                                             :noexport:
+*** Subroutine ~.~                                                 :noexport:
 
 #+CAPTION: Subroutine ~'.'~ TODO.
 #+LABEL: tbl:forth:dot
@@ -835,7 +869,7 @@ Citations:
 | ~[RDI++] ← AL;~                  | STOS m8           | AA               | ~AA~                                    | [rdi++] = al |
 | ~return.~                        | RET               | C3               | ~C3~                                    | return       |
 
-**** LIT                                                           :noexport:
+*** Subroutine ~LIT~                                               :noexport:
 
 #+CAPTION: Subroutine ~LIT~ compiles a literal byte into a word definition.
 #+LABEL: tbl:forth:lit
@@ -893,7 +927,7 @@ Citations:
 | ~stack@R15 += 8;~                                           | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~49 83~ {{{modrm(C7,11,000,111)}}} /08/ | r15 += 8                |
 | ~return.~                                                   | RET               | C3               | ~C3~                                    | return                  |
 
-**** xt=                                                           :noexport:
+*** Subroutine ~xt=~                                               :noexport:
 
 #+CAPTION: Subroutine ~xt=~ compares an execution token's name with a given string.
 #+LABEL: tbl:forth:xt=
@@ -943,7 +977,7 @@ Citations:
 | {{{c(10)}}}        ~u@RCX);~  /# (Un)sets ~ZF~./   | REPE CMPS m8, m8  | F3 A6            |                | ~F3 A6~                                            | strings equal ?         |
 | {{{c(2)}}} ~return.~                               | RET               | C3               |                | ~C3~                                               | return                  |
 
-**** FIND                                                          :noexport:
+*** Subroutine ~FIND~                                              :noexport:
 
 #+CAPTION: Subroutine ~FIND~ searches the dictionary for a word matching a given name.
 #+LABEL: tbl:forth:find
@@ -985,7 +1019,7 @@ Citations:
 | ~_end:~                                    |                |             | {{{addr(04)}}} |                                                             | # _end:          |
 | {{{c(2)}}} ~return.~                       | RET            | C3          |                | ~C3~                                                        | return           |
 
-**** Num                                                           :noexport:
+*** Subroutine ~Num~                                               :noexport:
 
 #+CAPTION: Subroutine ~Num~ parses a character string as a number and returns it on the stack.
 #+LABEL: tbl:forth:num
@@ -1029,7 +1063,7 @@ Citations:
 | {{{c(2)}}} ~[stack@R15]~ \vert​~= digit@RAX;~ | OR r/m64, r64     | REX.W 09 /r      |                | ~49 09~ {{{modrm(07,00,000,111)}}}        | [r15] \vert= rax       |
 | {{{c(2)}}} ~return.~                     | RET               | C3               |                | ~C3~                                      | return             |
 
-**** miss                                                          :noexport:
+*** Subroutine ~miss~                                              :noexport:
 
 #+CAPTION: Subroutine ~miss~ attempts parsing a word as a number, optionally compiling it as a literal.
 #+LABEL: tbl:forth:miss
@@ -1068,7 +1102,7 @@ Citations:
 | {{{c(2)}}} ~call LIT;~  /# Compiled./  |                   |             |                | {{{compile(4C,L)}}}                                      | Call LIT              |
 | {{{c(2)}}} ~return.~                   | RET               | C3          |                | ~C3~                                                     | return                |
 
-**** EXEC                                                          :noexport:
+*** Subroutine ~EXEC~                                              :noexport:
 
 #+CAPTION: Subroutine ~EXEC~ ???.
 #+LABEL: tbl:forth:EXEC
@@ -1099,7 +1133,7 @@ Citations:
 | ~call [RCX];~                   | CALL r/m64       | FF /2      | ~FF~ {{{modrm(D1,11,010,001)}}} | call rcx     |
 | ~return.~                       | RET              | C3         | ~C3~                            | return       |
 
-**** exec
+*** Subroutine ~exec~                                              :noexport:
 
 #+CAPTION: Subroutine ~exec~ executes a word if interpreting or if it's immediate.
 #+LABEL: tbl:forth:exec
@@ -1121,7 +1155,7 @@ Citations:
 | {{{c(2)}}} ~call EXEC;~  /# Compiled./          |                |          |                | {{{compile(45,E)}}}          | Call EXEC          |
 | {{{c(2)}}} ~return.~                            | RET            | C3       |                | ~C3~                         | return             |
 
-**** compl
+*** Subroutine ~compl~                                             :noexport:
 
 #+CAPTION: Subroutine ~compl~ compiles a word in compiling state if it's not immediate.
 #+LABEL: tbl:forth:compl
@@ -1145,7 +1179,7 @@ Citations:
 | {{{c(2)}}} ~imm+state@AL ← 1;~              | MOV r8, /imm8/ | B0+rb /ib/ |                | ~B0~ /~01~/                     | al = 1              |
 | {{{c(2)}}} ~return.~                        | RET            | C3         |                | ~C3~                            | return              |
 
-**** hit
+*** Subroutine ~hit~                                               :noexport:
 
 #+CAPTION: Subroutine ~hit~ ???.
 #+LABEL: tbl:forth:hit
@@ -1172,7 +1206,7 @@ Citations:
 | {{{c(2)}}} ~call exec;~   {{{c(1)}}}​/# Compiled./ |                 |             |                | {{{compile(65,e)}}}                                      | Call exec           |
 | {{{c(2)}}} ~return.~                              | RET             | C3          |                | ~C3~                                                     | return              |
 
-**** SVAL
+*** Subroutine ~SVAL~                                              :noexport:
 
 #+CAPTION: Subroutine ~SVAL~ ???.
 #+LABEL: tbl:forth:SVAL
@@ -1201,7 +1235,7 @@ Citations:
 |                                                   |                |             |                | \hookrightarrow {{{i(0)}}} {{{displ(00 00 00 10)}}}         |                 |
 | {{{c(2)}}} ~return.~                              | RET            | C3          |                | ~C3~                                                        | return          |
 
-**** ti
+*** Subroutine ~ti~                                                :noexport:
 
 #+CAPTION: Subroutine ~ti~ ???.
 #+LABEL: tbl:forth:ti
@@ -1226,17 +1260,7 @@ Citations:
 | {{{c(2)}}} ~return.~                               | RET                | C3               |                | ~C3~                                               | return                |
 
 
-* Footnotes
-
-[fn:2] We reset the address counter since no jumps occur from the code
-below this point to the code above or vice versa. This has the
-advantage of keeping the counter value contained to one byte. We will
-use an overlined {{{addr(00)}}} when we do this again.
-
-[fn:1] SmithForth misses the opcode here.
-
-
-* Bibliography
+* Bibliography                                                     :noexport:
 
 References:
 
@@ -1260,8 +1284,10 @@ References:
 *** Sections that I should include in the thesis
 - Legend explaining the typographic conventions.
   - Do it by column for the code tables.
-- Call graph of the subroutines to show how they are related.
 - Comparison between SmithForth, sectorforth, milliForth, other (?).
+- Call graph of the subroutines to show how they are related.
+- Summaries of instructions (~x86-64~ and ~riscv~) used in the two
+  implementations.
   
 *** Useful Sections in the Intel Manual
 
@@ -1290,3 +1316,12 @@ that it's not wasted.
 - https://github.com/theandrew168/derzforth
 - https://github.com/mcmenaminadrian/riscyforth
 
+
+* Footnotes
+
+[fn:1] SmithForth misses the opcode here.
+
+[fn:2] We reset the address counter since no jumps occur from the code
+below this point to the code above or vice versa. This has the
+advantage of keeping the counter value contained to one byte. We will
+use an overlined {{{addr(00)}}} when we do this again.

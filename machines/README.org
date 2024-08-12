@@ -2,6 +2,9 @@ Configurations done in the Debian machines:
 - intalled packages:
   + vim
   + gdb
+  + binutils
+  + man-db manpages-dev
+  + locales
 - mount shared directory; =/etc/fstab= entry:
   #+begin_src fstab
     share   /media/share    9p      trans=virtio,version=9p2000.L   0       0
