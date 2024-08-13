@@ -192,7 +192,7 @@ RISC-V on QEMU:
 *** ELF File Header
 
 #+CAPTION: ELF file header for the =x86-64= Linux executable.
-#+LABEL: tbl:elf-file-header:x86
+#+LABEL: tbl:elf-file-header:x
 #+ATTR_LATEX: :align l|l|l
 | *&*            | *File Header Bytes*                 | *Explanation*                                                                      |
 |----------------+-------------------------------------+------------------------------------------------------------------------------------|
@@ -222,7 +222,7 @@ RISC-V on QEMU:
 | {{{addr(40)}}} |                                     |                                                                                    |
 
 #+CAPTION: ELF file header for the =RISC-V= Linux executable.
-#+LABEL: tbl:elf-file-header:risc5
+#+LABEL: tbl:elf-file-header:r
 #+ATTR_LATEX: :align l|l|l
 | *&*            | *File Header Bytes*                 | *Explanation*                                                                      |
 |----------------+-------------------------------------+------------------------------------------------------------------------------------|
@@ -253,8 +253,8 @@ RISC-V on QEMU:
 
 *** ELF Program Header
 
-#+CAPTION: ELF program header (~x86-64~).
-#+LABEL: tbl:elf-program-header
+#+CAPTION: x86-64: ELF program header.
+#+LABEL: tbl:elf-program-header:x
 #+ATTR_LATEX: :align l|l|l
 | *&*            | *File Header Bytes*                 | *Explanation*                                                                                         |
 |----------------+-------------------------------------+-------------------------------------------------------------------------------------------------------|
@@ -269,8 +269,8 @@ RISC-V on QEMU:
 |----------------+-------------------------------------+-------------------------------------------------------------------------------------------------------|
 | {{{addr(78)}}} |                                     |                                                                                                       |
 
-#+CAPTION: ELF program header (~RV64I~).
-#+LABEL: tbl:elf-program-header
+#+CAPTION: RISC-V: ELF program header.
+#+LABEL: tbl:elf-program-header:r
 #+ATTR_LATEX: :align l|l|l
 | *&*            | *File Header Bytes*                 | *Explanation*                                                                              |
 |----------------+-------------------------------------+--------------------------------------------------------------------------------------------|
@@ -290,27 +290,48 @@ RISC-V on QEMU:
 
 #+CAPTION: All global variables used by SmithForth.
 #+LABEL: tbl:globals
-#+ATTR_LATEX: :align l|l|l
-| *Variable* | *Register*​/​*Address*   | *Contents*                                                    |
-|------------+------------------------+---------------------------------------------------------------|
-| ~INPUT~    | ~RSI~                  | Source address of binary interpreter data and commands.       |
-| ~OUTPUT~   | ~RDI~                  | Destination address of binary interpreter operations.         |
-| ~#IN~      | ~0x10000000 (VARS)~    | The number of characters in the current line.                 |
-| ~TIB~      | ~0x10000008 (VARS+8)~  | The address where the current line begins.                    |
-| ~>IN~      | ~0x10000010 (VARS+16)~ | The number of /parsed/ characters in the current line.        |
-| ~STATE~    | ~0x10000020 (VARS+32)~ | Either ~0~ (/interpreting/ state) or ~1~ (/compiling/ state). |
-| ~LATEST~   | ~0x10000028 (VARS+40)~ | The execution token (/xt/) of the latest defined Forth word.  |
+#+ATTR_LATEX: :align l|l|l|l
+| *Variable* | *Register*​/​*Address*   |                        | *Contents*                                                    |
+|------------+------------------------+------------------------+---------------------------------------------------------------|
+| ~INPUT~    | ~RSI~                  | ~s0~                   | Source address of binary interpreter data and commands.       |
+| ~OUTPUT~   | ~RDI~                  | ~s1~                   | Destination address of binary interpreter operations.         |
+| ~VARS~     |                        | ~s2~                   | *TODO:* Base address of globals stored in memory.             |
+| ~#IN~      | ~0x10000000 (VARS)~    | ~0x10000000 (VARS)~    | The number of characters in the current line.                 |
+| ~TIB~      | ~0x10000008 (VARS+8)~  | ~0x10000008 (VARS+8)~  | The address where the current line begins.                    |
+| ~>IN~      | ~0x10000010 (VARS+16)~ | ~0x10000010 (VARS+16)~ | The number of /parsed/ characters in the current line.        |
+| ~STATE~    | ~0x10000020 (VARS+32)~ | ~0x10000020 (VARS+32)~ | Either ~0~ (/interpreting/ state) or ~1~ (/compiling/ state). |
+| ~LATEST~   | ~0x10000028 (VARS+40)~ | ~0x10000028 (VARS+40)~ | The execution token (/xt/) of the latest defined Forth word.  |
 
-#+CAPTION: Initialize global variables =INPUT= and =OUTPUT=.
-#+LABEL: tbl:forth:init-io
+Therefore beyond 0x10000030 lies uninitialized memory. This is where
+the binary interpreter is going to start writing, so this is the
+initial value we will give to global variable `OUTPUT`.
+
+#+CAPTION: x86-64: Initialize global variables =INPUT= and =OUTPUT=.
+#+LABEL: tbl:forth:init-io:x
 #+ATTR_LATEX: :align l|ll|l|l
 | *Pseudocode*                  | *Instruction*    | *Opcode*   | *&*            | *Machine code*       |
 |-------------------------------+------------------+------------+----------------+----------------------|
 | /# Global variable ~INPUT~./  |                  |            |                |                      |
 | ~INPUT@RSI ← 0x004000B2;~     | MOV r32, /imm32/ | B8+rd /id/ | {{{addr(78)}}} | ~BE~ /~B2 00 40 00~/ |
 | /# Global variable ~OUTPUT~./ |                  |            |                |                      |
-| ~OUTPUT@RDI ← 0x10000030;~    | MOV r32, /imm32/ | B8+rd /id/ | {{{addr(7D)}}} | ~BF~ /~30 00 00 10~/ |
+| ~OUTPUT@RDI ← 0x10000030;~    | MOV r32, /imm32/ | B8+rd /id/ |                | ~BF~ /~30 00 00 10~/ |
 |                               |                  |            | {{{addr(82)}}} |                      |
+
+#+CAPTION: RISC-V: Initialize global variables =INPUT= and =OUTPUT=.
+#+LABEL: tbl:forth:init-io:r
+#+ATTR_LATEX: :align l|ll|l|l
+| *Pseudocode*                                   | *Instruction*      | *Encoding*                        | *&*            | *Machine code* |
+|------------------------------------------------+--------------------+-----------------------------------+----------------+----------------|
+| /# Global variable ~INPUT~./                   |                    |                                   |                |                |
+| ~INPUT@s0 ← 0x010000FF;~  /# TODO: replace FF. | lui s0, 0x01000    | ~0x01000           01000 0110111~ | {{{addr(78)}}} | 37 04 00 01    |
+|                                                | addi s0, s0, 0x0?? | ~0x0FF   01000 000 01000 0010011~ |                | 13 04 F4 0F    |
+| /# Global variable ~OUTPUT~./                  |                    |                                   |                |                |
+| ~OUTPUT@s1 ← 0x10000030;~                      | lui s1, 0x10000    | ~0x10000           01001 0110111~ |                | B7 04 00 10    |
+|                                                | addi s1, s1, 0x030 | ~0x030   01001 000 01001 0010011~ |                | 93 84 04 03    |
+| /# Global variable ~VARS~./                    |                    |                                   |                |                |
+| ~VARS@s2 ← 0x10000000;~                        | lui s2, 0x10000    | ~0x10000           01010 0110111~ |                | B7 05 00 10    |
+|                                                | addi s2, s2, 0x000 | ~0x000   01010 000 01010 0010011~ |                | 13 05 05 00    |
+|                                                |                    |                                   | {{{addr(90)}}} |                |
 
 
 ** Binary interpreter
@@ -318,7 +339,7 @@ RISC-V on QEMU:
 *** The binary interpreter loop
 
 #+CAPTION: The binary interpreter routine and loop.
-#+LABEL: tbl:forth:bi
+#+LABEL: tbl:forth:bi:x
 #+ATTR_LATEX: :align l|ll|l|lH
 | *Pseudocode*                                  | *Instruction*    | *Opcode*      | *&*            | *Machine code*                          | *Intention*             |
 |-----------------------------------------------+------------------+---------------+----------------+-----------------------------------------+-------------------------|
@@ -337,7 +358,7 @@ RISC-V on QEMU:
 | {{{i(1)}}} ~[OUTPUT@RDI++] <- chr@AL;~        | STOS m8          | AA            | {{{addr(8E)}}} | ~AA~                                    | [rdi++] = al (xmit)     |
 | {{{i(1)}}} ~return.~                          | RET              | C3            |                | ~C3~                                    | return                  |
 | ~_command:~                                   |                  |               | {{{addr(90)}}} |                                         |                         |
-| {{{i(1)}}} /# Global variable ~LATEST~./      |                  |               |                |                                         |                         |
+| {{{i(1)}}} /# Address of global ~LATEST~./    |                  |               |                |                                         |                         |
 | {{{i(1)}}} ~LATEST@RDX ← 0x10000028;~         | MOV r32, /imm32/ | B8+rd /id/    |                | ~BA~ /~28 00 00 10~/                    | rdx = Latest            |
 | {{{i(1)}}} /# Read command argument./         |                  |               |                |                                         |                         |
 | {{{i(1)}}} ~arg@AL ← [INPUT@RSI++];~          | LODS m8          | AC            |                | ~AC~                                    | al = [rsi++] (argument) |
@@ -349,7 +370,7 @@ RISC-V on QEMU:
 | {{{i(2)}}}     /# Define a new word./         |                  |               |                |                                         |                         |
 | {{{i(2)}}}     ~goto Head.~                   | JZ _rel8_        | 74 _cb_       |                | ~74~ {{{offset(31,CB-9A)}}}             | jump Head if zero       |
 | {{{i(1)}}} /# Get latest dictionary entry./   |                  |               | {{{addr(9A)}}} |                                         |                         |
-| {{{i(1)}}} ~entry@RBX ← *LATEST;~             | MOV r64, r/m64   | REX.W 8B /r   |                | ~48 8B~ {{{modrm(1A,00,011,010)}}}      | rbx = [rdx]             |
+| {{{i(1)}}} ~entry@RBX ← [LATEST];~            | MOV r64, r/m64   | REX.W 8B /r   |                | ~48 8B~ {{{modrm(1A,00,011,010)}}}      | rbx = [rdx]             |
 | ~_find1:~                                     |                  |               | {{{addr(9D)}}} |                                         |                         |
 | {{{i(1)}}} ~save arg@AL on the stack;~        | PUSH r64         | 50+rd         |                | ~50~                                    | push al                 |
 | {{{i(1)}}} ~chr@AL &= 0b0111111;~             | AND AL, /imm8/   | 24 /ib/       |                | ~24 7F~                                 | al &= 7F                |
@@ -370,10 +391,67 @@ RISC-V on QEMU:
 | {{{i(1)}}} ~goto [entry@RBX].~                | JMP r/m64        | REX FF /4     |                | ~FF~ {{{modrm(23,00,100,011)}}}         | jump [rbx] (exec)       |
 |                                               |                  |               | {{{addr(B2)}}} |                                         |                         |
 
-*** Subroutine ~COMPL~                                             :noexport:
+#+CAPTION: The binary interpreter routine and loop.
+#+LABEL: tbl:forth:bi:r
+#+ATTR_LATEX: :align l|ll|l|lH
+| *Pseudocode*                                       | *Instruction*             | *Encoding*        | *&*            | *Machine code*                          | *Intention*             |
+|----------------------------------------------------+---------------------------+-------------------+----------------+-----------------------------------------+-------------------------|
+| ~_bi:~                                             |                           |                   | {{{addr(90)}}} |                                         |                         |
+| {{{i(1)}}} /# Loop the binary interpreter./        |                           |                   |                |                                         |                         |
+| {{{i(1)}}} ~call bi();~                            | jal ra, 8                 | imm20 rd5 1101111 |                | ~E8~ {{{offset(02 00 00 00,89-87)}}}    | call bi()               |
+| {{{i(1)}}} ~goto _bi.~                             | jal zero, -8              | imm20 rd5 1101111 |                | ~EB~ {{{offset(F9,82-89)}}}             | jump _bi                |
+| ~bi():~                                            |                           |                   | {{{addr(98)}}} |                                         |                         |
+| {{{i(1)}}} /# Read next byte from ~INPUT~./        |                           |                   |                |                                         |                         |
+| {{{i(1)}}} ~chr@a1 ← [INPUT@s0++];~                | lb a1, s0, 0              |                   |                | ~AC~                                    | al = [rsi++]            |
+| {{{i(1)}}}                                         | addi s0, s0, 1            |                   |                |                                         |                         |
+| {{{i(1)}}} /# Does it start a command?/            |                           |                   |                |                                         |                         |
+| {{{i(1)}}} ~if chr@a1 = 0x99:~                     | addi t0, zero, 0x099      |                   |                | ~3C~ /~99~/                             | cmp al, 99(command)     |
+| {{{i(2)}}}     ~goto _command.~                    | beq a1, t0, +??(_command) |                   |                | ~74~ {{{offset(02,90-8E)}}}             | jump _command if ==     |
+| {{{i(1)}}} /# If not, just copy the byte/          |                           |                   |                |                                         |                         |
+| {{{i(1)}}} /# to ~OUTPUT~ and return./             |                           |                   |                |                                         |                         |
+| {{{i(1)}}} ~[OUTPUT@s1++] <- chr@a1;~              | sb a1, 0(s1)              |                   |                | ~AA~                                    | [rdi++] = al (xmit)     |
+| {{{i(1)}}}                                         | addi s1, s1, 1            |                   |                |                                         |                         |
+| {{{i(1)}}} ~return.~                               | jalr zero, 0(ra)          |                   |                | ~C3~                                    | return                  |
+| ~_command:~                                        |                           |                   |                |                                         |                         |
+| {{{i(1)}}} /# Address of global ~LATEST~./         | TODO: remove              |                   |                |                                         |                         |
+| {{{i(1)}}} ~LATEST@?? ← 0x10000028;~               | TODO: remove              |                   |                | ~BA~ /~28 00 00 10~/                    | rdx = Latest            |
+| {{{i(1)}}} /# Read command argument./              |                           |                   |                |                                         |                         |
+| {{{i(1)}}} ~arg@a1 ← [INPUT@s0++];~                | lb a1, s0, 0              |                   |                | ~AC~                                    | al = [rsi++] (argument) |
+| {{{i(1)}}}                                         | addi s0, s0, 1            |                   |                |                                         |                         |
+| {{{i(1)}}} /# Command type by argument:/           |                           |                   |                |                                         |                         |
+| {{{i(1)}}} /# – ~0bx00xxxxx~: define;/             |                           |                   |                |                                         |                         |
+| {{{i(1)}}} /# – ~0b011xxxxx~: compile;/            |                           |                   |                |                                         |                         |
+| {{{i(1)}}} /# – ~0b111xxxxx~: execute./            |                           |                   |                |                                         |                         |
+| {{{i(1)}}} ~if arg@a1 & 0b01100000 = 0:~           | andi t0, a1, 0x060        |                   |                | ~A8~ /~60~/                             | al & 60(graphic)?       |
+| {{{i(2)}}}     /# Define a new word./              |                           |                   |                |                                         |                         |
+| {{{i(2)}}}     ~goto Head.~                        | beq t0, zero, +??(Head)   |                   |                | ~74~ {{{offset(31,CB-9A)}}}             | jump Head if zero       |
+| {{{i(1)}}} /# Get latest dictionary entry./        |                           |                   |                |                                         |                         |
+| {{{i(1)}}} ~entry@s3 ← [LATEST];~  /# [VARS+0x40]/ | ld s3, 40(s2)             |                   |                | ~48 8B~ {{{modrm(1A,00,011,010)}}}      | rbx = [rdx]             |
+| ~_find1:~                                          |                           |                   |                |                                         |                         |
+| {{{i(1)}}} ~save arg@AL on the stack;~             | TODO: remove              |                   |                | ~50~                                    | push al                 |
+| {{{i(1)}}} ~chr@a1 &= 0b0111111;~                  | andi t0, a1, 0x07F        |                   |                | ~24 7F~                                 | al &= 7F                |
+| {{{i(1)}}} ~if char@AL = [entry@s3 + 11]:~         | lb t1, 11(s3)             |                   |                | ~3A 43~ {{{modrm(11,00,010,001)}}}      | cmp al, [rbx+11]        |
+| {{{i(2)}}}     /# We found an entry whose/         |                           |                   |                |                                         |                         |
+| {{{i(2)}}}     /# name begins with ~chr~./         |                           |                   |                |                                         |                         |
+| {{{i(2)}}}     ~restore arg@AL;~                   | TODO: remove              |                   |                | ~58~                                    | pop al                  |
+| {{{i(2)}}}     ~goto _match.~                      | beq t0, t1, +??(match)    |                   |                | ~74~ {{{offset(06,AC-A6)}}}             | jump _match if ==       |
+| {{{i(1)}}} /# Follow entry's link pointer/         |                           |                   |                |                                         |                         |
+| {{{i(1)}}} /# to previous entry and repeat./       |                           |                   |                |                                         |                         |
+| {{{i(1)}}} ~entry@s3 ← [entry@s3 + 8];~            | ld s3, 8(s3)              |                   |                | ~48 8B~ {{{modrm(5B,01,011,011)}}} ~08~ | rbx = [rbx+8]           |
+| {{{i(1)}}} ~goto _find1.~                          | jal zero, -??(_find1)     |                   |                | ~EB~ {{{offset(F1,9D-AC)}}}             | jump _find1             |
+| ~_match:~                                          |                           |                   |                |                                         |                         |
+| {{{i(1)}}} ~if arg@a1 & 0b1000000 = 0:~            | andi t0, a1, 0x080        |                   |                | ~A8~ /~80~/                             | al & 80(exec) ?         |
+| {{{i(2)}}}     /# Compile./                        |                           |                   |                |                                         |                         |
+| {{{i(2)}}}     ~goto COMPL.~                       | beq t0, zero, +??(COMPL)  |                   |                | ~74~ {{{offset(09,B9-B0)}}}             | jump COMPL if zero      |
+| {{{i(1)}}} /# Execute: jump to entry's code./      |                           |                   |                |                                         |                         |
+| {{{i(1)}}} ~goto [entry@s3].~                      | ld t0, 0(s3)              |                   |                | ~FF~ {{{modrm(23,00,100,011)}}}         | jump [rbx] (exec)       |
+| {{{i(1)}}}                                         | jalr zero, 0(t0)          |                   |                |                                         |                         |
+|                                                    |                           |                   | {{{addr(??)}}} |                                         |                         |
+
+*** Subroutine ~COMPL~
 
 #+CAPTION: =COMPL=, the FORTH compiler.
-#+LABEL: tbl:forth:compl
+#+LABEL: tbl:forth:compl:x
 #+ATTR_LATEX: :align l|ll|l|lH
 | *Pseudocode*                                                                                | *Instruction*  | *Opcode*   | *&*            | *Machine code*                  | *Intention*                                        |
 |---------------------------------------------------------------------------------------------+----------------+------------+----------------+---------------------------------+----------------------------------------------------|
@@ -403,10 +481,47 @@ RISC-V on QEMU:
 | ~return.~  /# From binary interpreter./                                                     | RET            | C3         |                | ~C3~                            | return                                             |
 |                                                                                             |                |            | {{{addr(C5)}}} |                                 |                                                    |
 
-*** Subroutine ~Head~                                              :noexport:
+#+CAPTION: =COMPL=, the FORTH compiler.
+#+LABEL: tbl:forth:compl:r
+#+ATTR_LATEX: :align l|ll|l|lH
+| *Pseudocode*                                                                  | *Instruction*      | *Opcode* | *&*            | *Machine code*                  | *Intention*                                        |
+|-------------------------------------------------------------------------------+--------------------+----------+----------------+---------------------------------+----------------------------------------------------|
+| /# Define:/ _~COMPL~_                                                         | ---                | ---      | {{{addr(??)}}} | {{{define(99,43 4F 4D 50 4C)}}} | define COMPL                                       |
+| /# In/Out:/ ~( xt@a1 -- )~                                                    |                    |          |                |                                 |                                                    |
+|                                                                               |                    |          |                |                                 |                                                    |
+| /# Generate a pair of ~lui~ + ~jalr~/                                         |                    |          |                |                                 |                                                    |
+| /# instructions to ~OUTPUT~, which, combined,/                                |                    |          |                |                                 |                                                    |
+| /# set the PC to ~[xt]~./                                                     |                    |          |                |                                 |                                                    |
+| /# – instruction 1: lui t0, immediate (that is, highest 20 bits of [xt])/     |                    |          |                |                                 |                                                    |
+| /#   with encoding: ~immediate[31:12] ; rd ; 0110111~/                        |                    |          |                |                                 |                                                    |
+| /# – instruction 2: jalr ra, t0, immediate (that is, lowest 12 bits of [xt])/ |                    |          |                |                                 |                                                    |
+| /#   with encoding: ~offset[11:0] ; rs1 ; 000 ; rd ; 1100111~/                |                    |          |                |                                 |                                                    |
+| /#/                                                                           |                    |          |                |                                 |                                                    |
+| /# Thus we generate code as follows:/                                         |                    |          |                |                                 |                                                    |
+| /#/{{{c(2)}}}​~???????????? ????? ??? 00101 0110111~                           |                    |          |                |                                 |                                                    |
+| /#/{{{c(2)}}}​~???????????? 00101 000 00001 1100111~                           |                    |          |                |                                 |                                                    |
+|                                                                               |                    |          |                |                                 |                                                    |
+| /# 1. Load code address from ~xt~./                                           |                    |          |                |                                 |                                                    |
+| ~t0 ← [xt@a1];~                                                               | lw t0, 0(a1)       |          |                | ~B0~ /FF/                       | compile: call r/m64 (FF /2, 00 010 100, 00 100 101 |
+| /# 2. Assemble and write ~lui~ instr./                                        |                    |          |                |                                 |                                                    |
+| ~t1 ← 0xFFFFF000;~                                                            | lui t0, 0xFFFFF    |          |                | ~B0~ /14/                       | al = _                                             |
+| ~t1 &= t0;~                                                                   | and t1, t1, t0     |          |                | ~AA~                            |                                                    |
+| ~t1 += 0x2B7;~  /# 00101 0110111./                                            | addi t1, t1, 0x2B7 |          |                |                                 |                                                    |
+| ~[OUTPUT@s1++4] ← t1;~                                                        | sw t1, 0(s1)       |          |                |                                 |                                                    |
+| /# 3. Assemble and write ~jalr~ instruction./                                 |                    |          |                |                                 |                                                    |
+| ~t1 ← 0x280E7000;~  /# 00101 000 00001 1100111./                              | lui t1, 0x280E7    |          |                |                                 |                                                    |
+| ~t1 >>>= 12;~                                                                 | srli t1, t1, 12    |          |                |                                 |                                                    |
+| ~t0 <<= 20;~                                                                  | slli t0, t0, 20    |          |                | ~B0~ /25/                       | [rdi++] = al                                       |
+| ~t1 \vert= t0;~                                                                   | or t1, t1, t0      |          |                |                                 |                                                    |
+| ~[OUTPUT@s1++4] ← t1;~                                                        | sw t1, 0(s1)       |          |                | ~AA~                            |                                                    |
+|                                                                               | addi s1, s1, 4     |          |                |                                 |                                                    |
+| ~return.~  /# From binary interpreter./                                       | jalr zero, 0(ra)   |          |                | ~C3~                            | return                                             |
+|                                                                               |                    |          | {{{addr(??)}}} |                                 |                                                    |
+
+*** Subroutine ~Head~
 
 #+CAPTION: Subroutine =Head= defines new words in the dictionary.
-#+LABEL: tbl:forth:head
+#+LABEL: tbl:forth:head:x
 #+ATTR_LATEX: :align l|ll|l|lH
 | *Pseudocode*                               | *Instruction*     | *Opcode*         | *&*            | *Machine code*                          | *Intention*   |
 |--------------------------------------------+-------------------+------------------+----------------+-----------------------------------------+---------------|
@@ -442,6 +557,55 @@ RISC-V on QEMU:
 | ~code@RCX ← [LATEST@RDX];~                 | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(0A,00,001,010)}}}      | rcx = [rdx]   |
 | ~[code@RCX] ← INPUT@RDI;~                  | MOV r/m64, r64    | REX.W 89 /r      |                | ~48 89~ {{{modrm(39,00,111,001)}}}      | [rcx] = rdi   |
 | ~return.~  /# From binary interpreter./    | RET               | C3               |                | ~C3~                                    | return        |
+
+#+CAPTION: Subroutine =Head= defines new words in the dictionary.
+#+LABEL: tbl:forth:head:r
+#+ATTR_LATEX: :align l|ll|l|lH
+| *Pseudocode*                               | *Instruction*           | *Opcode* | *&*            | *Machine code*                          | *Intention*   |
+|--------------------------------------------+-------------------------+----------+----------------+-----------------------------------------+---------------|
+| /# Define:/ _~Head~_                       | ---                     | ---      | {{{addr(??)}}} | {{{define(04,48 65 61 64)}}}            | define Head   |
+| /# In/Out:/ ~( flag@AL -​- )~               |                         |          |                |                                         |               |
+|                                            |                         |          |                |                                         |               |
+| /# 16-bit align ~OUTPUT~./                 |                         |          |                |                                         |               |
+| ~OUTPUT@s1 += 0x0F;~                       | addi s1, s1, 0x00F      |          | {{{addr(??)}}} | ~48 83~ {{{modrm(C7,11,000,111)}}} ~0F~ | rdi += 0F     |
+| ~OUTPUT@s1 &= 0xF0;~                       | andi s1, s1, 0x0F0      |          |                | ~48 83~ {{{modrm(E7,11,100,111)}}} ~F0~ | rdi &= F0     |
+|                                            |                         |          |                |                                         |               |
+| /# Fill the new dictionary entry:/         |                         |          |                |                                         |               |
+|                                            |                         |          |                |                                         |               |
+| /# 1. Set the _link field_, then set/      |                         |          |                |                                         |               |
+| /#{{{c(3)}}}LATEST to the new entry./      |                         |          |                |                                         |               |
+| ~latest@t0 ← [LATEST];~  /# [VARS+40]./    | ld t0, 40(s2)           |          |                | ~48 8B~ {{{modrm(0A,00,001,010)}}}      | rcx = [rdx]   |
+| ~[OUTPUT@s1+8] ← latest@t0;~               | sd t0, 8(s1)            |          |                | ~48 89~ {{{modrm(4F,01,001,111)}}} ~08~ | [rdi+8] = rcx |
+| ~[LATEST] ← OUTPUT@s1;~                    | sd s1, 40(s2)           |          |                | ~48 89~ {{{modrm(3A,00,111,010)}}}      | [rdx] = rdi   |
+|                                            |                         |          |                |                                         |               |
+| /# 2. Set the _flag+length field_./        |                         |          |                |                                         |               |
+| ~OUTPUT@s1 += 0x10;~                       | TODO: remove            |          |                | ~48 83~ {{{modrm(C7,11,000,111)}}} ~10~ | rdi += 10     |
+| ~[OUTPUT@RDI++] ← flag@AL;~                | TODO: remove            |          |                | ~AA~                                    | [rdi++] = al  |
+| ~[OUTPUT@s1+16] ← flag@a1;~                | sb a1, 16(s1)           |          |                |                                         |               |
+|                                            |                         |          |                |                                         |               |
+| /# 3. Extract name length from flag/       |                         |          |                |                                         |               |
+| /#{{{c(3)}}}and copy _name field_./        |                         |          |                |                                         |               |
+| ~flag@ECX ← flag@AL;~                      | TODO: remove            |          |                | ~91~                                    | ecx = eax     |
+| ~length@t0 ← flag@a1 & 0x1F;~              | andi t0, a1, 0x01F      |          |                | ~83~ {{{modrm(E1,11,100,001)}}} ~1F~    | ecx &= 1F     |
+| ~copy      length@t0 bytes~                |                         |          |                |                                         |               |
+| {{{c(5)}}}​~from INPUT@s0~                  |                         |          |                |                                         |               |
+| {{{c(5)}}}​~to OUTPUT@s1;~                  |                         |          |                | ~F3 A4~                                 | copy Name     |
+| {{{c(2)}}}​~OUTPUT@s1 += 17;~               | addi s1, s1, 0x011      |          |                |                                         |               |
+| ~_begin:~                                  |                         |          |                |                                         |               |
+| {{{c(2)}}}​~if length@t0 = 0:~              | beq t0, zero, +??(_end) |          |                |                                         |               |
+| {{{c(4)}}}​  ~goto _end;~                   |                         |          |                |                                         |               |
+| {{{c(2)}}}​~chr@t1 ← [INPUT@s0++];~         | lb t1, 0(s0)            |          |                |                                         |               |
+|                                            | addi s0, s0, 1          |          |                |                                         |               |
+| {{{c(2)}}}​~[OUTPUT@s1] ← chr@t1;~          | sb t1, 0(s1)            |          |                |                                         |               |
+|                                            | addi s1, s1, 1          |          |                |                                         |               |
+| {{{c(2)}}}​~goto _begin;~                   | jal zero, -??(_begin)   |          |                |                                         |               |
+| ~_end:~                                    |                         |          |                |                                         |               |
+|                                            |                         |          |                |                                         |               |
+| /# 4. Point _code field_ to the machine/   |                         |          |                |                                         |               |
+| /#{{{c(3)}}}code that follows at ~INPUT~./ |                         |          |                |                                         |               |
+| ~code@t0 ← [LATEST];~  /# [VARS+40]./      | ld t0, 40(s2)           |          |                | ~48 8B~ {{{modrm(0A,00,001,010)}}}      | rcx = [rdx]   |
+| ~[code@t0] ← INPUT@s0;~                    | sd s0, 0(t0)            |          |                | ~48 89~ {{{modrm(39,00,111,001)}}}      | [rcx] = rdi   |
+| ~return.~  /# From binary interpreter./    | jalr zero, 0(ra)        |          |                | ~C3~                                    | return        |
 
 
 ** A way out
@@ -1258,6 +1422,36 @@ RISC-V on QEMU:
 | {{{c(2)}}} ~call REFILL;~  {{{c(0)}}}​/# Compiled./ |                    |                  |                | {{{compile(52,R)}}}                                | Call REFILL           |
 | {{{c(2)}}} ~call SVAL;~    {{{c(2)}}}​/# Compiled./ |                    |                  |                | {{{compile(53,S)}}}                                | Call SVAL             |
 | {{{c(2)}}} ~return.~                               | RET                | C3               |                | ~C3~                                               | return                |
+
+
+* Analysis
+
+| *Instruction*           | *Type* | *Encoding*                                                    |
+|-------------------------+--------+---------------------------------------------------------------|
+| slli rd, rs1, shamt     | I      | ~0000000          shamt  rs1    001  rd              0010011~ |
+| srli rd, rs1, shamt     | I      | ~0000000          shamt  rs1    101  rd              0010011~ |
+|-------------------------+--------+---------------------------------------------------------------|
+| addi rd, rs1, immediate | I      | ~immediate[11:0]         rs1    000  rd              0010011~ |
+| lui rd, immediate       | U      | ~immediate[31:12]                  rd              0110111~   |
+|-------------------------+--------+---------------------------------------------------------------|
+| or rd, rs1, rs2         | R      | ~0000000          rs2    rs1    110  rd              0110011~ |
+| and rd, rs1, rs2        | R      | ~0000000          rs2    rs1    111  rd              0110011~ |
+| andi rd, rs1, immediate | I      | ~immediate[11:0]         rs1    111  rd              0010011~ |
+|-------------------------+--------+---------------------------------------------------------------|
+| beq rs1, rs2, offset    | B      | ~offset[12\vert10:5]  rs2    rs1    000  offset[4:1\vert11]  1100011~ |
+|-------------------------+--------+---------------------------------------------------------------|
+| jal rd, offset          | J      | ~offset[20\vert10:1\vert11\vert19:12]          rd              1101111~   |
+| jalr rd, offset(rs1)    | I      | ~offset[11:0]            rs1    000  rd              1100111~ |
+|-------------------------+--------+---------------------------------------------------------------|
+| ecall                   | I      | ~000000000000            00000  000  00000           1110011~ |
+|-------------------------+--------+---------------------------------------------------------------|
+| lb rd, offset(rs1)      | I      | ~offset[11:0]            rs1    000  rd              0000011~ |
+| lw rd, offset(rs1)      | I      | ~offset[11:0]            rs1    010  rd              0000011~ |
+| ld rd, offset(rs1)      | I      | ~offset[11:0]            rs1    011  rd              0000011~ |
+|-------------------------+--------+---------------------------------------------------------------|
+| sb rs2, offset(rs1)     | S      | ~offset[11:5]     rs2    rs1    000  offset[4:0]     0100011~ |
+| sw rs2, offset(rs1)     | S      | ~offset[11:5]     rs2    rs1    010  offset[4:0]     0100011~ |
+| sd rs2, offset(rs1)     | S      | ~offset[11:5]     rs2    rs1    011  offset[4:0]     0100011~ |
 
 
 * Bibliography                                                     :noexport:
