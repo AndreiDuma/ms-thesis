@@ -61,6 +61,7 @@
 
 # --- Encoding annotation macros (RISC-V).
 #+MACRO: imm   /~$1~/
+#+MACRO: off   _~$1~_
 #+MACRO: rd    ~$1~​$^{d}$
 #+MACRO: rs1   ~$1~​$^{s_{1}}$
 #+MACRO: rs2   ~$1~​$^{s_{2}}$
@@ -307,7 +308,7 @@ RISC-V on QEMU:
 | {{{addr(78)}}} |                                     |                                                                                                 |
 
 
-** Global Variables
+** Global Variables                                                :noexport:
 
 #+CAPTION: Global variables in SmithForth, referenced directly by machine code (x86-64).
 #+LABEL: tbl:globals:x
@@ -379,115 +380,116 @@ value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 
 *** The Binary Interpreter Loop
 
-#+CAPTION: The binary interpreter routine and loop.
+#+CAPTION: The binary interpreter routine and loop (x86-64).
 #+LABEL: tbl:forth:bi:x
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                                  | *Instruction*    | *Opcode*      | *&*            | *Machine code*                          | *Intention*             |
-|-----------------------------------------------+------------------+---------------+----------------+-----------------------------------------+-------------------------|
-| ~_bi:~                                        |                  |               | {{{addr(82)}}} |                                         |                         |
-| {{{i(1)}}} /# Loop the binary interpreter./   |                  |               |                |                                         |                         |
-| {{{i(1)}}} ~call bi();~                       | CALL _rel32_     | E8 _cb_[fn:1] |                | ~E8~ {{{offset(02 00 00 00,89-87)}}}    | call bi()               |
-| {{{i(1)}}} ~goto _bi.~                        | JMP _rel8_       | EB _cb_       | {{{addr(87)}}} | ~EB~ {{{offset(F9,82-89)}}}             | jump _bi                |
-| ~bi():~                                       |                  |               | {{{addr(89)}}} |                                         |                         |
-| {{{i(1)}}} /# Read next byte from ~INPUT~./   |                  |               |                |                                         |                         |
-| {{{i(1)}}} ~chr@AL ← [INPUT@RSI++];~          | LODS m8          | AC            |                | ~AC~                                    | al = [rsi++]            |
-| {{{i(1)}}} /# Does it start a command?/       |                  |               |                |                                         |                         |
-| {{{i(1)}}} ~if chr@AL = 0x99:~                | CMP AL, /imm8/   | 3C /ib/       |                | ~3C~ /~99~/                             | cmp al, 99(command)     |
-| {{{i(2)}}}     ~goto _command.~               | JE _rel8_        | 74 _cb_       |                | ~74~ {{{offset(02,90-8E)}}}             | jump _command if ==     |
-| {{{i(1)}}} /# If not, just copy the byte/     |                  |               |                |                                         |                         |
-| {{{i(1)}}} /# to ~OUTPUT~ and return./        |                  |               |                |                                         |                         |
-| {{{i(1)}}} ~[OUTPUT@RDI++] <- chr@AL;~        | STOS m8          | AA            | {{{addr(8E)}}} | ~AA~                                    | [rdi++] = al (xmit)     |
-| {{{i(1)}}} ~return.~                          | RET              | C3            |                | ~C3~                                    | return                  |
-| ~_command:~                                   |                  |               | {{{addr(90)}}} |                                         |                         |
-| {{{i(1)}}} /# Address of global ~LATEST~./    |                  |               |                |                                         |                         |
-| {{{i(1)}}} ~LATEST@RDX ← 0x10000028;~         | MOV r32, /imm32/ | B8+rd /id/    |                | ~BA~ /~28 00 00 10~/                    | rdx = Latest            |
-| {{{i(1)}}} /# Read command argument./         |                  |               |                |                                         |                         |
-| {{{i(1)}}} ~arg@AL ← [INPUT@RSI++];~          | LODS m8          | AC            |                | ~AC~                                    | al = [rsi++] (argument) |
-| {{{i(1)}}} /# Command type by argument:/      |                  |               |                |                                         |                         |
-| {{{i(1)}}} /# – ~0bx00xxxxx~: define;/        |                  |               |                |                                         |                         |
-| {{{i(1)}}} /# – ~0b011xxxxx~: compile;/       |                  |               |                |                                         |                         |
-| {{{i(1)}}} /# – ~0b111xxxxx~: execute./       |                  |               |                |                                         |                         |
-| {{{i(1)}}} ~if arg & 0b01100000 = 0:~         | TEST AL, /imm8/  | A8 /ib/       |                | ~A8~ /~60~/                             | al & 60(graphic)?       |
-| {{{i(2)}}}     /# Define a new word./         |                  |               |                |                                         |                         |
-| {{{i(2)}}}     ~goto Head.~                   | JZ _rel8_        | 74 _cb_       |                | ~74~ {{{offset(31,CB-9A)}}}             | jump Head if zero       |
-| {{{i(1)}}} /# Get latest dictionary entry./   |                  |               | {{{addr(9A)}}} |                                         |                         |
-| {{{i(1)}}} ~entry@RBX ← [LATEST];~            | MOV r64, r/m64   | REX.W 8B /r   |                | ~48 8B~ {{{modrm(1A,00,011,010)}}}      | rbx = [rdx]             |
-| ~_find1:~                                     |                  |               | {{{addr(9D)}}} |                                         |                         |
-| {{{i(1)}}} ~save arg@AL on the stack;~        | PUSH r64         | 50+rd         |                | ~50~                                    | push al                 |
-| {{{i(1)}}} ~chr@AL &= 0b0111111;~             | AND AL, /imm8/   | 24 /ib/       |                | ~24 7F~                                 | al &= 7F                |
-| {{{i(1)}}} ~if char@AL = [entry + 11]:~       | CMP r8, r/m8     | REX 3A /r     |                | ~3A 43~ {{{modrm(11,00,010,001)}}}      | cmp al, [rbx+11]        |
-| {{{i(2)}}}     /# We found an entry whose/    |                  |               |                |                                         |                         |
-| {{{i(2)}}}     /# name begins with ~chr~./    |                  |               |                |                                         |                         |
-| {{{i(2)}}}     ~restore arg@AL;~              | POP r64          | 58+rd         |                | ~58~                                    | pop al                  |
-| {{{i(2)}}}     ~goto _match.~                 | JE _rel8_        | 74 _cb_       |                | ~74~ {{{offset(06,AC-A6)}}}             | jump _match if ==       |
-| {{{i(1)}}} /# Follow entry's link pointer/    |                  |               | {{{addr(A6)}}} |                                         |                         |
-| {{{i(1)}}} /# to previous entry and repeat./  |                  |               |                |                                         |                         |
-| {{{i(1)}}} ~entry ← [entry + 8];~             | MOV r64, r/m64   | REX.W 8B /r   |                | ~48 8B~ {{{modrm(5B,01,011,011)}}} ~08~ | rbx = [rbx+8]           |
-| {{{i(1)}}} ~goto _find1.~                     | JMP _rel8_       | EB _cb_       |                | ~EB~ {{{offset(F1,9D-AC)}}}             | jump _find1             |
-| ~_match:~                                     |                  |               | {{{addr(AC)}}} |                                         |                         |
-| {{{i(1)}}} ~if arg & 0b1000000 = 0:~          | TEST AL, /imm8/  | A8 /ib/       |                | ~A8~ /~80~/                             | al & 80(exec) ?         |
-| {{{i(2)}}}     /# Compile./                   |                  |               |                |                                         |                         |
-| {{{i(2)}}}     ~goto COMPL.~                  | JZ _rel8_        | 74 _cb_       |                | ~74~ {{{offset(09,B9-B0)}}}             | jump COMPL if zero      |
-| {{{i(1)}}} /# Execute: jump to entry's code./ |                  |               | {{{addr(B0)}}} |                                         |                         |
-| {{{i(1)}}} ~goto [entry@RBX].~                | JMP r/m64        | REX FF /4     |                | ~FF~ {{{modrm(23,00,100,011)}}}         | jump [rbx] (exec)       |
-|                                               |                  |               | {{{addr(B2)}}} |                                         |                         |
+| *Pseudocode*                                    | *Instruction*    | *Opcode*      | *&*            | *Machine code*                          | *Intention*             |
+|-------------------------------------------------+------------------+---------------+----------------+-----------------------------------------+-------------------------|
+| ~_bi:~                                          |                  |               | {{{addr(82)}}} |                                         |                         |
+| {{{i(1)}}} /# Loop the binary interpreter./     |                  |               |                |                                         |                         |
+| {{{i(1)}}} ~call bi();~                         | CALL _rel32_     | E8 _cb_[fn:1] |                | ~E8~ {{{offset(02 00 00 00,89-87)}}}    | call bi()               |
+| {{{i(1)}}} ~goto _bi.~                          | JMP _rel8_       | EB _cb_       | {{{addr(87)}}} | ~EB~ {{{offset(F9,82-89)}}}             | jump _bi                |
+| ~bi():~                                         |                  |               | {{{addr(89)}}} |                                         |                         |
+| {{{i(1)}}} /# Read next byte from ~INPUT~./     |                  |               |                |                                         |                         |
+| {{{i(1)}}} ~chr@AL ← [INPUT@RSI++];~            | LODS m8          | AC            |                | ~AC~                                    | al = [rsi++]            |
+| {{{i(1)}}} /# Does it start a command?/         |                  |               |                |                                         |                         |
+| {{{i(1)}}} ~if chr@AL = 0x99:~                  | CMP AL, /imm8/   | 3C /ib/       |                | ~3C~ /~99~/                             | cmp al, 99(command)     |
+| {{{i(2)}}}     ~goto _command.~                 | JE _rel8_        | 74 _cb_       |                | ~74~ {{{offset(02,90-8E)}}}             | jump _command if ==     |
+| {{{i(1)}}} /# If not, just copy the byte/       |                  |               |                |                                         |                         |
+| {{{i(1)}}} /# to ~OUTPUT~ and return./          |                  |               |                |                                         |                         |
+| {{{i(1)}}} ~[OUTPUT@RDI++] <- chr@AL;~          | STOS m8          | AA            | {{{addr(8E)}}} | ~AA~                                    | [rdi++] = al (xmit)     |
+| {{{i(1)}}} ~return.~                            | RET              | C3            |                | ~C3~                                    | return                  |
+| ~_command:~                                     |                  |               | {{{addr(90)}}} |                                         |                         |
+| {{{i(1)}}} /# Address of global ~LATEST~./      |                  |               |                |                                         |                         |
+| {{{i(1)}}} ~LATEST@RDX ← 0x10000028;~           | MOV r32, /imm32/ | B8+rd /id/    |                | ~BA~ /~28 00 00 10~/                    | rdx = Latest            |
+| {{{i(1)}}} /# Read command argument./           |                  |               |                |                                         |                         |
+| {{{i(1)}}} ~arg@AL ← [INPUT@RSI++];~            | LODS m8          | AC            |                | ~AC~                                    | al = [rsi++] (argument) |
+| {{{i(1)}}} /# Command type by argument:/        |                  |               |                |                                         |                         |
+| {{{i(1)}}} /# – ~0bx00xxxxx~: define;/          |                  |               |                |                                         |                         |
+| {{{i(1)}}} /# – ~0b011xxxxx~: compile;/         |                  |               |                |                                         |                         |
+| {{{i(1)}}} /# – ~0b111xxxxx~: execute./         |                  |               |                |                                         |                         |
+| {{{i(1)}}} ~if arg & 0b01100000 = 0:~           | TEST AL, /imm8/  | A8 /ib/       |                | ~A8~ /~60~/                             | al & 60(graphic)?       |
+| {{{i(2)}}}     /# _Define_ a new word./         |                  |               |                |                                         |                         |
+| {{{i(2)}}}     ~goto Head.~                     | JZ _rel8_        | 74 _cb_       |                | ~74~ {{{offset(31,CB-9A)}}}             | jump Head if zero       |
+| {{{i(1)}}} /# Get latest dictionary entry./     |                  |               | {{{addr(9A)}}} |                                         |                         |
+| {{{i(1)}}} ~entry@RBX ← [LATEST];~              | MOV r64, r/m64   | REX.W 8B /r   |                | ~48 8B~ {{{modrm(1A,00,011,010)}}}      | rbx = [rdx]             |
+| ~_find1:~                                       |                  |               | {{{addr(9D)}}} |                                         |                         |
+| {{{i(1)}}} ~save arg@AL on the stack;~          | PUSH r64         | 50+rd         |                | ~50~                                    | push al                 |
+| {{{i(1)}}} ~chr@AL &= 0b0111111;~               | AND AL, /imm8/   | 24 /ib/       |                | ~24 7F~                                 | al &= 7F                |
+| {{{i(1)}}} ~if char@AL = [entry + 11]:~         | CMP r8, r/m8     | REX 3A /r     |                | ~3A 43~ {{{modrm(11,00,010,001)}}}      | cmp al, [rbx+11]        |
+| {{{i(2)}}}     /# We found an entry whose/      |                  |               |                |                                         |                         |
+| {{{i(2)}}}     /# name begins with ~chr~./      |                  |               |                |                                         |                         |
+| {{{i(2)}}}     ~restore arg@AL;~                | POP r64          | 58+rd         |                | ~58~                                    | pop al                  |
+| {{{i(2)}}}     ~goto _match.~                   | JE _rel8_        | 74 _cb_       |                | ~74~ {{{offset(06,AC-A6)}}}             | jump _match if ==       |
+| {{{i(1)}}} /# Follow entry's link pointer/      |                  |               | {{{addr(A6)}}} |                                         |                         |
+| {{{i(1)}}} /# to previous entry and repeat./    |                  |               |                |                                         |                         |
+| {{{i(1)}}} ~entry ← [entry + 8];~               | MOV r64, r/m64   | REX.W 8B /r   |                | ~48 8B~ {{{modrm(5B,01,011,011)}}} ~08~ | rbx = [rbx+8]           |
+| {{{i(1)}}} ~goto _find1.~                       | JMP _rel8_       | EB _cb_       |                | ~EB~ {{{offset(F1,9D-AC)}}}             | jump _find1             |
+| ~_match:~                                       |                  |               | {{{addr(AC)}}} |                                         |                         |
+| {{{i(1)}}} ~if arg & 0b1000000 = 0:~            | TEST AL, /imm8/  | A8 /ib/       |                | ~A8~ /~80~/                             | al & 80(exec) ?         |
+| {{{i(2)}}}     /# _Compile_./                   |                  |               |                |                                         |                         |
+| {{{i(2)}}}     ~goto COMPL.~                    | JZ _rel8_        | 74 _cb_       |                | ~74~ {{{offset(09,B9-B0)}}}             | jump COMPL if zero      |
+| {{{i(1)}}} /# _Execute_: jump to entry's code./ |                  |               | {{{addr(B0)}}} |                                         |                         |
+| {{{i(1)}}} ~goto [entry@RBX].~                  | JMP r/m64        | REX FF /4     |                | ~FF~ {{{modrm(23,00,100,011)}}}         | jump [rbx] (exec)       |
+|                                                 |                  |               | {{{addr(B2)}}} |                                         |                         |
 
-#+CAPTION: The binary interpreter routine and loop.
-#+LABEL: tbl:forth:bi:r
+#+CAPTION: The binary interpreter routine and loop (RISC-V).
+#+LABEL: tbl:forth:bi:rv
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                                       | *Instruction*             | *Encoding*        | *&*            | *Machine code*                          | *Intention*             |
-|----------------------------------------------------+---------------------------+-------------------+----------------+-----------------------------------------+-------------------------|
-| ~_bi:~                                             |                           |                   | {{{addr(90)}}} |                                         |                         |
-| {{{i(1)}}} /# Loop the binary interpreter./        |                           |                   |                |                                         |                         |
-| {{{i(1)}}} ~call bi();~                            | jal ra, 8                 | imm20 rd5 1101111 |                | ~E8~ {{{offset(02 00 00 00,89-87)}}}    | call bi()               |
-| {{{i(1)}}} ~goto _bi.~                             | jal zero, -8              | imm20 rd5 1101111 |                | ~EB~ {{{offset(F9,82-89)}}}             | jump _bi                |
-| ~bi():~                                            |                           |                   | {{{addr(98)}}} |                                         |                         |
-| {{{i(1)}}} /# Read next byte from ~INPUT~./        |                           |                   |                |                                         |                         |
-| {{{i(1)}}} ~chr@a1 ← [INPUT@s0++];~                | lb a1, s0, 0              |                   |                | ~AC~                                    | al = [rsi++]            |
-| {{{i(1)}}}                                         | addi s0, s0, 1            |                   |                |                                         |                         |
-| {{{i(1)}}} /# Does it start a command?/            |                           |                   |                |                                         |                         |
-| {{{i(1)}}} ~if chr@a1 = 0x99:~                     | addi t0, zero, 0x099      |                   |                | ~3C~ /~99~/                             | cmp al, 99(command)     |
-| {{{i(2)}}}     ~goto _command.~                    | beq a1, t0, +??(_command) |                   |                | ~74~ {{{offset(02,90-8E)}}}             | jump _command if ==     |
-| {{{i(1)}}} /# If not, just copy the byte/          |                           |                   |                |                                         |                         |
-| {{{i(1)}}} /# to ~OUTPUT~ and return./             |                           |                   |                |                                         |                         |
-| {{{i(1)}}} ~[OUTPUT@s1++] <- chr@a1;~              | sb a1, 0(s1)              |                   |                | ~AA~                                    | [rdi++] = al (xmit)     |
-| {{{i(1)}}}                                         | addi s1, s1, 1            |                   |                |                                         |                         |
-| {{{i(1)}}} ~return.~                               | jalr zero, 0(ra)          |                   |                | ~C3~                                    | return                  |
-| ~_command:~                                        |                           |                   |                |                                         |                         |
-| {{{i(1)}}} /# Address of global ~LATEST~./         | TODO: remove              |                   |                |                                         |                         |
-| {{{i(1)}}} ~LATEST@?? ← 0x10000028;~               | TODO: remove              |                   |                | ~BA~ /~28 00 00 10~/                    | rdx = Latest            |
-| {{{i(1)}}} /# Read command argument./              |                           |                   |                |                                         |                         |
-| {{{i(1)}}} ~arg@a1 ← [INPUT@s0++];~                | lb a1, s0, 0              |                   |                | ~AC~                                    | al = [rsi++] (argument) |
-| {{{i(1)}}}                                         | addi s0, s0, 1            |                   |                |                                         |                         |
-| {{{i(1)}}} /# Command type by argument:/           |                           |                   |                |                                         |                         |
-| {{{i(1)}}} /# – ~0bx00xxxxx~: define;/             |                           |                   |                |                                         |                         |
-| {{{i(1)}}} /# – ~0b011xxxxx~: compile;/            |                           |                   |                |                                         |                         |
-| {{{i(1)}}} /# – ~0b111xxxxx~: execute./            |                           |                   |                |                                         |                         |
-| {{{i(1)}}} ~if arg@a1 & 0b01100000 = 0:~           | andi t0, a1, 0x060        |                   |                | ~A8~ /~60~/                             | al & 60(graphic)?       |
-| {{{i(2)}}}     /# Define a new word./              |                           |                   |                |                                         |                         |
-| {{{i(2)}}}     ~goto Head.~                        | beq t0, zero, +??(Head)   |                   |                | ~74~ {{{offset(31,CB-9A)}}}             | jump Head if zero       |
-| {{{i(1)}}} /# Get latest dictionary entry./        |                           |                   |                |                                         |                         |
-| {{{i(1)}}} ~entry@s3 ← [LATEST];~  /# [VARS+0x40]/ | ld s3, 40(s2)             |                   |                | ~48 8B~ {{{modrm(1A,00,011,010)}}}      | rbx = [rdx]             |
-| ~_find1:~                                          |                           |                   |                |                                         |                         |
-| {{{i(1)}}} ~save arg@AL on the stack;~             | TODO: remove              |                   |                | ~50~                                    | push al                 |
-| {{{i(1)}}} ~chr@a1 &= 0b0111111;~                  | andi t0, a1, 0x07F        |                   |                | ~24 7F~                                 | al &= 7F                |
-| {{{i(1)}}} ~if char@AL = [entry@s3 + 11]:~         | lb t1, 11(s3)             |                   |                | ~3A 43~ {{{modrm(11,00,010,001)}}}      | cmp al, [rbx+11]        |
-| {{{i(2)}}}     /# We found an entry whose/         |                           |                   |                |                                         |                         |
-| {{{i(2)}}}     /# name begins with ~chr~./         |                           |                   |                |                                         |                         |
-| {{{i(2)}}}     ~restore arg@AL;~                   | TODO: remove              |                   |                | ~58~                                    | pop al                  |
-| {{{i(2)}}}     ~goto _match.~                      | beq t0, t1, +??(match)    |                   |                | ~74~ {{{offset(06,AC-A6)}}}             | jump _match if ==       |
-| {{{i(1)}}} /# Follow entry's link pointer/         |                           |                   |                |                                         |                         |
-| {{{i(1)}}} /# to previous entry and repeat./       |                           |                   |                |                                         |                         |
-| {{{i(1)}}} ~entry@s3 ← [entry@s3 + 8];~            | ld s3, 8(s3)              |                   |                | ~48 8B~ {{{modrm(5B,01,011,011)}}} ~08~ | rbx = [rbx+8]           |
-| {{{i(1)}}} ~goto _find1.~                          | jal zero, -??(_find1)     |                   |                | ~EB~ {{{offset(F1,9D-AC)}}}             | jump _find1             |
-| ~_match:~                                          |                           |                   |                |                                         |                         |
-| {{{i(1)}}} ~if arg@a1 & 0b1000000 = 0:~            | andi t0, a1, 0x080        |                   |                | ~A8~ /~80~/                             | al & 80(exec) ?         |
-| {{{i(2)}}}     /# Compile./                        |                           |                   |                |                                         |                         |
-| {{{i(2)}}}     ~goto COMPL.~                       | beq t0, zero, +??(COMPL)  |                   |                | ~74~ {{{offset(09,B9-B0)}}}             | jump COMPL if zero      |
-| {{{i(1)}}} /# Execute: jump to entry's code./      |                           |                   |                |                                         |                         |
-| {{{i(1)}}} ~goto [entry@s3].~                      | ld t0, 0(s3)              |                   |                | ~FF~ {{{modrm(23,00,100,011)}}}         | jump [rbx] (exec)       |
-| {{{i(1)}}}                                         | jalr zero, 0(t0)          |                   |                |                                         |                         |
-|                                                    |                           |                   | {{{addr(??)}}} |                                         |                         |
+| *Pseudocode*                                     | *Instruction*         | *Encoding*                                                                                             | *&*            | *Machine code* | *Intention*             |
+|--------------------------------------------------+-----------------------+--------------------------------------------------------------------------------------------------------+----------------+----------------+-------------------------|
+| ~_bi:~                                           |                       |                                                                                                        | {{{addr(90)}}} |                |                         |
+| {{{i(1)}}} /# Loop the binary interpreter./      |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} ~call bi();~                          | ~jalr ra,8(zero)~     | {{{off(0x008)}}} {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00001)}}} {{{op(1101111)}}}                     |                | ~DF 00 80 00~  | call bi()               |
+| {{{i(1)}}} ~goto _bi.~                           | ~jalr zero,-8(zero)~  | {{{off(0xFF8)}}} {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00000)}}} {{{op(1101111)}}}                     |                | ~6F 00 80 FF~  | jump _bi                |
+| ~bi():~                                          |                       |                                                                                                        | {{{addr(98)}}} |                |                         |
+| {{{i(1)}}} /# Read next byte from ~INPUT~./      |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} ~chr@a1 ← [INPUT@s0++];~              | ~lb a1,s0,0~          | {{{off(0x000)}}} {{{rs1(01000)}}} {{{fn3(000)}}} {{{rd(01011)}}} {{{op(0000011)}}}                     |                | ~83 05 04 00~  | al = [rsi++]            |
+| {{{i(1)}}}                                       | ~addi s0,s0,1~        | {{{imm(0x001)}}} {{{rs1(01000)}}} {{{fn3(000)}}} {{{rd(01000)}}} {{{op(0010011)}}}                     |                | ~13 04 14 00~  |                         |
+| {{{i(1)}}} /# Does it start a command?/          |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} ~if chr@a1 = 0x99:~                   | ~addi t0,zero,0x099~  | {{{imm(0x099)}}} {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00101)}}} {{{op(0010011)}}}                     |                | ~93 02 90 09~  | cmp al, 99(command)     |
+| {{{i(2)}}}     ~goto _command.~                  | ~beq a1,t0,+??~       | {{{off(???????)}}} {{{rs2(00101)}}} {{{rs1(01011)}}} {{{fn3(000)}}} {{{off(?????)}}} {{{op(1100011)}}} |                |                | jump _command if ==     |
+| {{{i(1)}}} /# If not, just copy the byte/        |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} /# to ~OUTPUT~ and return./           |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} ~[OUTPUT@s1++] <- chr@a1;~            | ~sb a1,0(s1)~         | {{{off(???????)}}} {{{rs2(01011)}}} {{{rs1(01001)}}} {{{fn3(000)}}} {{{off(?????)}}} {{{op(0100011)}}} |                |                | [rdi++] = al (xmit)     |
+| {{{i(1)}}}                                       | ~addi s1,s1,1~        | {{{imm(0x001)}}} {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}} {{{op(0010011)}}}                     |                |                |                         |
+| {{{i(1)}}} ~return.~                             | ~jalr zero,0(ra)~     | {{{off(0x000)}}} {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00001)}}} {{{op(1101111)}}}                     |                |                | return                  |
+| ~_command:~                                      |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} /# Address of global ~LATEST~./       | TODO: remove          |                                                                                                        |                |                |                         |
+| {{{i(1)}}} ~LATEST@?? ← 0x10000028;~             | TODO: remove          |                                                                                                        |                |                | rdx = Latest            |
+| {{{i(1)}}} /# Read command argument./            |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} ~arg@a1 ← [INPUT@s0++];~              | ~lb a1,s0,0~          | {{{off(0x000)}}} {{{rs1(01000)}}} {{{fn3(000)}}} {{{rd(01011)}}} {{{op(0000011)}}}                     |                |                | al = [rsi++] (argument) |
+| {{{i(1)}}}                                       | ~addi s0,s0,1~        | {{{imm(0x001)}}} {{{rs1(01000)}}} {{{fn3(000)}}} {{{rd(01000)}}} {{{op(0010011)}}}                     |                |                |                         |
+| {{{i(1)}}} /# Command type by argument:/         |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} /# – ~0bx00xxxxx~: define;/           |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} /# – ~0b011xxxxx~: compile;/          |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} /# – ~0b111xxxxx~: execute./          |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} ~if arg@a1~ ~&~ ~0b01100000~ ~=~ ~0:~ | ~andi t0,a1,0x060~    | {{{imm(0x060)}}} {{{rs1(01011)}}} {{{fn3(111)}}} {{{rd(00101)}}} {{{op(0010011)}}}                     |                |                | al & 60(graphic)?       |
+| {{{i(2)}}}     /# _Define_ a new word./          |                       |                                                                                                        |                |                |                         |
+| {{{i(2)}}}     ~goto Head.~                      | ~beq t0,zero,+??~     | {{{off(???????)}}} {{{rs2(00000)}}} {{{rs1(00101)}}} {{{fn3(000)}}} {{{off(?????)}}} {{{op(1100011)}}} |                |                | jump Head if zero       |
+| {{{i(1)}}} /# Get latest dictionary word/        |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} /# from ~[VARS+40]~:/                 |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} ~xt@s3 ← [LATEST];~                   | ~ld s3,40(s2)~        | {{{off(0x028)}}} {{{rs1(01010)}}} {{{fn3(011)}}} {{{rd(?????)}}} {{{op(0000011)}}}                     |                |                | rbx = [rdx]             |
+| ~_find1:~                                        |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} ~save arg@AL on the stack;~           | TODO: remove          |                                                                                                        |                |                | push al                 |
+| {{{i(1)}}} ~chr@a1 &= 0b0111111;~                | ~andi t0,a1,0x07F~    | {{{imm(0x07F)}}} {{{rs1(01011)}}} {{{fn3(111)}}} {{{rd(00101)}}} {{{op(0010011)}}}                     |                |                | al &= 7F                |
+| {{{i(1)}}} ~if char@AL = [xt@s3 + 17]:~          | ~lb t1,0x011(s3)~     | {{{off(0x011)}}} {{{rs1(?????)}}} {{{fn3(000)}}} {{{rd(00110)}}} {{{op(0000011)}}}                     |                |                | cmp al, [rbx+11]        |
+| {{{i(2)}}}     /# We found a word whose/         |                       |                                                                                                        |                |                |                         |
+| {{{i(2)}}}     /# name begins with ~chr~./       |                       |                                                                                                        |                |                |                         |
+| {{{i(2)}}}     ~restore arg@AL;~                 | TODO: remove          |                                                                                                        |                |                | pop al                  |
+| {{{i(2)}}}     ~goto _match.~                    | ~beq t0,t1,+??~       |                                                                                                        |                |                | jump _match if ==       |
+| {{{i(1)}}} /# Follow word's link pointer/        |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} /# to previous entry and repeat./     |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} ~entry@s3 ← [xt@s3 + 8];~             | ~ld s3,8(s3)~         |                                                                                                        |                |                | rbx = [rbx+8]           |
+| {{{i(1)}}} ~goto _find1.~                        | ~jalr zero,-??(zero)~ |                                                                                                        |                |                | jump _find1             |
+| ~_match:~                                        |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} ~if arg@a1 & 0b1000000 = 0:~          | ~andi t0,a1,0x080~    |                                                                                                        |                |                | al & 80(exec) ?         |
+| {{{i(2)}}}     /# _Compile_./                    |                       |                                                                                                        |                |                |                         |
+| {{{i(2)}}}     ~goto COMPL.~                     | ~beq t0,zero,+??~     |                                                                                                        |                |                | jump COMPL if zero      |
+| {{{i(1)}}} /# _Execute_ word's code./            |                       |                                                                                                        |                |                |                         |
+| {{{i(1)}}} ~goto [xt@s3].~                       | ~ld t0,0(s3)~         |                                                                                                        |                |                | jump [rbx] (exec)       |
+| {{{i(1)}}}                                       | ~jalr zero,0(t0)~     |                                                                                                        |                |                |                         |
+|                                                  |                       |                                                                                                        | {{{addr(??)}}} |                |                         |
 
 *** Subroutine ~COMPL~
 
@@ -1473,15 +1475,15 @@ value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 | srli rd, rs1, shamt     | I      | ~0000000          shamt  rs1    101  rd              0010011~ |
 |-------------------------+--------+---------------------------------------------------------------|
 | addi rd, rs1, immediate | I      | ~immediate[11:0]         rs1    000  rd              0010011~ |
-| lui rd, immediate       | U      | ~immediate[31:12]                  rd              0110111~   |
+| lui  rd,      immediate | U      | ~immediate[31:12]                    rd              0110111~ |
 |-------------------------+--------+---------------------------------------------------------------|
-| or rd, rs1, rs2         | R      | ~0000000          rs2    rs1    110  rd              0110011~ |
-| and rd, rs1, rs2        | R      | ~0000000          rs2    rs1    111  rd              0110011~ |
+| or   rd, rs1, rs2       | R      | ~0000000          rs2    rs1    110  rd              0110011~ |
+| and  rd, rs1, rs2       | R      | ~0000000          rs2    rs1    111  rd              0110011~ |
 | andi rd, rs1, immediate | I      | ~immediate[11:0]         rs1    111  rd              0010011~ |
 |-------------------------+--------+---------------------------------------------------------------|
 | beq rs1, rs2, offset    | B      | ~offset[12\vert10:5]  rs2    rs1    000  offset[4:1\vert11]  1100011~ |
 |-------------------------+--------+---------------------------------------------------------------|
-| jal rd, offset          | J      | ~offset[20\vert10:1\vert11\vert19:12]          rd              1101111~   |
+| jal  rd, offset         | J      | ~offset[20\vert10:1\vert11\vert19:12]            rd              1101111~ |
 | jalr rd, offset(rs1)    | I      | ~offset[11:0]            rs1    000  rd              1100111~ |
 |-------------------------+--------+---------------------------------------------------------------|
 | ecall                   | I      | ~000000000000            00000  000  00000           1110011~ |
