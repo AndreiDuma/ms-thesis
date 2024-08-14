@@ -22,7 +22,7 @@
 02 00                       # e_type: object file type; 2: executable
       F3 00                 # e_machine: instruction set architecture; 3: x86, 3E: amd64
             01 00 00 00     # e_version: ELF identification version; must be 1
-78 00 00 01 00 00 00 00     # e_entry: memory address of entry point (where process starts)
+78 00 00 00 00 00 00 00     # e_entry: memory address of entry point (where process starts)
 40 00 00 00 00 00 00 00     # e_phoff: file offset where program headers begin (34: 32-bit, 40: 64)
 00 00 00 00 00 00 00 00     # e_shoff: file offset where section headers begin
 00 00 00 00                 # e_flags: 0 for x86
@@ -38,7 +38,7 @@
 01 00 00 00                 # p_type: segment type; 1: loadable
             07 00 00 00     # p_flags: segment-dependent flags (1: X, 2: W, 4: R)
 00 00 00 00 00 00 00 00     # p_offset: file offset where segment begins
-00 00 00 01 00 00 00 00     # p_vaddr: virtual address of segment in memory (amd64: 00400000)
+00 00 00 00 00 00 00 00     # p_vaddr: virtual address of segment in memory (amd64: 00400000)
 00 00 00 00 00 00 00 00     # p_paddr: physical address of segment, unspecified by 386 supplement
 02 1E 01 00 00 00 00 00 ##### p_filesz: size in bytes of the segment in the file image (see make.sh)
 00 00 C0 7F 00 00 00 00     # p_memsz: (>= filesz) size in bytes of the segment in memory
@@ -48,6 +48,8 @@
 # 93 08 D0 05  		    # a7 <- 93 (0x5D, exit syscall #) 		# addi a7, x0, 0x5D		# 00000101 1101|0000 0|000|1000 1|0010011
 # 13 05 70 00  		    # a0 <- 7 (0x07, status)			# addi a0, x0, 0x07		# 00000000 0111|0000 0|000|0101 0|0010011
 # 73 00 00 00  		    # syscall					# ecall	       			# 00000000 0000|0000 0|000|0000 0|1110011
+
+# 00 00 00 00
 
 # ============= 64-BIT EXTENSIONS
 #
@@ -162,12 +164,15 @@
 # compile the word, only the first character of the name is provided, encoded
 # in the argument.
 #
-################### MACHINE CODE ############ INTENTION ############ 78 INSTRUCTION ####### OPCODE ######## ModR/M #### SIB ######
-37 04 00 01	  # BE B2 00 40 00          #:rsi(input)  = 004000__    mov r32, imm32      B8+rd id				
-13 04 F4 0F	                                                                                                                
-           
-B7 04 00 10	  # BF 30 00 00 10          # rdi(output) = 10000030    mov r32, imm32      B8+rd id				
-93 84 04 03												
+################################################################### MACHINE CODE ############ INTENTION ############ 78 INSTRUCTION ####### OPCODE ######## ModR/M #### SIB ######
+37 04 00 01	  # /# Global variable ~INPUT~./                  # BE B2 00 40 00          #:rsi(input)  = 004000__    mov r32, imm32      B8+rd id				
+13 04 F4 0F	  # ~INPUT@s0 ← 0x010000??;~  /# TODO: replace ??.                                                                                                              
+           	  #                                               
+B7 04 00 10	  # /# Global variable ~OUTPUT~./                 # BF 30 00 00 10          # rdi(output) = 10000030    mov r32, imm32      B8+rd id				
+93 84 04 03	  # ~OUTPUT@s1 ← 0x10000030;~                     											
+		  #                                               
+37 09 00 10	  # /# Global variable ~VARS~./                   
+13 09 09 00	  # ~VARS@s2 ← 0x10000000;~                       
 
 00 00 00 00
 

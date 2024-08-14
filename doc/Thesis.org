@@ -23,7 +23,12 @@
 
 #+LATEX_CLASS: article
 #+LATEX_CLASS_OPTIONS: [a4paper,8pt]
-#+LATEX_HEADER: \usepackage[margin=1in]{geometry}
+#+LATEX_HEADER: \usepackage[margin=0.5in]{geometry}
+#
+# TODO -- manually set the layout for tables with:
+#   \newgeometry{left=0.5in, right=0.5in}
+#   \restoregeometry
+#
 #+LATEX_HEADER_EXTRA:
 #+DESCRIPTION:
 #+KEYWORDS:
@@ -40,17 +45,30 @@
 #+LATEX_HEADER: \usepackage{array}
 #+LATEX_HEADER: \newcolumntype{H}{>{\setbox0=\hbox\bgroup}c<{\egroup}@{}}
 
+#+LATEX_HEADER: \usepackage{xcolor}
+
 # --- Indentation helper macros.
 #+MACRO: t   \hspace{1em}  # TODO: rewrite this one to use {{{c(x)}}}.
 #+MACRO: i   (eval (format "\\hspace{%sem}" $1))
 #+MACRO: c   (eval (format "\\hspace{%fem}" (* 0.5265 (string-to-number $1))))
 #+MACRO: b   (eval (format "\\hspace{%fem}" (* 3 0.5265 (string-to-number $1))))
 
-# --- Byte annotation macros.
-#+MACRO: modrm   ~$1~​$^{\text{\tiny ModR/M}}_{\text{\tiny $2·$3·$4}}$
-#+MACRO:   sib   ~$1~​$^{\text{\tiny    SIB}}_{\text{\tiny $1·$2·$3}}$
-#+MACRO: offset  _~$1~_​$_{\text{\tiny $2}}$
-#+MACRO: displ   $^{\text{\tiny +}}$​_~$1~_
+# --- Byte annotation macros (x86-64).
+#+MACRO: modrm    ~$1~​$^{\text{\tiny ModR/M}}_{\text{\tiny $2·$3·$4}}$
+#+MACRO:   sib    ~$1~​$^{\text{\tiny    SIB}}_{\text{\tiny $1·$2·$3}}$
+#+MACRO: offset   _~$1~_​$_{\text{\tiny $2}}$
+#+MACRO: displ    $^{\text{\tiny +}}$​_~$1~_
+
+# --- Encoding annotation macros (RISC-V).
+#+MACRO: imm   /~$1~/
+#+MACRO: rd    ~$1~​$^{d}$
+#+MACRO: rs1   ~$1~​$^{s_{1}}$
+#+MACRO: rs2   ~$1~​$^{s_{2}}$
+#+MACRO: fn3   ~$1~
+#+MACRO: op    ~$1~
+
+# --- Formatting macros.
+#+MACRO: ttt   $\textcolor{$2}{\texttt{$1}}$
 
 # --- Byte interpreter macros.
 #+MACRO: define  ~[99~ $^{d}$​~$1~ _~$2~_​~]~
@@ -94,7 +112,7 @@
 # \clearpage
 
 
-* Introduction
+* Introduction                                                     :noexport:
 
 ** Objectives and Approach
 
@@ -190,11 +208,11 @@ RISC-V on QEMU:
   
 * SmithForth Analysis and Porting to RISC-V
 
-** The ELF Header
+** The ELF Header                                                  :noexport:
 
 *** ELF File Header
 
-#+CAPTION: ELF file header for the =x86-64= Linux executable.
+#+CAPTION: ELF file header for the Linux executable (x86-64).
 #+LABEL: tbl:elf-file-header:x
 #+ATTR_LATEX: :align l|l|l
 | *&*            | *File Header Bytes*                 | *Explanation*                                                                      |
@@ -210,7 +228,7 @@ RISC-V on QEMU:
 |                | {{{b(0)}}}​~02 00~                   | ~e_type~: Object file type; ~2~ → executable.                                      |
 |                | {{{b(2)}}}​~3E 00~                   | ~e_machine~: Instruction set architecture; _~0x3E~ → ~x86-64~_, ~0xF3~ → ~RISC-V~. |
 |                | {{{b(4)}}}​~01 00 00 00~             | ~e_version~: ELF identification version; must be ~1~.                              |
-|                | {{{b(0)}}}​~78 00 10 00 00 00 00 00~ | ~e_entry~: Memory address of entry point (where process starts).                   |
+|                | {{{b(0)}}}​~78 00 40 00 00 00 00 00~ | ~e_entry~: Memory address of entry point (where process starts).                   |
 |                | {{{b(0)}}}​~40 00 00 00 00 00 00 00~ | ~e_phoff~: File offset of program headers; ~0x34~ → ~32-bit~, _~0x40~ → 64-bit_.   |
 |                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~e_shoff~: File offset section headers (we don't have any sections).               |
 |----------------+-------------------------------------+------------------------------------------------------------------------------------|
@@ -224,8 +242,8 @@ RISC-V on QEMU:
 |----------------+-------------------------------------+------------------------------------------------------------------------------------|
 | {{{addr(40)}}} |                                     |                                                                                    |
 
-#+CAPTION: ELF file header for the =RISC-V= Linux executable.
-#+LABEL: tbl:elf-file-header:r
+#+CAPTION: ELF file header for the Linux executable (RISC-V).
+#+LABEL: tbl:elf-file-header:rv
 #+ATTR_LATEX: :align l|l|l
 | *&*            | *File Header Bytes*                 | *Explanation*                                                                      |
 |----------------+-------------------------------------+------------------------------------------------------------------------------------|
@@ -240,7 +258,7 @@ RISC-V on QEMU:
 |                | {{{b(0)}}}​~02 00~                   | ~e_type~: Object file type; ~2~ → executable.                                      |
 |                | {{{b(2)}}}​~F3 00~                   | ~e_machine~: Instruction set architecture; ~0x3E~ → ~x86-64~, _~0xF3~ → ~RISC-V~_. |
 |                | {{{b(4)}}}​~01 00 00 00~             | ~e_version~: ELF identification version; must be ~1~.                              |
-|                | {{{b(0)}}}​~78 00 40 00 00 00 00 00~ | ~e_entry~: Memory address of entry point (where process starts).                   |
+|                | {{{b(0)}}}​~78 00 00 00 00 00 00 00~ | ~e_entry~: Memory address of entry point (where process starts).                   |
 |                | {{{b(0)}}}​~40 00 00 00 00 00 00 00~ | ~e_phoff~: File offset of program headers; ~0x34~ → ~32-bit~, _~0x40~ → 64-bit_.   |
 |                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~e_shoff~: File offset section headers (we don't have any sections).               |
 |----------------+-------------------------------------+------------------------------------------------------------------------------------|
@@ -256,58 +274,71 @@ RISC-V on QEMU:
 
 *** ELF Program Header
 
-#+CAPTION: x86-64: ELF program header.
+#+CAPTION: ELF program header (x86-64).
 #+LABEL: tbl:elf-program-header:x
 #+ATTR_LATEX: :align l|l|l
-| *&*            | *File Header Bytes*                 | *Explanation*                                                                                         |
-|----------------+-------------------------------------+-------------------------------------------------------------------------------------------------------|
-| {{{addr(40)}}} | {{{b(0)}}}​~01 00 00 00~             | ~p_type~: Segment type; ~1~ → loadable.                                                               |
-|                | {{{b(4)}}}​~07 00 00 00~             | ~p_flags~: Segment-wise permissions; _1 → execute_, _2 → write_, _4 → read_.                          |
-|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_offset~: Offset of segment in file; we load the whole file, so ~0~.                                |
-|                | {{{b(0)}}}​~00 00 40 00 00 00 00 00~ | ~p_vaddr~: Virtual address of segment in memory; ~0x400000~ on ~x86-64~ [cite:@system_v_psabi_amd64]. |
-|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_paddr~: Only used on systems where physical address is relevant.                                   |
-|                | {{{b(0)}}}​~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size of the segment in the file image (~TODO~).                                           |
-|                | {{{b(0)}}}​~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size of the segment in memory (\ge ~p_filesz~).                                            |
-|                | {{{b(0)}}}​~00 10 00 00 00 00 00 00~ | ~p_align~: Align segment to ~x86-64~ page size (4096 or ~0x1000~) [cite:@system_v_psabi_amd64].       |
-|----------------+-------------------------------------+-------------------------------------------------------------------------------------------------------|
-| {{{addr(78)}}} |                                     |                                                                                                       |
+| *&*            | *File Header Bytes*                 | *Explanation*                                                                                      |
+|----------------+-------------------------------------+----------------------------------------------------------------------------------------------------|
+| {{{addr(40)}}} | {{{b(0)}}}​~01 00 00 00~             | ~p_type~: Segment type; ~1~ → loadable.                                                            |
+|                | {{{b(4)}}}​~07 00 00 00~             | ~p_flags~: Segment-wise permissions; _1 → execute_, _2 → write_, _4 → read_.                       |
+|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_offset~: Offset of segment in file; we load the whole file, so ~0~.                             |
+|                | {{{b(0)}}}​~00 00 40 00 00 00 00 00~ | ~p_vaddr~: Virtual address of loaded segment; ~0x400000~ on ~x86-64~ [cite:@system_v_psabi_amd64]. |
+|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_paddr~: Only used on systems where physical address is relevant.                                |
+|                | {{{b(0)}}}​~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size of the segment in the file image (~TODO~).                                        |
+|                | {{{b(0)}}}​~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size of the segment in memory (\ge ~p_filesz~).                                         |
+|                | {{{b(0)}}}​~00 10 00 00 00 00 00 00~ | ~p_align~: Align segment to ~x86-64~ page size (4096 or ~0x1000~) [cite:@system_v_psabi_amd64].    |
+|----------------+-------------------------------------+----------------------------------------------------------------------------------------------------|
+| {{{addr(78)}}} |                                     |                                                                                                    |
 
-#+CAPTION: RISC-V: ELF program header.
-#+LABEL: tbl:elf-program-header:r
+#+CAPTION: ELF program header (RISC-V).
+#+LABEL: tbl:elf-program-header:rv
 #+ATTR_LATEX: :align l|l|l
-| *&*            | *File Header Bytes*                 | *Explanation*                                                                              |
-|----------------+-------------------------------------+--------------------------------------------------------------------------------------------|
-| {{{addr(40)}}} | {{{b(0)}}}​~01 00 00 00~             | ~p_type~: Segment type; ~1~ → loadable.                                                    |
-|                | {{{b(4)}}}​~07 00 00 00~             | ~p_flags~: Segment-wise permissions; _1 → execute_, _2 → write_, _4 → read_.               |
-|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_offset~: Offset of segment in file; we load the whole file, so ~0~.                     |
-|                | {{{b(0)}}}​~00 00 01 00 00 00 00 00~ | ~p_vaddr~: Virtual address of segment in memory; we can use 0 in RISC-V.                   |
-|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_paddr~: Only used on systems where physical address is relevant.                        |
-|                | {{{b(0)}}}​~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size of the segment in the file image (~TODO~).                                |
-|                | {{{b(0)}}}​~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size of the segment in memory (\ge ~p_filesz~).                                 |
-|                | {{{b(0)}}}​~00 10 00 00 00 00 00 00~ | ~p_align~: Align segment to RISC-V page size (4096 or ~0x1000~) [cite:@riscv_spec_vol_ii]. |
-|----------------+-------------------------------------+--------------------------------------------------------------------------------------------|
-| {{{addr(78)}}} |                                     |                                                                                            |
+| *&*            | *File Header Bytes*                 | *Explanation*                                                                                   |
+|----------------+-------------------------------------+-------------------------------------------------------------------------------------------------|
+| {{{addr(40)}}} | {{{b(0)}}}​~01 00 00 00~             | ~p_type~: Segment type; ~1~ → loadable.                                                         |
+|                | {{{b(4)}}}​~07 00 00 00~             | ~p_flags~: Segment-wise permissions; _1 → execute_, _2 → write_, _4 → read_.                    |
+|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_offset~: Offset of segment in file; we load the whole file, so ~0~.                          |
+|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_vaddr~: Virtual address of loaded segment; can be 0 in RISC-V. [cite:@riscv_assembly_manual] |
+|                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_paddr~: Only used on systems where physical address is relevant.                             |
+|                | {{{b(0)}}}​~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size of the segment in the file image (~TODO~).                                     |
+|                | {{{b(0)}}}​~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size of the segment in memory (\ge ~p_filesz~).                                        |
+|                | {{{b(0)}}}​~00 10 00 00 00 00 00 00~ | ~p_align~: Align segment to RISC-V page size (4096 or ~0x1000~) [cite:@riscv_spec_vol_ii].      |
+|----------------+-------------------------------------+-------------------------------------------------------------------------------------------------|
+| {{{addr(78)}}} |                                     |                                                                                                 |
 
 
 ** Global Variables
 
-#+CAPTION: All global variables used by SmithForth.
-#+LABEL: tbl:globals
+#+CAPTION: Global variables in SmithForth, referenced directly by machine code (x86-64).
+#+LABEL: tbl:globals:x
 #+ATTR_LATEX: :align l|l|l
 | *Variable* | *Register*​/​*Address*   | *Contents*                                                    |
 |------------+------------------------+---------------------------------------------------------------|
-| ~INPUT~    | ~RSI~ / ~s0~           | Source address of binary interpreter data and commands.       |
-| ~OUTPUT~   | ~RDI~ / ~s1~           | Destination address of binary interpreter operations.         |
-| ~VARS~     | -- / ~s2~              | *TODO:* Base address of globals stored in memory.             |
+| ~INPUT~    | ~RSI~                  | Source address of binary interpreter data and commands.       |
+| ~OUTPUT~   | ~RDI~                  | Destination address of binary interpreter operations.         |
 | ~#IN~      | ~0x10000000 (VARS)~    | The number of characters in the current line.                 |
 | ~TIB~      | ~0x10000008 (VARS+8)~  | The address where the current line begins.                    |
 | ~>IN~      | ~0x10000010 (VARS+16)~ | The number of /parsed/ characters in the current line.        |
 | ~STATE~    | ~0x10000020 (VARS+32)~ | Either ~0~ (/interpreting/ state) or ~1~ (/compiling/ state). |
 | ~LATEST~   | ~0x10000028 (VARS+40)~ | The execution token (/xt/) of the latest defined Forth word.  |
 
-Therefore beyond 0x10000030 lies uninitialized memory. This is where
-the binary interpreter is going to start writing, so this is the
-initial value we will give to global variable `OUTPUT`.
+#+CAPTION: Global variables in SmithForth (RISC-V).
+#+LABEL: tbl:globals:rv
+#+ATTR_LATEX: :align l|l|l
+| *Variable* | *Register*​/​*Address*   | *Contents*                                                    |
+|------------+------------------------+---------------------------------------------------------------|
+| ~INPUT~    | ~s0~                   | Source address of binary interpreter data and commands.       |
+| ~OUTPUT~   | ~s1~                   | Destination address of binary interpreter operations.         |
+| ~VARS~     | ~s2~                   | Base address of globals stored in memory (~#IN~, ~TIB~ etc).  |
+| ~#IN~      | ~0x10000000 (VARS)~    | The number of characters in the current line.                 |
+| ~TIB~      | ~0x10000008 (VARS+8)~  | The address where the current line begins.                    |
+| ~>IN~      | ~0x10000010 (VARS+16)~ | The number of /parsed/ characters in the current line.        |
+| ~STATE~    | ~0x10000020 (VARS+32)~ | Either ~0~ (/interpreting/ state) or ~1~ (/compiling/ state). |
+| ~LATEST~   | ~0x10000028 (VARS+40)~ | The execution token (/xt/) of the latest defined Forth word.  |
+
+Beyond ~0x10000030~ lies uninitialized memory. This is where the
+binary interpreter is going to start writing, so this is the initial
+value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 
 #+CAPTION: x86-64: Initialize global variables =INPUT= and =OUTPUT=.
 #+LABEL: tbl:forth:init-io:x
@@ -321,20 +352,27 @@ initial value we will give to global variable `OUTPUT`.
 |                               |                  |            | {{{addr(82)}}} |                      |
 
 #+CAPTION: RISC-V: Initialize global variables =INPUT= and =OUTPUT=.
-#+LABEL: tbl:forth:init-io:r
+#+LABEL: tbl:forth:init-io:rv
 #+ATTR_LATEX: :align l|ll|l|l
-| *Pseudocode*                                   | *Instruction*      | *Encoding*                        | *&*            | *Machine code* |
-|------------------------------------------------+--------------------+-----------------------------------+----------------+----------------|
-| /# Global variable ~INPUT~./                   |                    |                                   |                |                |
-| ~INPUT@s0 ← 0x010000FF;~  /# TODO: replace FF. | lui s0, 0x01000    | ~0x01000           01000 0110111~ | {{{addr(78)}}} | 37 04 00 01    |
-|                                                | addi s0, s0, 0x0?? | ~0x0FF   01000 000 01000 0010011~ |                | 13 04 F4 0F    |
-| /# Global variable ~OUTPUT~./                  |                    |                                   |                |                |
-| ~OUTPUT@s1 ← 0x10000030;~                      | lui s1, 0x10000    | ~0x10000           01001 0110111~ |                | B7 04 00 10    |
-|                                                | addi s1, s1, 0x030 | ~0x030   01001 000 01001 0010011~ |                | 93 84 04 03    |
-| /# Global variable ~VARS~./                    |                    |                                   |                |                |
-| ~VARS@s2 ← 0x10000000;~                        | lui s2, 0x10000    | ~0x10000           01010 0110111~ |                | B7 05 00 10    |
-|                                                | addi s2, s2, 0x000 | ~0x000   01010 000 01010 0010011~ |                | 13 05 05 00    |
-|                                                |                    |                                   | {{{addr(90)}}} |                |
+| *Pseudocode*                  | *Instruction*      | *Encoding*                                                                             | *&*            | *Mach. code*  |
+|-------------------------------+--------------------+----------------------------------------------------------------------------------------+----------------+---------------|
+| /# Global variable ~INPUT~./  |                    |                                                                                        |                |               |
+| /# TODO: replace ??.          |                    |                                                                                        |                |               |
+| ~INPUT@s0 ← 0x010000??;~      | ~lui s0,0x01000~   | {{{imm(0x10000)}}}                                 {{{rd(01001)}}}   {{{op(0110111)}}} | {{{addr(78)}}} | ~37 04 00 01~ |
+|                               |                    | /# Group 8-bit groups into bytes:/                                                     |                |               |
+|                               |                    | /~0x~/​~⟨~​/~01~/​~⟩⟨~​/~00~/​~⟩⟨~​/~0~/                {{{rd(0100⟩⟨0)}}} {{{op(0110111⟩)}}} |                |               |
+|                               |                    | /# Write as hexadecimal:/                                                              |                |               |
+|                               |                    | ~01 00 04 37~                                                                          |                |               |
+|                               |                    | /# Finally, change to little-endian:/                                                  |                |               |
+|                               |                    | ~37 04 00 01~                                                                          |                |               |
+|                               | ~addi s0,s0,0x0??~ | {{{imm(0x0FF)}}}   {{{rs1(01000)}}} {{{fn3(000)}}} {{{rd(01000)}}}   {{{op(0010011)}}} |                | ~13 04 ?4 0?~ |
+| /# Global variable ~OUTPUT~./ |                    |                                                                                        |                |               |
+| ~OUTPUT@s1 ← 0x10000030;~     | ~lui s1,0x10000~   | {{{imm(0x10000)}}}                                 {{{rd(01001)}}}   {{{op(0110111)}}} |                | ~B7 04 00 10~ |
+|                               | ~addi s1,s1,0x030~ | {{{imm(0x030)}}}   {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}   {{{op(0010011)}}} |                | ~93 84 04 03~ |
+| /# Global variable ~VARS~./   |                    |                                                                                        |                |               |
+| ~VARS@s2 ← 0x10000000;~       | ~lui s2,0x10000~   | {{{imm(0x10000)}}}                                 {{{rd(10010)}}}   {{{op(0110111)}}} |                | ~37 09 00 10~ |
+|                               | ~addi s2,s2,0x000~ | {{{imm(0x000)}}}   {{{rs1(10010)}}} {{{fn3(000)}}} {{{rd(10010)}}}   {{{op(0010011)}}} |                | ~13 09 09 00~ |
+|                               |                    |                                                                                        | {{{addr(90)}}} |               |
 
 
 ** Binary Interpreter
