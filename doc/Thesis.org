@@ -9,7 +9,9 @@
 #+CREATOR: Emacs 29.2 (Org mode 9.6.15)
 
 #+BIBLIOGRAPHY: References.bib
-#+CITE_EXPORT: csl csl/ieee.csl
+# #+CITE_EXPORT: csl csl/ieee.csl
+# #+CITE_EXPORT: csl csl/ieee-with-url.csl
+#+CITE_EXPORT: csl csl/acm-siggraph.csl
 
 #+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:{} arch:headline
 #+OPTIONS: author:nil broken-links:nil c:nil creator:nil
@@ -92,9 +94,9 @@
 # \clearpage
 
 
-* Introduction                                                     :noexport:
+* Introduction
 
-** Our Objectives
+** Objectives and Approach
 
 #+begin_comment
 What are the objectives of this thesis?
@@ -110,11 +112,12 @@ What are the objectives of this thesis?
 ** SmithForth
 
 Citations:
-- Leo Brodie: [cite:@brodie1981starting] and [cite:@brodie2004thinking]
-- Loeliger: [cite:@loeliger1981threaded]
-- [cite:SmithForth @smithforth] vs [cite:sectorforth @sectorforth] vs
-  [cite:milliForth @milliforth]
-- Anton Ertl: [cite:@ertl02]
+- /Starting Forth/ [cite:@brodie1981starting] and /Thinking Forth/
+  [cite:@brodie2004thinking]
+- /Threaded Interpretive Languages/ [cite:@loeliger1981threaded]
+- /SmithForth/ [cite:@smithforth] vs /sectorforth/ [cite:@sectorforth]
+  vs /milliForth/ [cite:@milliforth]
+- [cite:@ertl02]
 
 
 ** The x86-64 Architecture
@@ -147,9 +150,9 @@ Citations:
 #+LABEL: tbl:syscall-calling-convention
 #+ATTR_LATEX: :align c|c|c|c|ccccc
 | *Arch.*  | *Instr.*  | *Syscall #* | *Return* | *Arg. 1* | *Arg. 2* | *Arg. 3* | *Args. 4, 5, 6*   |
-|----------+-----------+------------+----------+----------+----------+----------+-------------------|
-| ~x86-64~ | ~syscall~ | ~rax~      | ~rax~    | ~rdi~    | ~rsi~    | ~rdx~    | ~r10~, ~r8~, ~r9~ |
-| ~riscv~  | ~ecall~   | ~a7~       | ~a0~     | ~a0~     | ~a1~     | ~a2~     | ~a3~, ~a4~, ~a5~  |
+|----------+-----------+-------------+----------+----------+----------+----------+-------------------|
+| ~x86-64~ | ~syscall~ | ~rax~       | ~rax~    | ~rdi~    | ~rsi~    | ~rdx~    | ~r10~, ~r8~, ~r9~ |
+| ~riscv~  | ~ecall~   | ~a7~        | ~a0~     | ~a0~     | ~a1~     | ~a2~     | ~a3~, ~a4~, ~a5~  |
 
 #+CAPTION: Used Linux system calls for ~x86-64~ and ~riscv~, with their signatures.
 #+LABEL: tbl:syscalls:x86-64
@@ -286,21 +289,21 @@ RISC-V on QEMU:
 | {{{addr(78)}}} |                                     |                                                                                            |
 
 
-** Global variables
+** Global Variables
 
 #+CAPTION: All global variables used by SmithForth.
 #+LABEL: tbl:globals
-#+ATTR_LATEX: :align l|l|l|l
-| *Variable* | *Register*​/​*Address*   |                        | *Contents*                                                    |
-|------------+------------------------+------------------------+---------------------------------------------------------------|
-| ~INPUT~    | ~RSI~                  | ~s0~                   | Source address of binary interpreter data and commands.       |
-| ~OUTPUT~   | ~RDI~                  | ~s1~                   | Destination address of binary interpreter operations.         |
-| ~VARS~     |                        | ~s2~                   | *TODO:* Base address of globals stored in memory.             |
-| ~#IN~      | ~0x10000000 (VARS)~    | ~0x10000000 (VARS)~    | The number of characters in the current line.                 |
-| ~TIB~      | ~0x10000008 (VARS+8)~  | ~0x10000008 (VARS+8)~  | The address where the current line begins.                    |
-| ~>IN~      | ~0x10000010 (VARS+16)~ | ~0x10000010 (VARS+16)~ | The number of /parsed/ characters in the current line.        |
-| ~STATE~    | ~0x10000020 (VARS+32)~ | ~0x10000020 (VARS+32)~ | Either ~0~ (/interpreting/ state) or ~1~ (/compiling/ state). |
-| ~LATEST~   | ~0x10000028 (VARS+40)~ | ~0x10000028 (VARS+40)~ | The execution token (/xt/) of the latest defined Forth word.  |
+#+ATTR_LATEX: :align l|l|l
+| *Variable* | *Register*​/​*Address*   | *Contents*                                                    |
+|------------+------------------------+---------------------------------------------------------------|
+| ~INPUT~    | ~RSI~ / ~s0~           | Source address of binary interpreter data and commands.       |
+| ~OUTPUT~   | ~RDI~ / ~s1~           | Destination address of binary interpreter operations.         |
+| ~VARS~     | -- / ~s2~              | *TODO:* Base address of globals stored in memory.             |
+| ~#IN~      | ~0x10000000 (VARS)~    | The number of characters in the current line.                 |
+| ~TIB~      | ~0x10000008 (VARS+8)~  | The address where the current line begins.                    |
+| ~>IN~      | ~0x10000010 (VARS+16)~ | The number of /parsed/ characters in the current line.        |
+| ~STATE~    | ~0x10000020 (VARS+32)~ | Either ~0~ (/interpreting/ state) or ~1~ (/compiling/ state). |
+| ~LATEST~   | ~0x10000028 (VARS+40)~ | The execution token (/xt/) of the latest defined Forth word.  |
 
 Therefore beyond 0x10000030 lies uninitialized memory. This is where
 the binary interpreter is going to start writing, so this is the
@@ -334,9 +337,9 @@ initial value we will give to global variable `OUTPUT`.
 |                                                |                    |                                   | {{{addr(90)}}} |                |
 
 
-** Binary interpreter
+** Binary Interpreter
 
-*** The binary interpreter loop
+*** The Binary Interpreter Loop
 
 #+CAPTION: The binary interpreter routine and loop.
 #+LABEL: tbl:forth:bi:x
@@ -608,7 +611,7 @@ initial value we will give to global variable `OUTPUT`.
 | ~return.~  /# From binary interpreter./    | jalr zero, 0(ra)        |          |                | ~C3~                                    | return        |
 
 
-** A way out
+** A Way Out
 
 *** Subroutine ~BYE~                                               :noexport:
 
@@ -628,7 +631,7 @@ initial value we will give to global variable `OUTPUT`.
 |                                    |                |          |                                 |                        |
 
 
-** Debugging utilities
+** Debugging Utilities
 
 :LOGBOOK:
 - Note taken on [2024-07-29 Mon 13:19] \\
@@ -739,7 +742,7 @@ initial value we will give to global variable `OUTPUT`.
 |                                          |                   |                  |                                       |                         |
 
 
-** Text interpreter
+** Text Interpreter
 
 # ============= TEXT INTERPRETER
 #
@@ -1454,9 +1457,7 @@ initial value we will give to global variable `OUTPUT`.
 | sd rs2, offset(rs1)     | S      | ~offset[11:5]     rs2    rs1    011  offset[4:0]     0100011~ |
 
 
-* Bibliography                                                     :noexport:
-
-References:
+* Bibliography
 
 #+PRINT_BIBLIOGRAPHY:
 

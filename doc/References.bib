@@ -1,50 +1,56 @@
 %%% Forth %%%
 
 @Book{brodie2004thinking,
-  title =	 {Thinking forth},
+  title =	 {{Thinking FORTH}},
   author =	 {Brodie, Leo},
   year =	 2004,
-  publisher =	 {Punchy Publishing}
+  publisher =	 {Punchy Publishing},
+  url =
+                  {https://www.forth.com/wp-content/uploads/2018/11/thinking-forth-color.pdf}
 }
 
 @Book{brodie1981starting,
-  title =	 {Starting forth},
+  title =	 {{Starting FORTH}},
   author =	 {Brodie, Leo},
   year =	 1981,
-  publisher =	 {Prentice-Hall}
+  publisher =	 {Prentice-Hall},
+  url =		 {https://www.forth.com/starting-forth/},
 }
 
-@book{loeliger1981threaded,
-  title =	 {Threaded Interpretive Languages},
+@Book{loeliger1981threaded,
+  title =	 {{Threaded Interpretive Languages}},
   author =	 {Loeliger, Ronald G.},
   year =	 1981,
   publisher =	 {McGraw-Hill, Inc.},
-  address =	 {USA},
   isbn =	 {007038360X},
+  url =
+                  {https://archive.org/details/R.G.LoeligerThreadedInterpretiveLanguagesTheirDesignAndImplementationByteBooks1981}
 }
 
 @Misc{smithforth,
   title =	 {{SmithForth: A Forth for x86-64 personal computers}},
   author =	 {David Smith},
   year =	 2022,
-  howpublished = {\url{https://dacvs.neocities.org/SF/}}
+  url =		 {https://dacvs.neocities.org/SF/}
 }
 
 @Misc{sectorforth,
-  title =	 {sectorforth},
+  title =	 {{sectorforth. A 16-bit x86 Forth that fits in a
+                  512-byte boot sector.}},
   author =	 {Blum, Cesar},
-  howpublished = {\url{https://github.com/cesarblum/sectorforth/}},
+  url =		 {https://github.com/cesarblum/sectorforth/},
 }
 
 @Misc{milliforth,
-  title =	 {milliForth},
-  author =	 {https://github.com/fuzzballcat},
-  howpublished = {\url{https://github.com/fuzzballcat/milliForth}}
+  title =	 {{milliForth. A FORTH in 340 bytes — the smallest
+                  real programming language ever as of yet.}},
+  author =	 {@fuzzballcat},
+  url =		 {https://github.com/fuzzballcat/milliForth}
 }
 
 @Article{kogge82,
   author =	 "Peter M. Kogge",
-  title =	 "An Architectural Trail to Threaded-Code Systems",
+  title =	 {{An Architectural Trail to Threaded-Code Systems}},
   journal =	 ieeecomputer,
   year =	 1982,
   pages =	 "22--32",
@@ -58,13 +64,13 @@
 
 @InProceedings{ertl02,
   author =	 {M. Anton Ertl},
-  title =	 {Threaded Code Variations and Optimizations (Extended
-                  Version)},
-  booktitle =	 {Forth-Tagung 2002},
+  title =	 {{Threaded Code Variations and Optimizations
+                  (Extended Version)}},
+  booktitle =	 {{Forth-Tagung 2002}},
   year =	 2002,
   address =	 {Garmisch-Partenkirchen},
   url =
-                  {\url{https://www.complang.tuwien.ac.at/papers/ertl02.ps.gz}},
+                  {https://www.complang.tuwien.ac.at/papers/ertl02.ps.gz},
   abstract =	 {Forth has been traditionally implemented as indirect
                   threaded code, where the code for non-primitives is
                   the code-field address of the word. To get the
@@ -90,36 +96,37 @@
 @Misc{system_v_gabi,
   title =	 {{System V Application Binary Interface
                   (`gABI'). DRAFT Version, June 10, 2013}},
-  howpublished = {
-                  \url{https://www.sco.com/developers/gabi/latest/contents.html}},
-  note =	 {Accessed 24.11.2016},
+  url =
+                  {https://www.sco.com/developers/gabi/latest/contents.html},
   annote =	 {1997 SCO version at:
                   https://www.sco.com/developers/devspecs/gabi41.pdf},
 }
 
-@Misc{system_v_psabi_amd64,
+@Manual{system_v_psabi_amd64,
   title =	 {{System V Application Binary Interface. AMD64
                   Architecture Processor Supplement (`psABI'). Version
                   1.0, June 3, 2024}},
   author =	 { Lu, H.J. and Matz, Michael and Girkar, Milind and
                   Hubička, Jan and Jaeger, Andreas and Mitchell, Mark},
-  howpublished = {\url{https://gitlab.com/x86-psABIs/x86-64-ABI}},
+  publisher =	 {Published at https://gitlab.com/x86-psABIs},
+  year =	 2024,
+  url =		 {https://gitlab.com/x86-psABIs/x86-64-ABI},
   annote =	 {PDF version at:
                   https://gitlab.com/x86-psABIs/x86-64-ABI/-/jobs/artifacts/master/raw/x86-64-ABI/abi.pdf?job=build}
 }
 
-@Misc{system_v_psabi_riscv,
+@Manual{system_v_psabi_riscv,
   title =	 {{RISC-V ABIs Specification, Document Version 1.0}},
   editor =	 {Kito Cheng and Jessica Clarke},
   institution =	 {RISC-V International},
   month =	 {November},
   year =	 2022,
-  howpublished = {\url{https://riscv.org/technical/specifications/}},
+  url =		 {https://riscv.org/technical/specifications/},
 }
 
 @Article{elf_sti_1995,
-  title =	 {Executable and Linking Format (ELF) Specification
-                  Version 1.2},
+  title =	 {{Executable and Linking Format (ELF) Specification
+                  Version 1.2}},
   author =	 {Standard, Tool Interface},
   journal =	 {TIS Committee},
   pages =	 {1--106},
@@ -129,32 +136,15 @@
 %%% Linux %%%
 
 @Misc{linux_system_calls_table,
-  title =	 {Linux System Call Table},
-  howpublished =
-                  {\url{https://www.chromium.org/chromium-os/developer-library/reference/linux-constants/syscalls/#x86_64-64-bit}}
+  title =	 {{Linux System Call Table. The Chromium Projects}},
+  url =
+                  {https://www.chromium.org/chromium-os/developer-library/reference/linux-constants/syscalls/},
 }
 
 @Misc{linux_man_syscall,
-  title =	 {syscall(2) — Linux manual page - NOTES},
-  howpublished =
-                  {\url{https://man7.org/linux/man-pages/man2/syscall.2.html#NOTES}},
-}
-
-@Misc{linux_alpine,
-  title =	 {Alpine Linux},
-  howpublished = {\url{https://alpinelinux.org/about/}},
-}
-
-@Misc{linux_alpine_docker_amd64,
-  title =	 {{Docker Hub: amd64/alpine -- Alpine Linux on the
-                  AMD64 Architecture}},
-  howpublished = {\url{https://hub.docker.com/r/amd64/alpine/}}
-}
-
-@Misc{linux_alpine_docker_riscv,
-  title =	 {{Docker Hub: riscv64/alpine -- Alpine Linux on the
-                  RISC-V Architecture}},
-  howpublished = {\url{https://hub.docker.com/r/riscv64/alpine}}
+  title =	 {{syscall(2) — Linux manual page - NOTES}},
+  url =
+                  {https://man7.org/linux/man-pages/man2/syscall.2.html#NOTES},
 }
 
 %%% ELF files %%%
@@ -163,8 +153,8 @@
   title =	 {{Handmade Linux x86 executables}},
   author =	 {David Smith},
   year =	 2021,
-  howpublished =
-                  {\url{https://www.youtube.com/playlist?list=PLZCIHSjpQ12woLj0sjsnqDH8yVuXwTy3p}}
+  url =
+                  {https://www.youtube.com/playlist?list=PLZCIHSjpQ12woLj0sjsnqDH8yVuXwTy3p}
 }
 
 @Misc{raiter_teensy_elf_executables,
@@ -172,34 +162,36 @@
                   Executables for Linux},
   author =	 {Brian Raiter},
   year =	 1999,
-  howpublished =
-                  {\url{http://www.muppetlabs.com/~breadbox/software/tiny/teensy.html}},
+  url =
+                  {http://www.muppetlabs.com/~breadbox/software/tiny/teensy.html},
 }
 
 %%% x86-64 %%%
 
 @Manual{intel_manual_volume_2,
-  title =	 {Intel® 64 and IA-32 Architectures Software
+  title =	 {{Intel® 64 and IA-32 Architectures Software
                   Developer’s Manual. Volume 2 (2A, 2B, 2C, & 2D):
-                  Instruction Set Reference, A-Z},
+                  Instruction Set Reference, A-Z}},
   publisher =	 {Intel Corporation},
   year =	 2024,
-  howpublished =
-                  {\url{https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html}}
+  url =
+                  {https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html}
 }
 
-@article{kerner2007history,
-  title =	 {A history of modern 64-bit computing},
+@TechReport{kerner2007history,
+  title =	 {{A History of Modern 64-bit Computing}},
   author =	 {Kerner, Matthew and Padgett, Neil},
-  journal =	 {Preprint at
-                  https://courses.cs.washington.edu/courses/csep590/06au/projects/history-64-bit.pdf},
+  institution =	 {CS Department, University of Washington},
+  url =
+                  {https://courses.cs.washington.edu/courses/csep590/06au/projects/history-64-bit.pdf},
+  month =	 {February},
   year =	 2007
 }
 
 %%% RISC-V %%%
 
-@book{patterson2017,
-  title =	 {The RISC-V Reader: An Open Architecture Atlas},
+@Book{patterson2017,
+  title =	 {{The RISC-V Reader: An Open Architecture Atlas}},
   author =	 {Patterson, David and Waterman, Andrew},
   year =	 2017,
   isbn =	 0999249118,
@@ -212,47 +204,56 @@
                   embedded microcontroller to the fastest 64-bit cloud
                   computer. The text shows how RISC-V followed the
                   good ideas of past architectures while avoiding
-                  their mistake.}
+                  their mistake.},
+  url =		 {http://riscvbook.com}
 }
 
-@Book{waterman2016,
-  title =	 {Design of the RISC-V instruction set architecture},
+@TechReport{waterman2016,
+  title =	 {{Design of the RISC-V Instruction Set Architecture
+                  -- PhD Thesis}},
   author =	 {Waterman, Andrew Shell},
   year =	 2016,
-  publisher =	 {University of California, Berkeley}
+  institution =	 {EECS Department, University of California, Berkeley},
+  url =
+                  {https://www2.eecs.berkeley.edu/Pubs/TechRpts/2016/EECS-2016-1.html}
 }
 
-@Misc{riscv_spec_vol_i,
+@Book{riscv_spec_vol_i,
   title =	 {{The RISC-V Instruction Set Manual: Volume I
                   (Unprivileged Architecture). Version 20240411}},
+  editors =	 {Waterman, Andrew and Asanović, Krste},
   institution =	 {{RISC-V International}},
-  howpublished = {\url{https://riscv.org/technical/specifications/}},
+  year =	 2024,
+  url =		 {https://riscv.org/technical/specifications/},
 }
 
-@Misc{riscv_spec_vol_ii,
+@Book{riscv_spec_vol_ii,
   title =	 {{The RISC-V Instruction Set Manual: Volume II
                   (Privileged Architecture). Version 20240411}},
+  editors =	 {Waterman, Andrew and Asanović, Krste},
   institution =	 {{RISC-V International}},
-  howpublished = {\url{https://riscv.org/technical/specifications/}},
+  year =	 2024,
+  url =		 {https://riscv.org/technical/specifications/},
 }
 
 @Misc{riscv_ratified_extensions,
-  title =	 {RISC-V Ratified Extensions},
-  howpublished =
-                  {\url{https://wiki.riscv.org/display/HOME/Ratified+Extensions}},
+  title =	 {{RISC-V Ratified Extensions. RISC-V International}},
+  url =
+                  {https://wiki.riscv.org/display/HOME/Ratified+Extensions},
 }
 
 %%% QEMU %%%
 
-@inproceedings{bellard2005qemu,
-  title =	 {QEMU, a fast and portable dynamic translator.},
-  author =	 {Bellard, Fabrice},
-  booktitle =	 {USENIX annual technical conference, FREENIX Track},
-  volume =	 41,
-  number =	 46,
-  pages =	 {10--5555},
+@InProceedings{bellard2005qemu,
+  author =	 {Fabrice Bellard},
+  title =	 {{QEMU, a Fast and Portable Dynamic Translator}},
+  booktitle =	 {{Proceedings of the FREENIX Track: 2005 USENIX
+                  Annual Technical Conference, April 10-15, 2005,
+                  Anaheim, CA, USA}},
+  publisher =	 {{USENIX}},
   year =	 2005,
-  organization = {California, USA}
+  url =
+                  {http://www.usenix.org/events/usenix05/tech/freenix/bellard.html},
 }
 
 %%% LISP %%%
@@ -309,7 +310,6 @@
 @Misc{jargon_file,
   title =	 {The Jargon File, Version 4.4.7, 29 December 2003},
   author =	 {Raymond, Eric S and Steele, Guy L},
-  howpublished =
-                  {\url{http://jargon-file.org/archive/jargon-4.4.7.dos.txt}},
+  url =		 {http://jargon-file.org/archive/jargon-4.4.7.dos.txt},
   year =	 2003,
 }
