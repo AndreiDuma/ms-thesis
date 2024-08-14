@@ -10,8 +10,8 @@
 
 #+BIBLIOGRAPHY: References.bib
 # #+CITE_EXPORT: csl csl/ieee.csl
-# #+CITE_EXPORT: csl csl/ieee-with-url.csl
-#+CITE_EXPORT: csl csl/acm-siggraph.csl
+# #+CITE_EXPORT: csl csl/acm-siggraph.csl
+#+CITE_EXPORT: csl csl/ieee-with-url.csl
 
 #+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:{} arch:headline
 #+OPTIONS: author:nil broken-links:nil c:nil creator:nil
@@ -133,8 +133,8 @@ Citations:
 - Patterson & Waterman: [cite:@patterson2017]
 - /Design of the RISC-V instruction set architecture/, PhD Thesis
   [cite:@waterman2016]
-- RISC-V Instruction Set Manual: Volume I[cite:@riscv_spec_vol_i] and
-  Volume 2[cite:@riscv_spec_vol_ii]
+- RISC-V Instruction Set Manual: Volume I [cite:@riscv_spec_vol_i] and
+  Volume 2 [cite:@riscv_spec_vol_ii]
 - RISC-V Ratified Extensions [cite:@riscv_ratified_extensions]
 
 
@@ -1458,6 +1458,8 @@ initial value we will give to global variable `OUTPUT`.
 
 
 * Bibliography
+
+References:
 
 #+PRINT_BIBLIOGRAPHY:
 

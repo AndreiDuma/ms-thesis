@@ -58,7 +58,7 @@
     <terms>
       <term name="chapter" form="short">ch.</term>
       <term name="presented at">presented at the</term>
-      <term name="available at">available</term>
+      <term name="available at"></term>
     </terms>
   </locale>
   <!-- Macros -->
