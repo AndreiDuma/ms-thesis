@@ -395,7 +395,7 @@ value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 | {{{i(2)}}}     ~goto _command.~              | JE _rel8_        | 74 _cb_       |                | ~74~ {{{offset(02,90-8E)}}}             | jump _command if ==     |
 | {{{i(1)}}} /# If not, just copy the byte/    |                  |               |                |                                         |                         |
 | {{{i(1)}}} /# to ~OUTPUT~ and return./       |                  |               |                |                                         |                         |
-| {{{i(1)}}} ~[OUTPUT@RDI++] <- chr@AL;~       | STOS m8          | AA            | {{{addr(8E)}}} | ~AA~                                    | [rdi++] = al (xmit)     |
+| {{{i(1)}}} ~[OUTPUT@RDI++] ← chr@AL;~        | STOS m8          | AA            | {{{addr(8E)}}} | ~AA~                                    | [rdi++] = al (xmit)     |
 | {{{i(1)}}} ~return.~                         | RET              | C3            |                | ~C3~                                    | return                  |
 | ~_command:~                                  |                  |               | {{{addr(90)}}} |                                         |                         |
 | {{{i(1)}}} /# Address of global ~LATEST~./   |                  |               |                |                                         |                         |
@@ -449,44 +449,44 @@ value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 | {{{i(2)}}}     ~goto _command.~                   | ~beq t0,t1,+??~       | {{{off(bbbbbbb)}}} {{{rs2(00110)}}} {{{rs1(00101)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} |                |                |
 | {{{i(1)}}} /# If not, just copy the byte/         |                       |                                                                                                        |                |                |
 | {{{i(1)}}} /# to ~OUTPUT~ and return./            |                       |                                                                                                        |                |                |
-| {{{i(1)}}} ~[OUTPUT@s1++] <- chr@t0;~             | ~sb t0,0(s1)~         | {{{off(???????)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(0100011)}}} |                |                |
+| {{{i(1)}}} ~[OUTPUT@s1++] ← chr@t0;~               | ~sb t0,0(s1)~         | {{{off(???????)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(0100011)}}} |                |                |
 | {{{i(1)}}}                                        | ~addi s1,s1,1~        | {{{imm(0x001)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}} {{{op(0010011)}}}  |                |                |
 | {{{i(1)}}} ~return.~                              | ~jalr zero,0(ra)~     | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}} {{{op(1101111)}}}  |                |                |
 | ~_command:~                                       |                       |                                                                                                        |                |                |
+| {{{i(1)}}} /# Get latest dictionary word/         |                       |                                                                                                        |                |                |
+| {{{i(1)}}} /# from ~LATEST~ (~VARS + 40~):/       |                       |                                                                                                        |                |                |
+| {{{i(1)}}} ~xt@a0 ← [LATEST];~                    | ~ld a0,40(s2)~        | {{{off(0x028)}}}                    {{{rs1(01010)}}} {{{fn3(011)}}} {{{rd(01010)}}} {{{op(0000011)}}}  |                |                |
+| {{{i(1)}}}                                        |                       |                                                                                                        |                |                |
 | {{{i(1)}}} /# Read command argument./             |                       |                                                                                                        |                |                |
-| {{{i(1)}}} ~arg@t0 ← [INPUT@s0++];~               | ~lb t0,s0,0~          | {{{off(0x000)}}}                    {{{rs1(01000)}}} {{{fn3(000)}}} {{{rd(00101)}}} {{{op(0000011)}}}  |                |                |
+| {{{i(1)}}} ~arg@a1 ← [INPUT@s0++];~               | ~lb a1,s0,0~          | {{{off(0x000)}}}                    {{{rs1(01000)}}} {{{fn3(000)}}} {{{rd(01011)}}} {{{op(0000011)}}}  |                |                |
 | {{{i(1)}}}                                        | ~addi s0,s0,1~        | {{{imm(0x001)}}}                    {{{rs1(01000)}}} {{{fn3(000)}}} {{{rd(01000)}}} {{{op(0010011)}}}  |                |                |
 | {{{i(1)}}} /# Command type by argument:/          |                       |                                                                                                        |                |                |
 | {{{i(1)}}} /# – ~0bi00ccccc~: define;/            |                       |                                                                                                        |                |                |
 | {{{i(1)}}} /# – ~0b011ccccc~: compile;/           |                       |                                                                                                        |                |                |
 | {{{i(1)}}} /# – ~0b111ccccc~: execute./           |                       |                                                                                                        |                |                |
-| {{{i(1)}}} ~if arg@t0~ ~&~ ~0b01100000~ ~=~ ~0:~  | ~andi t1,t0,0x060~    | {{{imm(0x060)}}}                    {{{rs1(00101)}}} {{{fn3(111)}}} {{{rd(00110)}}} {{{op(0010011)}}}  |                |                |
+| {{{i(1)}}} ~if arg@a1~ ~&~ ~0b01100000~ ~=~ ~0:~  | ~andi t0,a1,0x060~    | {{{imm(0x060)}}}                    {{{rs1(01011)}}} {{{fn3(111)}}} {{{rd(00101)}}} {{{op(0010011)}}}  |                |                |
 | {{{i(2)}}}     /# _Define_ a new word./           |                       |                                                                                                        |                |                |
-| {{{i(2)}}}     ~flag@a0 ← arg@t0;~                | ~or a0,t0,zero~       | {{{fn7(0000000)}}} {{{rs2(00000)}}} {{{rs1(00101)}}} {{{fn3(110)}}} {{{rd(01010)}}}  {{{op(0110011)}}} |                |                |
-| {{{i(2)}}}     ~goto Head.~                       | ~beq t1,zero,+??~     | {{{off(bbbbbbb)}}} {{{rs2(00000)}}} {{{rs1(00110)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} |                |                |
-| {{{i(1)}}} /# Get latest dictionary word/         |                       |                                                                                                        |                |                |
-| {{{i(1)}}} /# from ~LATEST~ (~VARS + 40~):/       |                       |                                                                                                        |                |                |
-| {{{i(1)}}} ~xt@a0 ← [LATEST];~                    | ~ld a0,40(s2)~        | {{{off(0x028)}}}                    {{{rs1(01010)}}} {{{fn3(011)}}} {{{rd(01010)}}} {{{op(0000011)}}}  |                |                |
+| {{{i(2)}}}     ~goto Head.~                       | ~beq t0,zero,+??~     | {{{off(bbbbbbb)}}} {{{rs2(00000)}}} {{{rs1(00101)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} |                |                |
 | ~_find1:~                                         |                       |                                                                                                        |                |                |
-| {{{i(1)}}} ~chr@t1~ ~←~ ~arg@t0~ ~&~ ~0b0111111;~ | ~andi t1,t0,0x07F~    | {{{imm(0x07F)}}}                    {{{rs1(00101)}}} {{{fn3(111)}}} {{{rd(00110)}}} {{{op(0010011)}}}  |                |                |
-| {{{i(1)}}} ~if chr@t1 = [xt@a0 + 17]:~            | ~lb t2,0x011(a0)~     | {{{off(0x011)}}}                    {{{rs1(01010)}}} {{{fn3(000)}}} {{{rd(00111)}}} {{{op(0000011)}}}  |                |                |
+| {{{i(1)}}} ~chr@t0~ ~←~ ~arg@a1~ ~&~ ~0b0111111;~ | ~andi t0,a1,0x07F~    | {{{imm(0x07F)}}}                    {{{rs1(01011)}}} {{{fn3(111)}}} {{{rd(00101)}}} {{{op(0010011)}}}  |                |                |
+| {{{i(1)}}} ~if chr@t0 = [xt@a0 + 17]:~            | ~lb t1,0x011(a0)~     | {{{off(0x011)}}}                    {{{rs1(01010)}}} {{{fn3(000)}}} {{{rd(00110)}}} {{{op(0000011)}}}  |                |                |
 | {{{i(2)}}}     /# We found a word whose/          |                       |                                                                                                        |                |                |
 | {{{i(2)}}}     /# name begins with ~chr~./        |                       |                                                                                                        |                |                |
-| {{{i(2)}}}     ~goto _match.~                     | ~beq t1,t2,+??~       | {{{off(bbbbbbb)}}} {{{rs2(00111)}}} {{{rs1(00110)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} |                |                |
+| {{{i(2)}}}     ~goto _match.~                     | ~beq t0,t1,+??~       | {{{off(bbbbbbb)}}} {{{rs2(00110)}}} {{{rs1(00101)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} |                |                |
 | {{{i(1)}}} /# Follow word's link pointer/         |                       |                                                                                                        |                |                |
 | {{{i(1)}}} /# to previous entry and repeat./      |                       |                                                                                                        |                |                |
 | {{{i(1)}}} ~xt@a0 ← [xt@a0 + 8];~                 | ~ld a0,8(a0)~         | {{{off(0x008)}}}                    {{{rs1(01010)}}} {{{fn3(011)}}} {{{rd(01010)}}} {{{op(0000011)}}}  |                |                |
 | {{{i(1)}}} ~goto _find1.~                         | ~jalr zero,-??(zero)~ | {{{off(0xhhh)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00000)}}} {{{op(1101111)}}}  |                |                |
 | ~_match:~                                         |                       |                                                                                                        |                |                |
-| {{{i(1)}}} ~if arg@t0 & 0b1000000 = 0:~           | ~andi t1,t0,0x080~    | {{{imm(0x080)}}}                    {{{rs1(00101)}}} {{{fn3(111)}}} {{{rd(00110)}}} {{{op(0010011)}}}  |                |                |
+| {{{i(1)}}} ~if arg@a1 & 0b1000000 = 0:~           | ~andi t0,a1,0x080~    | {{{imm(0x080)}}}                    {{{rs1(01011)}}} {{{fn3(111)}}} {{{rd(00101)}}} {{{op(0010011)}}}  |                |                |
 | {{{i(2)}}}     /# _Compile_./                     |                       |                                                                                                        |                |                |
-| {{{i(2)}}}     ~goto COMPL.~                      | ~beq t1,zero,+??~     | {{{off(bbbbbbb)}}} {{{rs2(00000)}}} {{{rs1(00110)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} |                |                |
+| {{{i(2)}}}     ~goto COMPL.~                      | ~beq t0,zero,+??~     | {{{off(bbbbbbb)}}} {{{rs2(00000)}}} {{{rs1(00101)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} |                |                |
 | {{{i(1)}}} /# _Execute_ word's code./             |                       |                                                                                                        |                |                |
 | {{{i(1)}}} ~goto [xt@a0].~                        | ~ld t0,0(a0)~         | {{{off(0x000)}}}                    {{{rs1(01010)}}} {{{fn3(011)}}} {{{rd(00101)}}} {{{op(0000011)}}}  |                |                |
 | {{{i(1)}}}                                        | ~jalr zero,0(t0)~     | {{{off(0x000)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00000)}}} {{{op(1101111)}}}  |                |                |
 |                                                   |                       |                                                                                                        | {{{addr(??)}}} |                |
 
-*** Subroutine ~COMPL~
+*** Subroutine ~COMPL~                                             :noexport:
 
 #+CAPTION: =COMPL=, the FORTH compiler.
 #+LABEL: tbl:forth:compl:x
@@ -564,90 +564,87 @@ value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 #+CAPTION: Subroutine =Head= defines new words in the dictionary (x86-64).
 #+LABEL: tbl:forth:head:x
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                             | *Instruction*     | *Opcode*         | *&*            | *Machine code*                          | *Intention*   |
-|------------------------------------------+-------------------+------------------+----------------+-----------------------------------------+---------------|
-| /# Define:/ _~Head~_                     | ---               | ---              | {{{addr(C5)}}} | {{{define(04,48 65 61 64)}}}            | define Head   |
-| /# In/Out:/ ~( LATEST@RDX~               |                   |                  |                |                                         |               |
-| {{{io}}}      ~flag@AL -​- )~             |                   |                  |                |                                         |               |
-|                                          |                   |                  |                |                                         |               |
-| /# 16-bit align ~OUTPUT~./               |                   |                  |                |                                         |               |
-| ~OUTPUT@RDI += 0x0F;~                    | ADD r/m64, /imm8/ | REX.W 83 /0 /ib/ | {{{addr(CB)}}} | ~48 83~ {{{modrm(C7,11,000,111)}}} ~0F~ | rdi += 0F     |
-| ~OUTPUT@RDI &= 0xF0;~                    | AND r/m64, /imm8/ | REX.W 83 /4 /ib/ |                | ~48 83~ {{{modrm(E7,11,100,111)}}} ~F0~ | rdi &= F0     |
-|                                          |                   |                  |                |                                         |               |
-| /# Fill the new dictionary entry:/       |                   |                  |                |                                         |               |
-|                                          |                   |                  |                |                                         |               |
-| /# 1. Set the _link field_, then set/    |                   |                  |                |                                         |               |
-| /# set ~LATEST~ to the new entry./       |                   |                  |                |                                         |               |
-| ~latest@RCX ← [LATEST@RDX];~             | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(0A,00,001,010)}}}      | rcx = [rdx]   |
-| ~[OUTPUT@RDI+8] ← latest@RCX;~           | MOV r/m64, r64    | REX.W 89 /r      |                | ~48 89~ {{{modrm(4F,01,001,111)}}} ~08~ | [rdi+8] = rcx |
-| ~[LATEST@RDX] ← OUTPUT@RDI;~             | MOV r/m64, r64    | REX.W 89 /r      |                | ~48 89~ {{{modrm(3A,00,111,010)}}}      | [rdx] = rdi   |
-|                                          |                   |                  |                |                                         |               |
-| /# 2. Set the _flag+length field_./      |                   |                  |                |                                         |               |
-| ~OUTPUT@RDI += 0x10;~                    | ADD r/m64, /imm8/ | REX.W 83 /0 /ib/ |                | ~48 83~ {{{modrm(C7,11,000,111)}}} ~10~ | rdi += 10     |
-| ~[OUTPUT@RDI++] ← flag@AL;~              | STOS m8           | AA               |                | ~AA~                                    | [rdi++] = al  |
-|                                          |                   |                  |                |                                         |               |
-| /# 3. Extract name length from/          |                   |                  |                |                                         |               |
-| /# flag and copy _name field_./          |                   |                  |                |                                         |               |
-| ~flag@ECX ← flag@AL;~                    | XCHG EAX, r32     | 90+rd            |                | ~91~                                    | ecx = eax     |
-| ~length@ECX ← flag@ECX & 0x1F;~          | AND r/m32, /imm8/ | 83 /​4 /ib/       |                | ~83~ {{{modrm(E1,11,100,001)}}} ~1F~    | ecx &= 1F     |
-| ~copy      length@ECX bytes~             |                   |                  |                |                                         |               |
-| {{{c(5)}}}​~from INPUT@RSI~               |                   |                  |                |                                         |               |
-| {{{c(5)}}}​~to OUTPUT@RDI;~               | REP MOVS m8, m8   | F3 A4            |                | ~F3 A4~                                 | copy Name     |
-|                                          |                   |                  |                |                                         |               |
-| /# 4. Point _code field_ to the machine/ |                   |                  |                |                                         |               |
-| /# code that follows at ~INPUT~./        |                   |                  |                |                                         |               |
-| ~code@RCX ← [LATEST@RDX];~               | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(0A,00,001,010)}}}      | rcx = [rdx]   |
-| ~[code@RCX] ← INPUT@RDI;~                | MOV r/m64, r64    | REX.W 89 /r      |                | ~48 89~ {{{modrm(39,00,111,001)}}}      | [rcx] = rdi   |
-| ~return.~  /# To interpreter loop./      | RET               | C3               |                | ~C3~                                    | return        |
+| *Pseudocode*                          | *Instruction*     | *Opcode*         | *&*            | *Machine code*                          | *Intention*   |
+|---------------------------------------+-------------------+------------------+----------------+-----------------------------------------+---------------|
+| /# Define:/ _~Head~_                  | ---               | ---              | {{{addr(C5)}}} | {{{define(04,48 65 61 64)}}}            | define Head   |
+| /# In/Out:/ ~( LATEST@RDX~            |                   |                  |                |                                         |               |
+| {{{io}}}      ~flag@AL -​- )~          |                   |                  |                |                                         |               |
+|                                       |                   |                  |                |                                         |               |
+| /# 16-bit align ~OUTPUT~./            |                   |                  |                |                                         |               |
+| ~OUTPUT@RDI += 0x0F;~                 | ADD r/m64, /imm8/ | REX.W 83 /0 /ib/ | {{{addr(CB)}}} | ~48 83~ {{{modrm(C7,11,000,111)}}} ~0F~ | rdi += 0F     |
+| ~OUTPUT@RDI &= 0xF0;~                 | AND r/m64, /imm8/ | REX.W 83 /4 /ib/ |                | ~48 83~ {{{modrm(E7,11,100,111)}}} ~F0~ | rdi &= F0     |
+|                                       |                   |                  |                |                                         |               |
+| /# Fill the new dictionary entry:/    |                   |                  |                |                                         |               |
+| /#/                                   |                   |                  |                |                                         |               |
+| /# 1. Set the _link_ field, then set/ |                   |                  |                |                                         |               |
+| /# ~LATEST~ to the new entry./        |                   |                  |                |                                         |               |
+| ~latest@RCX ← [LATEST@RDX];~          | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(0A,00,001,010)}}}      | rcx = [rdx]   |
+| ~[OUTPUT@RDI+8] ← latest@RCX;~        | MOV r/m64, r64    | REX.W 89 /r      |                | ~48 89~ {{{modrm(4F,01,001,111)}}} ~08~ | [rdi+8] = rcx |
+| ~[LATEST@RDX] ← OUTPUT@RDI;~          | MOV r/m64, r64    | REX.W 89 /r      |                | ~48 89~ {{{modrm(3A,00,111,010)}}}      | [rdx] = rdi   |
+|                                       |                   |                  |                |                                         |               |
+| /# 2. Set the _flag+length_ field./   |                   |                  |                |                                         |               |
+| ~OUTPUT@RDI += 0x10;~                 | ADD r/m64, /imm8/ | REX.W 83 /0 /ib/ |                | ~48 83~ {{{modrm(C7,11,000,111)}}} ~10~ | rdi += 10     |
+| ~[OUTPUT@RDI++] ← flag@AL;~           | STOS m8           | AA               |                | ~AA~                                    | [rdi++] = al  |
+|                                       |                   |                  |                |                                         |               |
+| /# 3. Extract name length from/       |                   |                  |                |                                         |               |
+| /# ~flag~ and copy _name_ field./     |                   |                  |                |                                         |               |
+| ~flag@ECX ← flag@AL;~                 | XCHG EAX, r32     | 90+rd            |                | ~91~                                    | ecx = eax     |
+| ~length@ECX ← flag@ECX & 0x1F;~       | AND r/m32, /imm8/ | 83 /​4 /ib/       |                | ~83~ {{{modrm(E1,11,100,001)}}} ~1F~    | ecx &= 1F     |
+| ~copy      length@ECX bytes~          |                   |                  |                |                                         |               |
+| {{{c(5)}}}​~from INPUT@RSI~            |                   |                  |                |                                         |               |
+| {{{c(5)}}}​~to OUTPUT@RDI;~            | REP MOVS m8, m8   | F3 A4            |                | ~F3 A4~                                 | copy Name     |
+|                                       |                   |                  |                |                                         |               |
+| /# 4. Point _code_ field to the code/ |                   |                  |                |                                         |               |
+| /# that follows at ~INPUT~./          |                   |                  |                |                                         |               |
+| ~code@RCX ← [LATEST@RDX];~            | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(0A,00,001,010)}}}      | rcx = [rdx]   |
+| ~[code@RCX] ← INPUT@RDI;~             | MOV r/m64, r64    | REX.W 89 /r      |                | ~48 89~ {{{modrm(39,00,111,001)}}}      | [rcx] = rdi   |
+| ~return.~  /# To interpreter loop./   | RET               | C3               |                | ~C3~                                    | return        |
 
 #+CAPTION: Subroutine =Head= defines new words in the dictionary (RISC-V).
 #+LABEL: tbl:forth:head:rv
 #+ATTR_LATEX: :align l|ll|l|l
-| *Pseudocode*                                              | *Instruction*           | *Opcode* | *&*            | *Machine code*                          |
-|-----------------------------------------------------------+-------------------------+----------+----------------+-----------------------------------------|
-| /# Define:/ _~Head~_                                      | ---                     | ---      | {{{addr(??)}}} | {{{define(04,48 65 61 64)}}}            |
-| /# In/Out:/ ~( flag@a0 -​- )~                              |                         |          |                |                                         |
-|                                                           |                         |          |                |                                         |
-| /# 16-bit align ~OUTPUT~./                                |                         |          |                |                                         |
-| ~OUTPUT@s1 += 0x0F;~                                      | addi s1, s1, 0x00F      |          | {{{addr(??)}}} | ~48 83~ {{{modrm(C7,11,000,111)}}} ~0F~ |
-| ~OUTPUT@s1 &= 0xF0;~                                      | andi s1, s1, 0x0F0      |          |                | ~48 83~ {{{modrm(E7,11,100,111)}}} ~F0~ |
-|                                                           |                         |          |                |                                         |
-| /# Fill the new dictionary entry:/                        |                         |          |                |                                         |
-|                                                           |                         |          |                |                                         |
-| /# 1. Set the _link field_, then set/                     |                         |          |                |                                         |
-| /#{{{c(3)}}}LATEST to the new entry./                     |                         |          |                |                                         |
-| ~latest@t0 ← [LATEST];~  /# [VARS+40]./                   | ld t0, 40(s2)           |          |                | ~48 8B~ {{{modrm(0A,00,001,010)}}}      |
-| ~[OUTPUT@s1+8] ← latest@t0;~                              | sd t0, 8(s1)            |          |                | ~48 89~ {{{modrm(4F,01,001,111)}}} ~08~ |
-| ~[LATEST] ← OUTPUT@s1;~                                   | sd s1, 40(s2)           |          |                | ~48 89~ {{{modrm(3A,00,111,010)}}}      |
-|                                                           |                         |          |                |                                         |
-| /# 2. Set the _flag+length field_./                       |                         |          |                |                                         |
-| ~[OUTPUT@s1+16] ← flag@a0;~                               | sb a0, 16(s1)           |          |                |                                         |
-|                                                           |                         |          |                |                                         |
-| /# 3. Extract name length from flag/                      |                         |          |                |                                         |
-| /#{{{c(3)}}}and copy _name field_./                       |                         |          |                |                                         |
-| ~length@t0 ← flag@a0 & 0x1F;~                             | andi t0, a0, 0x01F      |          |                | ~83~ {{{modrm(E1,11,100,001)}}} ~1F~    |
-| ~copy      length@t0 bytes~                               |                         |          |                |                                         |
-| {{{c(5)}}}​~from INPUT@s0~                                 |                         |          |                |                                         |
-| {{{c(5)}}}​~to OUTPUT@s1;~                                 |                         |          |                | ~F3 A4~                                 |
-| {{{c(2)}}}​~OUTPUT@s1 += 17;~                              | addi s1, s1, 0x011      |          |                |                                         |
-| ~_begin:~                                                 |                         |          |                |                                         |
-| {{{c(2)}}}​~if length@t0 = 0:~                             | beq t0, zero, +??(_end) |          |                |                                         |
-| {{{c(4)}}}​  ~goto _end;~                                  |                         |          |                |                                         |
-| {{{c(2)}}}​~chr@t1 ← [INPUT@s0++];~                        | lb t1, 0(s0)            |          |                |                                         |
-|                                                           | addi s0, s0, 1          |          |                |                                         |
-| {{{c(2)}}}​~[OUTPUT@s1] ← chr@t1;~                         | sb t1, 0(s1)            |          |                |                                         |
-|                                                           | addi s1, s1, 1          |          |                |                                         |
-| {{{c(2)}}}​~goto _begin;~                                  | jal zero, -??(_begin)   |          |                |                                         |
-| ~_end:~                                                   |                         |          |                |                                         |
-|                                                           |                         |          |                |                                         |
-| /# 4. Point _code field_ to the machine/                  |                         |          |                |                                         |
-| /#{{{c(3)}}}code that follows at ~INPUT~./                |                         |          |                |                                         |
-| ~code@t0 ← [LATEST];~  /# [VARS+40]./                     | ld t0, 40(s2)           |          |                | ~48 8B~ {{{modrm(0A,00,001,010)}}}      |
-| ~[code@t0] ← INPUT@s0;~                                   | sd s0, 0(t0)            |          |                | ~48 89~ {{{modrm(39,00,111,001)}}}      |
-|                                                           |                         |          |                |                                         |
-| /# 1-bit align ~INPUT~ as required/                       |                         |          |                |                                         |
-| /# by the RISC-V specification [cite:@riscv_spec_vol_i]./ |                         |          |                |                                         |
-| ~return.~  /# To interpreter loop./                       | jalr zero, 0(ra)        |          |                | ~C3~                                    |
+| *Pseudocode*                                                        | *Instruction*          | *Encoding*                                                                                             | *&*            | *Machine code*               |
+|---------------------------------------------------------------------+------------------------+--------------------------------------------------------------------------------------------------------+----------------+------------------------------|
+| /# Define:/ _~Head~_                                                | ---                    | ---                                                                                                    | {{{addr(??)}}} | {{{define(04,48 65 61 64)}}} |
+| /# In/Out:/ ~( xt@a0 flag@a1 -​- )~                                  |                        |                                                                                                        |                |                              |
+|                                                                     |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​/# 16-bit align ~OUTPUT~./                                |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​~OUTPUT@s1 += 0x0F;~                                      | *addi* s1, s1, /0x00F/ |                                                                                                        | {{{addr(??)}}} |                              |
+| {{{c(2)}}}​~OUTPUT@s1 &= 0xF0;~                                      | *andi* s1, s1, /0x0F0/ |                                                                                                        |                |                              |
+|                                                                     |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​/# Fill the new dictionary entry:/                        |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​/#/                                                       |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​/# 1. Set the _link_ field, then point/                   |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​/# ~LATEST~ (~VARS+40~) to new word./                     |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​~latest@t0 ← [LATEST];~                                   | *ld* t0, _40_​(s2)      |                                                                                                        |                |                              |
+| {{{c(2)}}}​~[OUTPUT@s1 + 8] ← latest@t0;~                            | *sd* t0, _8_​(s1)       |                                                                                                        |                |                              |
+| {{{c(2)}}}​~[LATEST] ← OUTPUT@s1;~                                   | *sd* s1, _40_​(s2)      |                                                                                                        |                |                              |
+|                                                                     |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​/# 2. Set the _flag+length_ field./                       |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​~[OUTPUT@s1 + 16] ← flag@a1;~                             | *sb* a1, _16_​(s1)      |                                                                                                        |                |                              |
+|                                                                     |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​/# 3. Extract name length from/                           |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​/# ~flag~ and copy _name_ field./                         |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​~length@t0 ← flag@a1 & 0x1F;~                             | *andi* t0, a1, /0x01F/ |                                                                                                        |                |                              |
+| {{{c(2)}}}​~OUTPUT@s1 += 17;~                                        | *addi* s1, s1, /0x011/ |                                                                                                        |                |                              |
+| ~_begin:~                                                           |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​~chr@t1 ← [INPUT@s0++];~                                  | *lb* t1, _0_​(s0)       |                                                                                                        |                |                              |
+|                                                                     | *addi* s0, s0, /1/     |                                                                                                        |                |                              |
+| {{{c(2)}}}​~[OUTPUT@s1] ← chr@t1;~                                   | *sb* t1, _0_​(s1)       |                                                                                                        |                |                              |
+|                                                                     | *addi* s1, s1, /1/     |                                                                                                        |                |                              |
+| {{{c(2)}}}​~length@t0--;~                                            | *addi* t0, t0, /-1/    |                                                                                                        |                |                              |
+| {{{c(2)}}}​~if length@t0 != 0:~                                      | *bne* t0, zero, _-??_  | {{{off(bbbbbbb)}}} {{{rs2(00000)}}} {{{rs1(00101)}}} {{{fn3(001)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} |                |                              |
+| {{{c(4)}}}​  ~goto _begin;~                                          |                        |                                                                                                        |                |                              |
+|                                                                     |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​/# 4. Point _code_ field to the code/                     |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​/# that follows at ~INPUT~./                              |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​~code@t0 ← [LATEST];~                                     | *ld* t0, _40_​(s2)      |                                                                                                        |                |                              |
+| {{{c(2)}}}​~[code@t0] ← INPUT@s0;~                                   | *sd* s0, _0_​(t0)       |                                                                                                        |                |                              |
+|                                                                     |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​/# 1-bit align ~INPUT~ as required/                       |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​/# by the RISC-V specification [cite:@riscv_spec_vol_i]./ |                        |                                                                                                        |                |                              |
+| {{{c(2)}}}​~return.~  /# To interpreter loop./                       | *jalr* zero, _0_​(ra)   |                                                                                                        |                |                              |
+|                                                                     |                        |                                                                                                        |                |                              |
 
 
 ** A Way Out
@@ -1481,6 +1478,7 @@ value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 | andi rd, rs1, immediate | I      | {{{imm(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(111)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} | ~immediate[11:0]         rs1    111  rd              0010011~ |
 |-------------------------+--------+--------------------------------------------------------------------------------------------------------+---------------------------------------------------------------|
 | beq rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]  rs2    rs1    000  offset[4:1\vert11]  1100011~ |
+| bne rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(001)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]  rs2    rs1    001  offset[4:1\vert11]  1100011~ |
 |-------------------------+--------+--------------------------------------------------------------------------------------------------------+---------------------------------------------------------------|
 | jal  rd, offset         | J      | TODO: remove?                                                                                          | ~offset[20\vert10:1\vert11\vert19:12]            rd              1101111~ |
 | jalr rd, offset(rs1)    | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(1101111)}}} | ~offset[11:0]            rs1    000  rd              1100111~ |
