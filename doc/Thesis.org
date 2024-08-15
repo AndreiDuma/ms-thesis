@@ -524,39 +524,40 @@ value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 #+CAPTION: =COMPL=, the FORTH compiler.
 #+LABEL: tbl:forth:compl:rv
 #+ATTR_LATEX: :align l|ll|l|l
-| *Pseudocode*                                                                  | *Instruction*      | *Opcode* | *&*            | *Machine code*                  |
-|-------------------------------------------------------------------------------+--------------------+----------+----------------+---------------------------------|
-| /# Define:/ _~COMPL~_                                                         | ---                | ---      | {{{addr(??)}}} | {{{define(99,43 4F 4D 50 4C)}}} |
-| /# In/Out:/ ~( xt@a1 -- )~                                                    |                    |          |                |                                 |
-|                                                                               |                    |          |                |                                 |
-| /# Generate a pair of ~lui~ + ~jalr~/                                         |                    |          |                |                                 |
-| /# instructions to ~OUTPUT~, which, combined,/                                |                    |          |                |                                 |
-| /# set the PC to ~[xt]~./                                                     |                    |          |                |                                 |
-| /# – instruction 1: lui t0, immediate (that is, highest 20 bits of [xt])/     |                    |          |                |                                 |
-| /#   with encoding: ~immediate[31:12] ; rd ; 0110111~/                        |                    |          |                |                                 |
-| /# – instruction 2: jalr ra, t0, immediate (that is, lowest 12 bits of [xt])/ |                    |          |                |                                 |
-| /#   with encoding: ~offset[11:0] ; rs1 ; 000 ; rd ; 1100111~/                |                    |          |                |                                 |
-| /#/                                                                           |                    |          |                |                                 |
-| /# Thus we generate code as follows:/                                         |                    |          |                |                                 |
-| /#/{{{c(2)}}}​~???????????? ????? ??? 00101 0110111~                           |                    |          |                |                                 |
-| /#/{{{c(2)}}}​~???????????? 00101 000 00001 1100111~                           |                    |          |                |                                 |
-|                                                                               |                    |          |                |                                 |
-| /# 1. Load code address from ~xt~./                                           |                    |          |                |                                 |
-| ~t0 ← [xt@a1];~                                                               | lw t0, 0(a1)       |          |                | ~B0~ /FF/                       |
-| /# 2. Assemble and write ~lui~ instr./                                        |                    |          |                |                                 |
-| ~t1 ← 0xFFFFF000;~                                                            | lui t0, 0xFFFFF    |          |                | ~B0~ /14/                       |
-| ~t1 &= t0;~                                                                   | and t1, t1, t0     |          |                | ~AA~                            |
-| ~t1 += 0x2B7;~  /# 00101 0110111./                                            | addi t1, t1, 0x2B7 |          |                |                                 |
-| ~[OUTPUT@s1++4] ← t1;~                                                        | sw t1, 0(s1)       |          |                |                                 |
-| /# 3. Assemble and write ~jalr~ instruction./                                 |                    |          |                |                                 |
-| ~t1 ← 0x280E7000;~  /# 00101 000 00001 1100111./                              | lui t1, 0x280E7    |          |                |                                 |
-| ~t1 >>>= 12;~                                                                 | srli t1, t1, 12    |          |                |                                 |
-| ~t0 <<= 20;~                                                                  | slli t0, t0, 20    |          |                | ~B0~ /25/                       |
-| ~t1 \vert= t0;~                                                                   | or t1, t1, t0      |          |                |                                 |
-| ~[OUTPUT@s1++4] ← t1;~                                                        | sw t1, 0(s1)       |          |                | ~AA~                            |
-|                                                                               | addi s1, s1, 4     |          |                |                                 |
-| ~return.~  /# To interpreter loop./                                           | jalr zero, 0(ra)   |          |                | ~C3~                            |
-|                                                                               |                    |          | {{{addr(??)}}} |                                 |
+| *Pseudocode*                                                                  | *Instruction*        | *Encoding*                                                                                             | *&*            | *Machine code*                  |
+|-------------------------------------------------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------+----------------+---------------------------------|
+| /# Define:/ _~COMPL~_                                                         | ---                  | ---                                                                                                    | {{{addr(??)}}} | {{{define(99,43 4F 4D 50 4C)}}} |
+| /# In/Out:/ ~( xt@a0 -- )~                                                    |                      |                                                                                                        |                |                                 |
+|                                                                               |                      |                                                                                                        |                |                                 |
+| /# Generate a pair of ~lui~ + ~jalr~/                                         |                      |                                                                                                        |                |                                 |
+| /# instructions to ~OUTPUT~, which, combined,/                                |                      |                                                                                                        |                |                                 |
+| /# set the PC to ~[xt]~./                                                     |                      |                                                                                                        |                |                                 |
+| /# – instruction 1: lui t0, immediate (that is, highest 20 bits of [xt])/     |                      |                                                                                                        |                |                                 |
+| /#   with encoding: ~immediate[31:12] ; rd ; 0110111~/                        |                      |                                                                                                        |                |                                 |
+| /# – instruction 2: jalr ra, t0, immediate (that is, lowest 12 bits of [xt])/ |                      |                                                                                                        |                |                                 |
+| /#   with encoding: ~offset[11:0] ; rs1 ; 000 ; rd ; 1100111~/                |                      |                                                                                                        |                |                                 |
+| /#/                                                                           |                      |                                                                                                        |                |                                 |
+| /# Thus we generate code as follows:/                                         |                      |                                                                                                        |                |                                 |
+| /#/{{{c(2)}}}​~???????????? ????? ??? 00101 0110111~                           |                      |                                                                                                        |                |                                 |
+| /#/{{{c(2)}}}​~???????????? 00101 000 00001 1100111~                           |                      |                                                                                                        |                |                                 |
+|                                                                               |                      |                                                                                                        |                |                                 |
+| /# 1. Load code address from ~xt~./                                           |                      |                                                                                                        |                |                                 |
+| ~t0 ← [xt@a0];~                                                               | ~lw t0, 0(a0)~       | {{{off(0x000)}}}                    {{{rs1(01010)}}} {{{fn3(010)}}} {{{rd(00101)}}}  {{{op(0000011)}}} |                |                                 |
+| /# 2. Assemble and write ~lui~ instr./                                        |                      |                                                                                                        |                |                                 |
+| ~t1 ← 0xFFFFF000;~                                                            | ~lui t1, 0xFFFFF~    | {{{imm(0xFFFFF)}}}                                                  {{{rd(00110)}}}  {{{op(0110111)}}} |                |                                 |
+| ~t1 &= t0;~                                                                   | ~and t1, t1, t0~     | {{{fn7(0000000)}}} {{{rs2(00101)}}} {{{rs1(00110)}}} {{{fn3(111)}}} {{{rd(00110)}}}  {{{op(0110011)}}} |                |                                 |
+| ~t1 += 0x2B7;~  /# 00101 0110111./                                            | ~addi t1, t1, 0x2B7~ | {{{imm(0x2B7)}}}                    {{{rs1(00110)}}} {{{fn3(000)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                |                                 |
+| ~[OUTPUT@s1++4] ← t1;~                                                        | ~sw t1, 0(s1)~       | {{{off(0000000)}}} {{{rs2(00110)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(00000)}}} {{{op(0100011)}}} |                |                                 |
+|                                                                               | ~addi s1, s1, 4~     | {{{imm(0x004)}}}                    {{{rs1(00110)}}} {{{fn3(000)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                |                                 |
+| /# 3. Assemble and write ~jalr~ instruction./                                 |                      |                                                                                                        |                |                                 |
+| ~t1 ← 0x280E7000;~  /# 00101 000 00001 1100111./                              | ~lui t1, 0x280E7~    | {{{imm(0x280E7)}}}                                                  {{{rd(00110)}}}  {{{op(0110111)}}} |                |                                 |
+| ~t1 >>>= 12;~                                                                 | ~srli t1, t1, 12~    | ~000000~ {{{shamt(001100)}}}        {{{rs1(00110)}}} {{{fn3(101)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                |                                 |
+| ~t0 <<= 20;~                                                                  | ~slli t0, t0, 20~    | ~000000~ {{{shamt(010100)}}}        {{{rs1(00101)}}} {{{fn3(101)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |                |                                 |
+| ~t1 \vert= t0;~                                                                   | ~or t1, t1, t0~      | {{{fn7(0000000)}}} {{{rs2(00101)}}} {{{rs1(00110)}}} {{{fn3(110)}}} {{{rd(00110)}}}  {{{op(0110011)}}} |                |                                 |
+| ~[OUTPUT@s1++4] ← t1;~                                                        | ~sw t1, 0(s1)~       | {{{off(0000000)}}} {{{rs2(00110)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(00000)}}} {{{op(0100011)}}} |                |                                 |
+|                                                                               | ~addi s1, s1, 4~     | {{{imm(0x004)}}}                    {{{rs1(00110)}}} {{{fn3(000)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                |                                 |
+| ~return.~  /# To interpreter loop./                                           | ~jalr zero, 0(ra)~   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1101111)}}} |                |                                 |
+|                                                                               |                      |                                                                                                        | {{{addr(??)}}} |                                 |
 
 *** Subroutine ~Head~
 
@@ -1474,13 +1475,13 @@ value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 | addi rd, rs1, immediate | I      | {{{imm(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} | ~immediate[11:0]         rs1    000  rd              0010011~ |
 | lui  rd,      immediate | U      | {{{imm(0xhhhhh)}}}                                           {{{rd(rrrrr)}}}  {{{op(0110111)}}}        | ~immediate[31:12]                    rd              0110111~ |
 |-------------------------+--------+--------------------------------------------------------------------------------------------------------+---------------------------------------------------------------|
-| or   rd, rs1, rs2       | R      |                                                                                                        | ~0000000          rs2    rs1    110  rd              0110011~ |
-| and  rd, rs1, rs2       | R      |                                                                                                        | ~0000000          rs2    rs1    111  rd              0110011~ |
+| or   rd, rs1, rs2       | R      | {{{fn7(0000000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(110)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} | ~0000000          rs2    rs1    110  rd              0110011~ |
+| and  rd, rs1, rs2       | R      | {{{fn7(0000000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(111)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} | ~0000000          rs2    rs1    111  rd              0110011~ |
 | andi rd, rs1, immediate | I      | {{{imm(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(111)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} | ~immediate[11:0]         rs1    111  rd              0010011~ |
 |-------------------------+--------+--------------------------------------------------------------------------------------------------------+---------------------------------------------------------------|
 | beq rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]  rs2    rs1    000  offset[4:1\vert11]  1100011~ |
 |-------------------------+--------+--------------------------------------------------------------------------------------------------------+---------------------------------------------------------------|
-| jal  rd, offset         | J      |                                                                                                        | ~offset[20\vert10:1\vert11\vert19:12]            rd              1101111~ |
+| jal  rd, offset         | J      | TODO: remove?                                                                                          | ~offset[20\vert10:1\vert11\vert19:12]            rd              1101111~ |
 | jalr rd, offset(rs1)    | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(1101111)}}} | ~offset[11:0]            rs1    000  rd              1100111~ |
 |-------------------------+--------+--------------------------------------------------------------------------------------------------------+---------------------------------------------------------------|
 | ecall                   | I      | ~000000000000~     ~00000~                           {{{fn3(000)}}} ~00000~          {{{op(0000011)}}} | ~000000000000            00000  000  00000           1110011~ |
@@ -1509,6 +1510,7 @@ References:
 - [X] Convert all /N/A/​s to ~---~.
 - [X] Check all returns/gotos end with ~.~ and all calls with ~;~.
 - [X] Check that compiled calls don't end in ~()~.
+- [ ] Change *Opcode* col. name to *Encoding* everywhere.
 - [ ] Properly align /In/Out/ sections.
 - [ ] Add a ~rex~ macro to annotate the REX byte?
 - [ ] Align ~\hookrightarrow~ properly.
