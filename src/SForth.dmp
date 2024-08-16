@@ -209,7 +209,7 @@ EF 00 80 00          # {{{i(1)}}} ~call bi();~
                      # {{{i(1)}}} /# – ~0b111ccccc~: execute./          
 93 F2 05 06          # {{{i(1)}}} ~if arg@a1~ ~&~ ~0b01100000~ ~=~ ~0:~ 
                      # {{{i(2)}}}     /# _Define_ a new word./          
-63 83 02 06          # {{{i(2)}}}     ~goto Head.~                      
+63 85 02 06          # {{{i(2)}}}     ~goto Head.~                      
                      # ~_find1:~                                        
 93 F2 F5 07          # {{{i(1)}}} ~chr@t0~ ~←~ ~arg@a1~ ~&~ ~0b0111111;~
 03 43 15 01          # {{{i(1)}}} ~if chr@t0 = [xt@a0 + 17]:~           
@@ -241,14 +241,14 @@ EF 00 80 00          # {{{i(1)}}} ~call bi();~
 33 73 53 00          # ~t1 &= t0;~                                                                                    
 13 03 73 2B          # ~t1 += 0x2B7;~  /# 12 fixed bits in ~lui~./                                                    
 23 A0 64 00          # ~[OUTPUT@s1++4] ← t1;~                                                                         
-13 03 43 00          #                                                                                                
+93 84 44 00          #                                                                                                
                      # /# 3. Assemble and write ~jalr~ instruction./                                                  
-                     # ~t1 ← 0x280E7000;~  /# 20 fixed bits in ~jalr~./                                               
+37 73 0E 28          # ~t1 ← 0x280E7000;~  /# 20 fixed bits in ~jalr~./                                               
 13 53 C3 00          # ~t1 >>>= 12;~                                                                                  
-93 D2 42 01          # ~t0 <<= 20;~                                                                                   
+93 92 42 01          # ~t0 <<= 20;~                                                                                   
 33 63 53 00          # ~t1~ \vert​~= t0;~                                                                                  
 23 A0 64 00          # ~[OUTPUT@s1++4] ← t1;~                                                                         
-13 03 43 00          #                                                                                                
+93 84 44 00          #                                                                                                
 67 80 00 00          # ~return.~  /# To interpreter loop./                                                           
 
 
@@ -283,17 +283,25 @@ B3 E2 94 00          # {{{c(2)}}}​~xt@t0 ← OUTPUT@s1;~
 13 03 F3 FF          # {{{c(2)}}}​~length@t1--;~                                           
                      # {{{c(2)}}}​~if length@t1 != 0:~                                     
 E3 16 03 FE          # {{{c(4)}}}​  ~goto _begin;~                                         
-                     #                                                                    
-                     # {{{c(2)}}}​/# 4a. 1-bit align ~INPUT~ as required/                      
-                     # {{{c(2)}}}​/# by the RISC-V specification [cite:@riscv_spec_vol_i]./
-13 04 14 00          # {{{c(2)}}}​~INPUT@s0 += 0x001;~                                      
-13 74 E4 FF          # {{{c(2)}}}​~INPUT@s0 &= 0xFFE;~                                      
-                     #                                                                    
-                     # {{{c(2)}}}​/# 4b. Point _code_ field to the code/                    
-                     # {{{c(2)}}}​/# that follows at ~INPUT~./                             
-23 B0 82 00          # {{{c(2)}}}​~[xt@t0 + 0] ← INPUT@s0;~                                
-67 80 00 00          # {{{c(2)}}}​~return.~  /# To interpreter loop./
-
+                     #                                                                       
+                     # {{{c(2)}}}​/# One padding byte might follow/                             
+                     # {{{c(2)}}}​/# the word's name to abide by/                             
+                     # {{{c(2)}}}​/# RISC-V's requirement to align/                           
+                     # {{{c(2)}}}​/# instructions to even addresses [cite:@riscv_spec_vol_i]./
+                     # {{{c(2)}}}​/# Both ~INPUT~ and ~OUTPUT~ need to/                       
+                     # {{{c(2)}}}​/# be 1-bit aligned: the former to keep/                    
+                     # {{{c(2)}}}​/# instructions in the executable/                          
+                     # {{{c(2)}}}​/# aligned and former to make sure/                         
+                     # {{{c(2)}}}​/# that compiled code is also aligned./                     
+13 04 14 00          # {{{c(2)}}}​~INPUT@s0 += 0x001;~                                        
+13 74 E4 FF          # {{{c(2)}}}​~INPUT@s0 &= 0xFFE;~                                        
+93 84 14 00          # {{{c(2)}}}​~OUTPUT@s1 += 0x001;~                                       
+93 F4 E4 FF          # {{{c(2)}}}​~OUTPUT@s1 &= 0xFFE;~                                       
+                     #                                                                       
+                     # {{{c(2)}}}​/# 4b. Point _code_ field to the code/                      
+                     # {{{c(2)}}}​/# about to be generated at ~OUTPUT~./                      
+23 B0 92 00          # {{{c(2)}}}​~[xt@t0 + 0] ← OUTPUT@s1;~                                  
+67 80 00 00          # {{{c(2)}}}​~return.~  /# To interpreter loop./                         
 
 # ============= DICTIONARY FORMAT
 #
@@ -324,7 +332,7 @@ E3 16 03 FE          # {{{c(4)}}}​  ~goto _begin;~
 73 00 00 00          # ~syscall exit(status@RDI).~       
 
 
-99 C2                # BYE
+# 99 C2                # BYE
 
 # Linux syscall: ( RDI RSI RDX R10 R8 R9 RAX=syscall# -- RAX=stat RCX=? R11=? )
 #     Manual pages on system calls: `man 2 syscalls ; man 2 exit ; man 2 read ; man 2 write ; man 2 mmap`
@@ -333,17 +341,33 @@ E3 16 03 FE          # {{{c(4)}}}​  ~goto _begin;~
 #     mmap flag values: /usr/include/asm-generic/mman-common.h
 
 99 04 54 59 50 45 ####### TYPE ( rsi=addr rdx=u -- rsi=? rdi=? ) show memory [addr, addr+u) ======
-6A 01 5F                # rdi(fd) = stdout = 1      push imm8; pop      6A ib ; 58+rd
-# _beg:                 #                        00
-8B C7                   # rax = write = 1 = rdi     mov r32, r/m32      8B /r           11 000 111
-0F 05                   # syscall                   syscall             0F 05
-48 85 C0                # cmp rax, 0                test r/m64, r64     REX.W 85 /r     11 000 000
-7C 08                   #+jump _end if <         09 jl rel8             7C cb
-48 01 C6                # rsi(buf) += rax           add r/m64, r64      REX.W 01 /r     11 000 110
-48 29 C2                # rdx(cnt) -= rax           sub r/m64, r64      REX.W 29 /r     11 000 010
-7F EF                   #-jump _beg if >         11 jg rel8             7F cb
-# _end:                 #                        11
-C3                      # return                    ret                 C3
+                     #
+                     # {{{i(1)}}} /# Save ~addr~ and ~u~, since they/                      
+                     # {{{i(1)}}} /# will not be preserved across/                         
+                     # {{{i(1)}}} /# the ~write~ system call [cite:@system_v_psabi_riscv]./
+13 03 05 00          # {{{i(1)}}} ~addr@t1 ← addr@a0;~                                     
+93 83 05 00          # {{{i(1)}}} ~u@t2 ← u@a1;~                                           
+                     # ~_begin:~                                                           
+13 05 10 00          # {{{i(1)}}} ~fd@a0 ← 1;~  /# ~STDOUT_FILENO~./                       
+93 05 03 00          # {{{i(1)}}} ~addr@a1 ← addr@t1;~                                     
+13 86 03 00          # {{{i(1)}}} ~u@a2 ← u@t2;~                                           
+93 08 00 04          # {{{i(1)}}} ~nr@a7 ← 64;~  /# ~__NR_write~./                         
+                     # {{{i(1)}}} ~syscall write(fd@a0,~                                   
+                     # {{{i(1)}}}{{{c(14)}}}    ~addr@a1,~                                 
+73 00 00 00          # {{{i(1)}}}{{{c(14)}}}    ~u@a2);~                                   
+                     # {{{i(1)}}} ~if ret@a0 < 0:~                                         
+                     # {{{i(2)}}} /# An error occured./                                    
+63 48 05 00          # {{{i(2)}}}     ~goto _end.~                                         
+                     # {{{i(1)}}} /# Advance by ~ret~ (printed) bytes./                    
+B3 82 A2 00          # {{{i(1)}}} ~addr@t0 += ret@a0;~                                     
+                     # {{{i(1)}}} /# Fewer bytes left to print./                           
+33 03 A3 40          # {{{i(1)}}} ~u@t1 -= ret@a0;~                                        
+                     # {{{i(1)}}} ~if u@t1 > 0:~                                           
+                     # {{{i(2)}}}     /# We still have bytes to print./                    
+E3 40 60 FE          # {{{i(2)}}}     ~goto _begin.~                                       
+                     # ~_end:~                                                             
+67 80 00 00          # {{{i(1)}}} ~return.~                                                
+
 
 # ============= DEBUGGING
 #
@@ -361,14 +385,20 @@ C3                      # return                    ret                 C3
 # -- Inside a subroutine, leave early by inserting a return instruction RET = C3.
 
 99 03 64 62 67 ########## dbg ( -- ) show stack and data; use `./SForth | xxd -o 0x0fffffe0` =====
-56 57                   # push rsi, rdi             push r64            50+rd
-BE E0 FF FF 0F          # rsi = addr                mov r32, imm32      B8+rd id
-BA 00 0A 00 00          # rdx = u                   mov r32, imm32      B8+rd id
-99 54                   # Call TYPE
-5F 5E                   # pop rdi, rsi              pop r64             58+rd
-C3                      # return                    ret                 C3
+00     	             #
+                     # /# Dump memory contents using/        
+                     # /# subroutine ~TYPE~./                
+37 05 00 10          # ~addr@a0 ← 0x0FFFFFE0;~               
+13 05 05 FE          #                                       
+B7 15 00 00          # ~u@a1 ← 0xA00;~
+93 85 05 A0          #
+                     # /# Compile a CALL to ~TYPE(addr, u)~./
+99 54		     # ~call TYPE;~  /# Compiled./           
+                     #                                       
+67 80 00 00          # ~return.~                             
 
-# 99 E4 99 C2             # dbg BYE
+
+99 E4 99 C2             # dbg BYE
 
 99 03 72 65 67 ########## reg ( -- ) show registers; use `./SForth | xxd` ========================
 56 57                   # push rsi, rdi             push r64            50+rd
