@@ -165,69 +165,135 @@
 # in the argument.
 #
 ################################################################### MACHINE CODE ############ INTENTION ############ 78 INSTRUCTION ####### OPCODE ######## ModR/M #### SIB ######
-37 04 00 01	  # /# Global variable ~INPUT~./                  # BE B2 00 40 00          #:rsi(input)  = 004000__    mov r32, imm32      B8+rd id				
-13 04 F4 0F	  # ~INPUT@s0 ← 0x010000??;~  /# TODO: replace ??.                                                                                                              
-           	  #                                               
-B7 04 00 10	  # /# Global variable ~OUTPUT~./                 # BF 30 00 00 10          # rdi(output) = 10000030    mov r32, imm32      B8+rd id				
-93 84 04 03	  # ~OUTPUT@s1 ← 0x10000030;~                     											
-		  #                                               
-37 09 00 10	  # /# Global variable ~VARS~./                   
-13 09 09 00	  # ~VARS@s2 ← 0x10000000;~                       
+                  
+         	  # /# Global variable ~INPUT~./                  # BE B2 00 40 00          #:rsi(input)  = 004000__    mov r32, imm32      B8+rd id				
+37 04 00 00	  # ~INPUT@s0 ← 0x000000EC;~                                                                                                              
+13 04 C4 0E	  #                                               
+           	  # /# Global variable ~OUTPUT~./                 # BF 30 00 00 10          # rdi(output) = 10000030    mov r32, imm32      B8+rd id				
+B7 04 00 10	  # ~OUTPUT@s1 ← 0x10000030;~                     											
+93 84 04 03	  #                                               
+	   	  # /# Global variable ~VARS~./                   
+37 09 00 10	  # ~VARS@s2 ← 0x10000000;~                       
+13 09 09 00       #
 
-00 00 00 00
+# 00 00 00 00
 
-######################### binary interpreter >>> 82 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-E8 02 00 00 00          #+call (bi)                 call rel32
-EB F9                   #-jump bi                89 jmp rel8            EB cb
-# # # # # # # # # # # # # (bi)                   89
-AC                      # al = [rsi++]              lods m8             AC
-3C 99                   # cmp al, 99(command)       cmp al, imm8        3C ib
-74 02                   #+jump _command if ==    8E je rel8             74 cb
-AA                      # [rdi++] = al (xmit)       stos m8             AA
-C3                      # return                    ret                 C3
-# _command:             #                        90
-BA 28 00 00 10          # rdx = Latest              mov r32, imm32      B8+rd id
-AC                      # al = [rsi++] (argument)   lods m8             AC
-A8 60                   # al & 60(graphic)?         test al, imm8       A8 ib
-74 31                   #+jump Head if zero      9A jz rel8             74 cb
-48 8B 1A                # rbx = [rdx]               mov r64, r/m64      REX.W 8B /r     00 011 010
-# _find1:               #                        9D
-50                      # push al                   push r64            50+rd
-24 7F                   # al &= 7F                  and al, imm8        24 ib
-3A 43 11                # cmp al, [rbx+11]          cmp r8, r/m8        REX 3A /r       01 000 011
-58                      # pop al                    pop r64             58+rd
-74 06                   #+jump _match if ==      A6 je rel8             74 cb
-48 8B 5B 08             # rbx = [rbx+8]             mov r64, r/m64      REX.W 8B /r     01 011 011
-EB F1                   #-jump _find1            AC jmp rel8            EB cb
-# _match:               #                        AC
-A8 80                   # al & 80(exec) ?           test al, imm8       A8 ib
-74 09                   #+jump COMPL if zero     B0 jz rel8             74 cb
-FF 23                   # jump [rbx] (exec)      B2 jmp r/m64           REX FF /4       00 100 011
+################################# binary interpreter
+                     # ~_bi:~                                           
+                     # {{{i(1)}}} /# Loop the binary interpreter./      
+EF 00 80 00          # {{{i(1)}}} ~call bi();~                          
+6F F0 DF FF          # {{{i(1)}}} ~goto _bi.~                           
+                     # ~bi():~                                          
+                     # {{{i(1)}}} /# Read next byte from ~INPUT~./      
+83 42 04 00          # {{{i(1)}}} ~chr@t0 ← [INPUT@s0++];~              
+13 04 14 00          # {{{i(1)}}}                                       
+                     # {{{i(1)}}} /# Does it start a command?/          
+13 03 90 09          # {{{i(1)}}} ~if chr@t0 = 0x99:~                   
+63 88 62 00          # {{{i(2)}}}     ~goto _command.~                  
+                     # {{{i(1)}}} /# If not, just copy the byte/        
+                     # {{{i(1)}}} /# to ~OUTPUT~ and return./           
+23 80 54 00          # {{{i(1)}}} ~[OUTPUT@s1++] ← chr@t0;~             
+93 84 14 00          # {{{i(1)}}}                                       
+67 80 00 00          # {{{i(1)}}} ~return.~                             
+                     # ~_command:~                                      
+                     # {{{i(1)}}} /# Get latest dictionary word/        
+                     # {{{i(1)}}} /# from ~LATEST~ (~VARS + 40~):/      
+03 35 89 02          # {{{i(1)}}} ~xt@a0 ← [LATEST];~                   
+                     # {{{i(1)}}}                                       
+                     # {{{i(1)}}} /# Read command argument./            
+83 45 04 00          # {{{i(1)}}} ~arg@a1 ← [INPUT@s0++];~              
+13 04 14 00          # {{{i(1)}}}                                       
+                     # {{{i(1)}}} /# Command type by argument:/         
+                     # {{{i(1)}}} /# – ~0bi00ccccc~: define;/           
+                     # {{{i(1)}}} /# – ~0b011ccccc~: compile;/          
+                     # {{{i(1)}}} /# – ~0b111ccccc~: execute./          
+93 F2 05 06          # {{{i(1)}}} ~if arg@a1~ ~&~ ~0b01100000~ ~=~ ~0:~ 
+                     # {{{i(2)}}}     /# _Define_ a new word./          
+63 83 02 06          # {{{i(2)}}}     ~goto Head.~                      
+                     # ~_find1:~                                        
+93 F2 F5 07          # {{{i(1)}}} ~chr@t0~ ~←~ ~arg@a1~ ~&~ ~0b0111111;~
+03 43 15 01          # {{{i(1)}}} ~if chr@t0 = [xt@a0 + 17]:~           
+                     # {{{i(2)}}}     /# We found a word whose/         
+                     # {{{i(2)}}}     /# name begins with ~chr~./       
+63 86 62 00          # {{{i(2)}}}     ~goto _match.~                    
+                     # {{{i(1)}}} /# Follow word's link pointer/        
+                     # {{{i(1)}}} /# to previous entry and repeat./     
+03 35 85 00          # {{{i(1)}}} ~xt@a0 ← [xt@a0 + 8];~                
+6F F0 1F FF          # {{{i(1)}}} ~goto _find1.~                        
+                     # ~_match:~                                        
+93 F2 05 08          # {{{i(1)}}} ~if arg@a1 & 0b1000000 = 0:~          
+                     # {{{i(2)}}}     /# _Compile_./                    
+63 8A 02 00          # {{{i(2)}}}     ~goto COMPL.~                     
+                     # {{{i(1)}}} /# _Execute_ word's code./            
+83 32 05 00          # {{{i(1)}}} ~goto [xt@a0].~                       
+67 80 02 00          # {{{i(1)}}}                                       
+
 
 ######################### Interpreter subroutines ################################################
 
-99 05 43 4F 4D 50 4C #### COMPL Forth's COMPILE, B9 ( ebx=xt -- )
-B0 FF AA                # compile >>>>>>>>>>>>>>>>> call r/m64          FF /2           00 010 100  00 100 101
-B0 14 AA                #     al = _                mov r8, imm8        B0+rb ib
-B0 25 AA                #         [rdi++] = al      stos m8             AA
-93                      # eax = ebx                 xchg eax, r32       90+rd
-AB                      # [rdi(++4)] = eax          stos m32            AB
-C3                      # return                    ret                 C3
+99 05 43 4F 4D 50 4C ####### COMPL Forth's COMPILE
+00    	       	     #
+                     # /# 1. Load code address from ~xt~./                                                            
+83 62 05 00          # ~t0 ← [xt@a0];~                                                                                
+                     #                                                                                                
+                     # /# 2. Assemble and write ~lui~ instr./                                                         
+37 F3 FF FF          # ~t1 ← 0xFFFFF000;~                                                                             
+33 73 53 00          # ~t1 &= t0;~                                                                                    
+13 03 73 2B          # ~t1 += 0x2B7;~  /# 12 fixed bits in ~lui~./                                                    
+23 A0 64 00          # ~[OUTPUT@s1++4] ← t1;~                                                                         
+13 03 43 00          #                                                                                                
+                     # /# 3. Assemble and write ~jalr~ instruction./                                                  
+                     # ~t1 ← 0x280E7000;~  /# 20 fixed bits in ~jalr~./                                               
+13 53 C3 00          # ~t1 >>>= 12;~                                                                                  
+93 D2 42 01          # ~t0 <<= 20;~                                                                                   
+33 63 53 00          # ~t1~ \vert​~= t0;~                                                                                  
+23 A0 64 00          # ~[OUTPUT@s1++4] ← t1;~                                                                         
+13 03 43 00          #                                                                                                
+67 80 00 00          # ~return.~  /# To interpreter loop./                                                           
 
-99 04 48 65 61 64 ####### Head ================= CB ( al=flag rdx=Latest rsi=addr -- rdx=Latest rsi=addr' )
-48 83 C7 0F             # rdi += 0F                 add r/m64, imm8     REX.W 83 /0 ib  11 000 111
-48 83 E7 F0             # rdi &= F0                 and r/m64, imm8     REX.W 83 /4 ib  11 100 111
-48 8B 0A                # rcx = [rdx]               mov r64, r/m64      REX.W 8B /r     00 001 010
-48 89 4F 08             # [rdi+8] = rcx             mov r/m64, r64      REX.W 89 /r     01 001 111
-48 89 3A                # [rdx] = rdi               mov r/m64, r64      REX.W 89 /r     00 111 010
-48 83 C7 10             # rdi += 10                 add r/m64, imm8     REX.W 83 /0 ib  11 000 111
-AA                      # [rdi++] = al              stos m8             AA
-91                      # ecx = eax                 xchg eax, r32       90+rd
-83 E1 1F                # ecx &= 1F                 and r/m32, imm8     83 /4 ib        11 100 001
-F3 A4                   # copy Name                 rep movs m8, m8     F3 A4
-48 8B 0A                # rcx = [rdx]               mov r64, r/m64      REX.W 8B /r     00 001 010
-48 89 39                # [rcx] = rdi               mov r/m64, r64      REX.W 89 /r     00 111 001
-C3                      # return                    ret                 C3
+
+99 04 48 65 61 64 ################## Head ================= CB
+      	       	     #
+                     # {{{c(2)}}}​/# 16-bit align ~OUTPUT~./                               
+93 84 F4 00          # {{{c(2)}}}​~OUTPUT@s1 += 0x00F;~                                     
+93 F4 04 FF          # {{{c(2)}}}​~OUTPUT@s1 &= 0xFF0;~                                     
+                     #                                                                    
+                     # {{{c(2)}}}​/# New word starts here./                                
+B3 E2 94 00          # {{{c(2)}}}​~xt@t0 ← OUTPUT@s1;~                                     
+                     #                                                                    
+                     # {{{c(2)}}}​/# Fill the new dictionary entry:/                       
+                     # {{{c(2)}}}​/#/                                                      
+                     # {{{c(2)}}}​/# 1. Set the _link_ field, then point/                  
+                     # {{{c(2)}}}​/# ~LATEST~ (~VARS+40~) to new word./                    
+23 B4 A2 00          # {{{c(2)}}}​~[xt@t0 + 8] ← latest@a0;~                               
+23 34 59 02          # {{{c(2)}}}​~[LATEST] ← xt@t0;~                                      
+                     #                                                                    
+                     # {{{c(2)}}}​/# 2. Set the _flag+length_ field./                      
+23 88 B2 00          # {{{c(2)}}}​~[xt@t0 + 16] ← flag@a1;~                                
+                     #                                                                    
+                     # {{{c(2)}}}​/# 3. Extract name length from/                          
+                     # {{{c(2)}}}​/# ~flag~ and copy into _name_ field./                   
+13 F3 F5 01          # {{{c(2)}}}​~length@t1 ← flag@a1 & 0x1F;~                            
+93 84 12 01          # {{{c(2)}}}​~OUTPUT@s1 ← xt@t0 + 17;~                                
+                     # ~_begin:~                                                          
+83 43 04 00          # {{{c(2)}}}​~chr@t2 ← [INPUT@s0++];~                                 
+13 04 14 00          #                                                                    
+23 80 74 00          # {{{c(2)}}}​~[OUTPUT@s1] ← chr@t2;~                                  
+93 84 14 00          #                                                                    
+13 03 F3 FF          # {{{c(2)}}}​~length@t1--;~                                           
+                     # {{{c(2)}}}​~if length@t1 != 0:~                                     
+E3 16 03 FE          # {{{c(4)}}}​  ~goto _begin;~                                         
+                     #                                                                    
+                     # {{{c(2)}}}​/# 4a. 1-bit align ~INPUT~ as required/                      
+                     # {{{c(2)}}}​/# by the RISC-V specification [cite:@riscv_spec_vol_i]./
+13 04 14 00          # {{{c(2)}}}​~INPUT@s0 += 0x001;~                                      
+13 74 E4 FF          # {{{c(2)}}}​~INPUT@s0 &= 0xFFE;~                                      
+                     #                                                                    
+                     # {{{c(2)}}}​/# 4b. Point _code_ field to the code/                    
+                     # {{{c(2)}}}​/# that follows at ~INPUT~./                             
+23 B0 82 00          # {{{c(2)}}}​~[xt@t0 + 0] ← INPUT@s0;~                                
+67 80 00 00          # {{{c(2)}}}​~return.~  /# To interpreter loop./
+
 
 # ============= DICTIONARY FORMAT
 #
@@ -249,12 +315,16 @@ C3                      # return                    ret                 C3
 # FF 14 25 ZZ ZZ ZZ ZZ    # call TYPE                 call r/m64          FF /2           00 010 100  00 100 101
 # C3                      # return                    ret                 C3
 
-99 03 42 59 45 ########## BYE ( -- ) =============================================================
-6A 3C 58                # rax = exit (no return)    push imm8; pop      6A ib ; 58+rd
-31 FF                   # rdi = stat                xor r/m32, r32      31 /r           11 111 111
-0F 05                   # syscall                   syscall             0F 05
+99 03 42 59 45 ############ BYE ( -- ) =============================================================
+00                   #
+                     # /# Goodbye, world (exit syscall)./
+93 08 D0 05          # ~nr@a7 ← 0x93;~  /# ~__NR_exit~./ 
+                     #                                   
+13 05 00 00          # ~status@RDI ← 0;~                 
+73 00 00 00          # ~syscall exit(status@RDI).~       
 
-# 99 C2                   # BYE
+
+99 C2                # BYE
 
 # Linux syscall: ( RDI RSI RDX R10 R8 R9 RAX=syscall# -- RAX=stat RCX=? R11=? )
 #     Manual pages on system calls: `man 2 syscalls ; man 2 exit ; man 2 read ; man 2 write ; man 2 mmap`
