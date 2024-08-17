@@ -376,7 +376,7 @@ E3 40 B0 FF	     # {{{i(2)}}}     ~goto _begin.~
 03 3D 01 00	     # {{{i(1)}}} ~restore s10, s11, ra;~                                   
 83 3D 81 00	     #                                                                      
 83 30 01 01	     #		                                                                           
-13 01 01 01	     #                                                                      
+13 01 81 01	     #                                                                      
 67 80 00 00	     # {{{i(1)}}} ~return.~                                                 
 
 
@@ -415,25 +415,63 @@ B7 15 00 00	     # ~u@a1 ← 0xA00;~
            	     #                                       
 67 80 00 00	     # ~return.~                             
 
+# 99 E4 99 C2          # dbg BYE
 
-
-
-99 E4 99 C2             # dbg BYE
 
 99 03 72 65 67 ########## reg ( -- ) show registers; use `./SForth | xxd` ========================
-56 57                   # push rsi, rdi             push r64            50+rd
-41 57 57 41 56 56       # push r15, rdi, r14, rsi   push r64            REX 50+rd
-41 55 55 41 54 54       # push r13, rbp, r12, rsp   push r64            REX 50+rd
-41 53 53 41 52 52       # push r11, rbx, r10, rdx   push r64            REX 50+rd
-41 51 51 41 50 50       # push r9 , rcx, r8 , rax   push r64            REX 50+rd
-48 8B F4                # rsi = rsp                 mov r64, r/m64      REX.W 8B /r     11 110 100
-BA 80 00 00 00          # rdx = u                   mov r32, imm32      B8+rd id
-99 54                   # Call TYPE
-48 83 EC 80             # rsp -= -80                sub r/m64, imm8     REX.W 83 /5 ib  11 101 100
-5F 5E                   # pop rdi, rsi              pop r64             58+rd
-C3                      # return                    ret                 C3
+00                   # /# Allocate stack space for the/      
+                     # /# return address and for the 32/     
+                     # /# RISC-V registers (8 + 256)./       
+13 01 81 EF          # ~save ra;~                            
+23 30 11 10          #                                       
+                     #                                       
+23 30 11 00          # /# Push the 32 registers on the/      
+23 34 11 01          # /# stack so that when printed/        
+23 38 21 00          # /# they're displayed like this:/      
+23 3C 21 01          # /#/                                   
+23 30 31 02          # /#/{{{c(4)}}} ~·---------·~           
+23 34 31 03          # /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~ra ¦ a7 ¦~
+23 38 41 02          # /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~sp ¦ s2 ¦~
+23 3C 41 03          # /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~·· ¦ ·· ¦~
+23 30 51 04          # /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~a5 ¦ t6 ¦~
+23 34 51 05          # /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~a6 ¦ pc ¦~
+23 38 61 04          # /#/{{{c(4)}}} ~·---------·~           
+23 3C 61 05          #                                       
+23 30 71 06          #                                       
+23 34 71 07          #                                       
+23 38 81 06          #                                       
+23 3C 81 07          #                                       
+23 30 91 08          #                                       
+23 34 91 09          #                                       
+23 38 A1 08          #                                       
+23 3C A1 09          #                                       
+23 30 B1 0A          #                                       
+23 34 B1 0B          #                                       
+23 38 C1 0A          #                                       
+23 3C C1 0B          #                                       
+23 30 D1 0C          #                                       
+23 34 D1 0D          #                                       
+23 38 E1 0C          #                                       
+23 3C E1 0D          #                                       
+23 30 F1 0E          #                                       
+23 34 F1 0F          #                                       
+23 38 01 0F          #
+97 02 00 00          # /# Special treatment for PC./         
+23 3C 51 0E          #                                       
+                     # /# Print top 256 stack bytes/         
+                     # /# using subroutine ~TYPE~./          
+13 05 01 00          # ~addr@a0 ← sp;~                       
+93 05 00 10          # ~u@a1 ← 0x100;~                       
+99 54                # ~call TYPE;~  /# Compiled./           
+                     #                                       
+                     # /# Restore return address and/        
+                     # /# clean the stack./                  
+83 30 01 10          # ~restore ra;~                         
+13 01 81 10          #                                       
+67 80 00 00          # ~return.~
 
-# 99 F2 99 C2             # reg BYE
+99 F2 99 C2          # reg BYE
+
 
 # ============= TEXT INTERPRETER
 #
