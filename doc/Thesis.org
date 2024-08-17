@@ -704,6 +704,10 @@ value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 
 *** Subroutine ~TYPE~
 
+Citations:
+- Section "3.2 Calling convention" from [cite:@patterson2017]:
+  function prologue & epilogue.
+
 #+CAPTION: Subroutine ~TYPE~ dumps a memory range to ~STDOUT~ (x86-64).
 #+LABEL: tbl:forth:type:x
 #+ATTR_LATEX: :align l|ll|l|lH
@@ -749,9 +753,11 @@ value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 | {{{i(1)}}} /# Use saved registers to preserve/                        |                          |                                                                                                           |                      |                              |
 | {{{i(1)}}} /# values of ~addr~ and ~a1~ across/                       |                          |                                                                                                           |                      |                              |
 | {{{i(1)}}} /# the ~write~ system calls [cite:@system_v_psabi_riscv]./ |                          |                                                                                                           |                      |                              |
-| {{{i(1)}}} ~save s10, s11;~                                           | *addi* sp, sp, -16       | {{{imm(0xFF.0)}}}                    {{{rs1(0001.0)}}} {{{fn3(000)}}} {{{rd(0001.0)}}}  {{{op(0010011)}}} |                      | ~13 01 01 FF~                |
-|                                                                       | *sd* s10, 0(sp)          | {{{off(0000000)}}} {{{rs2(1.1010)}}} {{{rs1(0001.0)}}} {{{fn3(011)}}} {{{off(0000.0)}}} {{{op(0100011)}}} |                      | ~43 30 A1 01~                |
+| {{{i(1)}}} /# Also save the return address./                          |                          |                                                                                                           |                      |                              |
+| {{{i(1)}}} ~save s10, s11, ra;~                                       | *addi* sp, sp, -24       | {{{imm(0xFE.8)}}}                    {{{rs1(0001.0)}}} {{{fn3(000)}}} {{{rd(0001.0)}}}  {{{op(0010011)}}} |                      | ~13 01 81 FE~                |
+|                                                                       | *sd* ra, 16(sp)          | {{{off(0000000)}}} {{{rs2(0.0001)}}} {{{rs1(0001.0)}}} {{{fn3(011)}}} {{{off(1000.0)}}} {{{op(0100011)}}} |                      | ~23 38 11 00~                |
 |                                                                       | *sd* s11, 8(sp)          | {{{off(0000000)}}} {{{rs2(1.1011)}}} {{{rs1(0001.0)}}} {{{fn3(011)}}} {{{off(0100.0)}}} {{{op(0100011)}}} |                      | ~23 34 B1 01~                |
+|                                                                       | *sd* s10, 0(sp)          | {{{off(0000000)}}} {{{rs2(1.1010)}}} {{{rs1(0001.0)}}} {{{fn3(011)}}} {{{off(0000.0)}}} {{{op(0100011)}}} |                      | ~23 30 A1 01~                |
 | {{{i(1)}}} ~addr@s10 ← addr@a0;~                                      | *addi* s10, a0, 0        | {{{imm(0x00.0)}}}                    {{{rs1(0101.0)}}} {{{fn3(000)}}} {{{rd(1101.0)}}}  {{{op(0010011)}}} |                      | ~13 0D 05 00~                |
 | {{{i(1)}}} ~u@s11 ← u@a1;~                                            | *addi* s11, a1, 0        | {{{imm(0x00.0)}}}                    {{{rs1(0101.1)}}} {{{fn3(000)}}} {{{rd(1101.1)}}}  {{{op(0010011)}}} |                      | ~93 8D 05 00~                |
 |                                                                       |                          |                                                                                                           |                      |                              |
@@ -775,9 +781,10 @@ value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 | {{{i(2)}}}     ~goto _begin.~                                         | *blt* zero, s11, _-0x20_ | {{{off(1111111)}}} {{{rs2(1.1011)}}} {{{rs1(0000.0)}}} {{{fn3(100)}}} {{{off(0000.1)}}} {{{op(1100011)}}} | {{{addr(20)}}}       | ~E3 40 B0 FF~                |
 | ~_end:~                                                               |                          |                                                                                                           | {{{addr(24)}}}       |                              |
 | {{{i(1)}}} /# Restore saved registers and return./                    |                          |                                                                                                           |                      |                              |
-| {{{i(1)}}} ~restore s10, s11;~                                        | *ld* s10, 0(sp)          | {{{off(0x00.0)}}}                    {{{rs1(0001.0)}}} {{{fn3(011)}}} {{{rd(1101.0)}}}  {{{op(0000011)}}} |                      | ~03 3D 01 00~                |
+| {{{i(1)}}} ~restore s10, s11, ra;~                                    | *ld* s10, 0(sp)          | {{{off(0x00.0)}}}                    {{{rs1(0001.0)}}} {{{fn3(011)}}} {{{rd(1101.0)}}}  {{{op(0000011)}}} |                      | ~03 3D 01 00~                |
 |                                                                       | *ld* s11, 8(sp)          | {{{off(0x00.8)}}}                    {{{rs1(0001.0)}}} {{{fn3(011)}}} {{{rd(1101.1)}}}  {{{op(0000011)}}} |                      | ~83 3D 81 00~                |
-|                                                                       | *addi* sp, sp, 16        | {{{imm(0x01.0)}}}                    {{{rs1(0001.0)}}} {{{fn3(000)}}} {{{rd(0001.0)}}}  {{{op(0010011)}}} |                      | ~13 01 01 01~                |
+|                                                                       | *ld* ra, 16(sp)          | {{{off(0x01.0)}}}                    {{{rs1(0001.0)}}} {{{fn3(011)}}} {{{rd(0000.1)}}}  {{{op(0000011)}}} |                      | ~83 30 01 01~                |
+|                                                                       | *addi* sp, sp, 24        | {{{imm(0x01.8)}}}                    {{{rs1(0001.0)}}} {{{fn3(000)}}} {{{rd(0001.0)}}}  {{{op(0010011)}}} |                      | ~13 01 01 01~                |
 | {{{i(1)}}} ~return.~                                                  | *jalr* zero, 0(ra)       | {{{off(0x00.0)}}}                    {{{rs1(0000.1)}}} {{{fn3(000)}}} {{{rd(0000.0)}}}  {{{op(1100111)}}} |                      | ~67 80 00 00~                |
 
 *** Subroutine ~dbg~

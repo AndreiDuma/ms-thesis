@@ -342,12 +342,14 @@ E3 16 03 FE          # {{{c(4)}}}​  ~goto _begin;~
 
 99 04 54 59 50 45 ####### TYPE ( a0=addr a1=u -- ) show memory [addr, addr+u) ======
                      #
-                     # {{{i(1)}}} /# Use saved registers to preserve/                          
+                     # {{{i(1)}}} /# Use saved registers to preserve/                                                
                      # {{{i(1)}}} /# values of ~addr~ and ~a1~ across/                      
                      # {{{i(1)}}} /# the ~write~ system calls [cite:@system_v_psabi_riscv]./
-13 01 01 FF          # {{{i(1)}}} ~save s10, s11;~                                          
-43 30 A1 01          #                                                                      
+                     # {{{i(1)}}} /# Also save the return address./                         
+13 01 81 FE          # {{{i(1)}}} ~save s10, s11, ra;~                                      
+23 38 11 00          #                                                                      
 23 34 B1 01          #                                                                      
+23 30 A1 01          #                                                                      
 13 0D 05 00          # {{{i(1)}}} ~addr@s10 ← addr@a0;~                                     
 93 8D 05 00          # {{{i(1)}}} ~u@s11 ← u@a1;~                                           
                      #                                                                      
@@ -365,14 +367,15 @@ E3 16 03 FE          # {{{c(4)}}}​  ~goto _begin;~
                      # {{{i(1)}}} /# Advance by ~ret~ (printed) bytes./                     
 33 0D AD 00          # {{{i(1)}}} ~addr@s10 += ret@a0;~                                     
                      # {{{i(1)}}} /# Fewer bytes left to print./                            
-B3 8D AD 40          # {{{i(1)}}} ~u@s11 -= ret@a0;~                                        
-                     # {{{i(1)}}} ~if u@s11 > 0:~                                           
+B3 8D AD 40	     # {{{i(1)}}} ~u@s11 -= ret@a0;~                                        
+           	     # {{{i(1)}}} ~if u@s11 > 0:~                                           
            	     # {{{i(2)}}}     /# We still have bytes to print./                     
 E3 40 B0 FF	     # {{{i(2)}}}     ~goto _begin.~                                        
            	     # ~_end:~                                                              
            	     # {{{i(1)}}} /# Restore saved registers and return./                   
-03 3D 01 00	     # {{{i(1)}}} ~restore s10, s11;~                                       
+03 3D 01 00	     # {{{i(1)}}} ~restore s10, s11, ra;~                                   
 83 3D 81 00	     #                                                                      
+83 30 01 01	     #		                                                                           
 13 01 01 01	     #                                                                      
 67 80 00 00	     # {{{i(1)}}} ~return.~                                                 
 
