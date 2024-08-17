@@ -397,16 +397,25 @@ E3 40 B0 FF	     # {{{i(2)}}}     ~goto _begin.~
 
 99 03 64 62 67 ########## dbg ( -- ) show stack and data; use `./SForth | xxd -o 0x0fffffe0` =====
 00     	             #
+		     #
+13 01 81 FF          # ~save ra;~                            
+23 30 11 00          #	                                      
+                     #	                                      
                      # /# Dump memory contents using/        
                      # /# subroutine ~TYPE~./                
 37 05 00 10          # ~addr@a0 ← 0x0FFFFFE0;~               
 13 05 05 FE          #                                       
-B7 15 00 00          # ~u@a1 ← 0xA00;~
-93 85 05 A0          #
-                     # /# Compile a CALL to ~TYPE(addr, u)~./
-99 54		     # ~call TYPE;~  /# Compiled./           
-                     #                                       
-67 80 00 00          # ~return.~                             
+B7 15 00 00	     # ~u@a1 ← 0xA00;~                       
+93 85 05 A0          #                                       
+                     # /# Compile a call to ~TYPE(addr, u)~./
+99 54      	     # ~call TYPE;~  /# Compiled./           
+           	     #                                       
+83 30 01 00	     # ~restore ra;~                         
+13 01 81 00	     #                                       
+           	     #                                       
+67 80 00 00	     # ~return.~                             
+
+
 
 
 99 E4 99 C2             # dbg BYE
