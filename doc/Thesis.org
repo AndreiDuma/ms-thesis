@@ -51,7 +51,7 @@
 #+MACRO: c      (eval (format "\\hspace{%fem}" (* 0.5265 (string-to-number $1))))
 #+MACRO: b      (eval (format "\\hspace{%fem}" (* 3 0.5265 (string-to-number $1))))
 #+MACRO: io     \hspace{4.9em}
-#+MACRO: io--   \hspace{3.32em}
+#+MACRO: io--   \hspace{3.35em}
 
 # --- Byte annotation macros (x86-64).
 #+MACRO: modrm    ~$1~​$^{\text{\tiny ModR/M}}_{\text{\tiny $2·$3·$4}}$
@@ -651,7 +651,7 @@ Discuss:
 |                                                                        | *addi* s1, s1, /1/                     | {{{imm(0x001)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |                 | ~93 84 14 00~                |
 | {{{c(2)}}}​~length@t1--;~                                               | *addi* t1, t1, /-1/                    | {{{imm(0xFFF)}}}                    {{{rs1(00110)}}} {{{fn3(000)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                 | ~13 03 F3 FF~                |
 | {{{c(2)}}}​~if length@t1 != 0:~                                         |                                        |                                                                                                        |                 |                              |
-| {{{c(4)}}}​  ~goto _begin;~                                             | *bne* t1, zero, _0xEC_                 | {{{off(1111111)}}} {{{rs2(00000)}}} {{{rs1(00110)}}} {{{fn3(001)}}} {{{off(01101)}}} {{{op(1100011)}}} | {{{addr(14)}}}  | ~E3 16 03 FE~                |
+| {{{c(4)}}}​  ~goto _begin;~                                             | *bne* t1, zero, _0xFEC_                | {{{off(1111111)}}} {{{rs2(00000)}}} {{{rs1(00110)}}} {{{fn3(001)}}} {{{off(01101)}}} {{{op(1100011)}}} | {{{addr(14)}}}  | ~E3 16 03 FE~                |
 |                                                                        |                                        |                                                                                                        |                 |                              |
 | {{{c(2)}}}​/# One padding byte might follow/                            |                                        |                                                                                                        |                 |                              |
 | {{{c(2)}}}​/# the word's name to abide by/                              |                                        |                                                                                                        |                 |                              |
@@ -978,7 +978,7 @@ Explain:
 # In Forth, to parse is to remove from the input stream. As a line is parsed, [>IN] increases from 0 to [#IN].
 # Forth's "parse area" is the part of the line not yet parsed.
 
-*** Subroutine ~REFILL~
+*** Subroutine ~REFILL~                                            :noexport:
 
 #+CAPTION: Subroutine ~REFILL~ replenishes the /parse area/ by advancing ~TIB~ and ~#IN~ (x86-64).
 #+LABEL: tbl:forth:refill:x
@@ -1057,7 +1057,7 @@ Explain:
 | {{{i(1)}}} ~[#IN] ← #in@t0;~                     | sd t0, 0(s2)        |            |                | ~~                                 |
 | {{{i(1)}}} ~return.~                             | jalr zero, 0(ra)    |            |                | ~~                                 |
 
-*** Subroutine ~seek~
+*** Subroutine ~seek~                                              :noexport:
 
 #+CAPTION: Subroutine ~seek~ parses characters until it finds one in a given range (x86-64).
 #+LABEL: tbl:forth:seek:x
@@ -1102,11 +1102,13 @@ Explain:
 | /# Define:/ _~seek~_                             | ---              | ---      |                | {{{define(04,73 65 65 6B)}}} |
 | /# In/Out:/    ~( low@a0 high@a1~                |                  |          |                |                              |
 | /#/{{{io}}}      ~"ccc"~                         |                  |          |                |                              |
-| /#/{{{io--}}} ~-​- FLAGS )~                       |                  |          |                |                              |
+| /#/{{{io--}}} ~-​- eof@a0 )~                      |                  |          |                |                              |
 | /#/                                              |                  |          |                |                              |
 | /# Advance ~>IN~ until next/                     |                  |          |                |                              |
 | /# char is within ~[low, high)~/                 |                  |          |                |                              |
 | /# or parse area is empty./                      |                  |          |                |                              |
+| /#/                                              |                  |          |                |                              |
+| /# *TODO*: Set eof@a0./                          |                  |          |                |                              |
 |                                                  |                  |          |                |                              |
 | {{{c(2)}}} ~high'@a1 ← high@a1 - low@a0;~        | sub a1, a1, a0   |          |                | ~~                           |
 | ~_begin:~                                        |                  |          | {{{addr(00)}}} |                              |
@@ -1130,41 +1132,89 @@ Explain:
 | {{{c(2)}}} ~[>IN] ← >in@t2;~                     | sd t2, 16(s2)    |          |                | ~~                           |
 | {{{c(2)}}} ~return.~                             | jalr zero, 0(ra) |          |                | ~~                           |
 
-*** Subroutine ~PARSE~                                             :noexport:
+*** Subroutine ~PARSE~
 
-#+CAPTION: Subroutine ~PARSE~ returns the address and size of a newly parsed string.
-#+LABEL: tbl:forth:parse
+#+CAPTION: Subroutine ~PARSE~ returns the address and size of a newly parsed string (x86-64).
+#+LABEL: tbl:forth:parse:x
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                               | *Instruction*      | *Opcode*         | *&*            | *Machine code*                                     | *Intention*                                                                         |
-|--------------------------------------------+--------------------+------------------+----------------+----------------------------------------------------+-------------------------------------------------------------------------------------|
-| /# Define:/ _~PARSE~_                      | ---                | ---              |                | {{{define(04,50 41 52 53 45)}}}                    | define PARSE                                                                        |
-| /# In/Out:    ~( low@CL high@DL~/          |                    |                  |                |                                                    |                                                                                     |
-| /# {{{c(8)}}} ​~"ccc<char>"~/               |                    |                  |                |                                                    |                                                                                     |
-| /# {{{c(5)}}}​ ~-​- addr@RBP u@RAX )~/       |                    |                  |                |                                                    |                                                                                     |
-| /#/                                        |                    |                  |                |                                                    |                                                                                     |
-| /# *TODO*:/                                |                    |                  |                |                                                    |                                                                                     |
-| /# -- addr: where ccc begins/              |                    |                  |                |                                                    |                                                                                     |
-| /# -- u: length of ccc/                    |                    |                  |                |                                                    |                                                                                     |
-|                                            |                    |                  |                |                                                    |                                                                                     |
-| {{{c( 2)}}} ~VARS@R9 ← 0x10000000;~        | MOV r/m64, /imm32/ | REX.W C7 /​​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}} /~00 00 00 10~/ | r9 = VAR                                                                            |
-| {{{c( 2)}}} ~start@RBP ← [>IN];~           | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(69,01,101,001)}}} {{{displ(10)}}} | rbp = [>IN]                                                                         |
-| {{{c( 2)}}} /# Compile a call to ~seek~/   |                    |                  |                |                                                    |                                                                                     |
-| {{{c( 2)}}} /# that advances ~>IN~./       |                    |                  |                |                                                    |                                                                                     |
-| {{{c( 2)}}} ~call seek;~  /# Compiled./    | ---                | ---              |                | {{{compile(73,s)}}}                                | Call seek  (parse until 1st instance within [cl, dl) is parsed or parse area empty) |
-| {{{c( 2)}}} ~end@RAX ← [>IN];~             | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | rax = [>IN]                                                                         |
-| {{{c( 2)}}} /# Did ~seek()~ encounter the/ |                    |                  |                |                                                    |                                                                                     |
-| {{{c( 2)}}} /# end of the parse area?/     |                    |                  |                |                                                    |                                                                                     |
-| {{{c( 2)}}} ~if parse area empty:~         |                    |                  |                |                                                    |                                                                                     |
-| {{{c( 4)}}}   ~goto _end.~                 | JAE _rel8_         | 73 _cb_          |                | ~73~ {{{offset(04,04-00)}}}                        | +jump _end if U>=                                                                   |
-| {{{c( 2)}}} ~[>IN]++;~  /# ???/            | INC r/m64          | REX.W FF /0      | {{{addr(00)}}} | ~49 FF~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | [>IN]++                                                                             |
-| ~_end:~                                    |                    |                  | {{{addr(04)}}} |                                                    | # _end:                                                                             |
-| {{{c( 2)}}} /# Compute address and/        |                    |                  |                |                                                    |                                                                                     |
-| {{{c( 2)}}} /# size of parsed input./      |                    |                  |                |                                                    |                                                                                     |
-| {{{c( 2)}}} ~u@RAX = end@RAX~              |                    |                  |                |                                                    |                                                                                     |
-| {{{c( 8)}}}       ~- start@RBP;~           | SUB r/m64, r64     | REX.W 29 /r      |                | ~48 29~ {{{modrm(E8,11,101,000)}}}                 | rax -= rbp                                                                          |
-| {{{c( 2)}}} ~addr@RBP = bgn@RBP~           | ADD r64, r/m64     | REX.W 03 /r      |                | ~49 03~ {{{modrm(69,01,101,001)}}} {{{displ(08)}}} | rbp += [TIB]                                                                        |
-| {{{c(11)}}}          ~+ [TIB];~            |                    |                  |                |                                                    |                                                                                     |
-| {{{c( 2)}}} ~return.~                      | RET                | C3               |                | ~C3~                                               | return                                                                              |
+| *Pseudocode*                                                    | *Instruction*      | *Opcode*         | *&*            | *Machine code*                                     | *Intention*                                                                         |
+|-----------------------------------------------------------------+--------------------+------------------+----------------+----------------------------------------------------+-------------------------------------------------------------------------------------|
+| /# Define:/ _~PARSE~_                                           | ---                | ---              |                | {{{define(04,50 41 52 53 45)}}}                    | define PARSE                                                                        |
+| /# In/Out:/    ~( low@CL high@DL~                               |                    |                  |                |                                                    |                                                                                     |
+| /#/{{{io}}}     ​~"ccc<char>"~                                   |                    |                  |                |                                                    |                                                                                     |
+| /#/{{{io--}}}​ ~-​- addr@RBP u@RAX )~                             |                    |                  |                |                                                    |                                                                                     |
+| /#/                                                             |                    |                  |                |                                                    |                                                                                     |
+| /# Parse until end of parse area/                               |                    |                  |                |                                                    |                                                                                     |
+| /# or until a character in range/                               |                    |                  |                |                                                    |                                                                                     |
+| /# ~[low, high)~ is encountered./                               |                    |                  |                |                                                    |                                                                                     |
+| /# Return parsed string as its/                                 |                    |                  |                |                                                    |                                                                                     |
+| /# address and length./                                         |                    |                  |                |                                                    |                                                                                     |
+|                                                                 |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 2)}}} ~VARS@R9 ← 0x10000000;~                             | MOV r/m64, /imm32/ | REX.W C7 /​​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}} /~00 00 00 10~/ | r9 = VAR                                                                            |
+| {{{c( 2)}}} ~start@RBP ← [>IN];~                                | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(69,01,101,001)}}} {{{displ(10)}}} | rbp = [>IN]                                                                         |
+| {{{c( 2)}}} /# Compile a call to ~seek~/                        |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 2)}}} /# that advances ~>IN~./                            |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 2)}}} ~call seek;~  /# Compiled./                         | ---                | ---              |                | {{{compile(73,s)}}}                                | Call seek  (parse until 1st instance within [cl, dl) is parsed or parse area empty) |
+| {{{c( 2)}}} ~end@RAX ← [>IN];~                                  | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | rax = [>IN]                                                                         |
+| {{{c( 2)}}} /# Did ~seek()~ encounter the/                      |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 2)}}} /# end of the parse area? In/                       |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 2)}}} /# this case the first CMP in/                      |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 2)}}} /# ~seek~ will have left the/                       |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 2)}}} /# carry flag unset [cite:@intel_manual_volume_2]./ |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 2)}}} ~if CF = 0:~                                        |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 4)}}}   ~goto _end.~                                      | JAE _rel8_         | 73 _cb_          |                | ~73~ {{{offset(04,04-00)}}}                        | +jump _end if U>=                                                                   |
+| {{{c( 2)}}} /# A character not in range/                        |                    |                  | {{{addr(00)}}} |                                                    |                                                                                     |
+| {{{c( 2)}}} /# ~[low, high)~ was found./                        |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 2)}}} ~[>IN]++;~  /# Skip it./                            | INC r/m64          | REX.W FF /0      |                | ~49 FF~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | [>IN]++                                                                             |
+| ~_end:~                                                         |                    |                  | {{{addr(04)}}} |                                                    | # _end:                                                                             |
+| {{{c( 2)}}} /# Compute address and/                             |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 2)}}} /# length of parsed input./                         |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 2)}}} ~u@RAX ← end@RAX~                                   |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 8)}}}       ~- start@RBP;~                                | SUB r/m64, r64     | REX.W 29 /r      |                | ~48 29~ {{{modrm(E8,11,101,000)}}}                 | rax -= rbp                                                                          |
+| {{{c( 2)}}} ~addr@RBP ← start@RBP~                              | ADD r64, r/m64     | REX.W 03 /r      |                | ~49 03~ {{{modrm(69,01,101,001)}}} {{{displ(08)}}} | rbp += [TIB]                                                                        |
+| {{{c(11)}}}          ~+ [TIB];~                                 |                    |                  |                |                                                    |                                                                                     |
+| {{{c( 2)}}} ~return.~                                           | RET                | C3               |                | ~C3~                                               | return                                                                              |
+
+#+CAPTION: Subroutine ~PARSE~ returns the address and size of a newly parsed string (RISC-V).
+#+LABEL: tbl:forth:parse:rv
+#+ATTR_LATEX: :align l|ll|l|l
+| *Pseudocode*                                    | *Instruction*     | *Opcode* | *&*            | *Machine code*                  |
+|-------------------------------------------------+-------------------+----------+----------------+---------------------------------|
+| /# Define:/ _~PARSE~_                           | ---               | ---      |                | {{{define(04,50 41 52 53 45)}}} |
+| /# In/Out:/    ~( low@a0 high@a1~               |                   |          |                |                                 |
+| /#/{{{io}}}     ​~"ccc<char>"~                   |                   |          |                |                                 |
+| /#/{{{io--}}}​ ~-​- addr@a0 u@a1 )~               |                   |          |                |                                 |
+| /#/                                             |                   |          |                |                                 |
+| /# Parse until end of parse area/               |                   |          |                |                                 |
+| /# or until a character in range/               |                   |          |                |                                 |
+| /# ~[low, high)~ is encountered./               |                   |          |                |                                 |
+| /# Return parsed string as its/                 |                   |          |                |                                 |
+| /# address and length./                         |                   |          |                |                                 |
+|                                                 |                   |          |                |                                 |
+| {{{c( 2)}}} ~push ra;~                          | addi sp, sp, -16  |          |                | ~~                              |
+| {{{c( 2)}}}                                     | sd ra, 8(sp)      |          |                | ~~                              |
+| {{{c( 2)}}} ~start@t0 ← [>IN];~                 | ld t0, 16(s2)     |          |                | ~~                              |
+| {{{c( 2)}}} ~push start@t0;~                    | sd t0, 0(sp)      |          |                | ~~                              |
+| {{{c( 2)}}} /# Compile a call to ~seek~/        |                   |          |                |                                 |
+| {{{c( 2)}}} /# that advances ~>IN~./            |                   |          |                |                                 |
+| {{{c( 2)}}} ~call seek;~  /# Compiled./         | ---               | ---      |                | {{{compile(73,s)}}}             |
+| {{{c( 2)}}} ~end@t1 ← [>IN];~                   | ld t1, 16(s2)     |          |                | ~~                              |
+| {{{c( 2)}}} ~restore start@t0;~                 | ld t0, 0(sp)      |          |                | ~~                              |
+| {{{c( 2)}}} /# Did ~seek()~ encounter the/      |                   |          |                |                                 |
+| {{{c( 2)}}} /# end of the parse area?/          |                   |          |                |                                 |
+| {{{c( 2)}}} ~if eof@a0 = 0:~                    |                   |          |                |                                 |
+| {{{c( 4)}}}   ~goto _end.~                      | beq t0, zero, +?? |          | {{{addr(00)}}} | ~~                              |
+| {{{c( 2)}}} /# A character in range/            |                   |          |                |                                 |
+| {{{c( 2)}}} /# ~[low, high)~ was found./        |                   |          |                |                                 |
+| {{{c( 2)}}} ~[>IN]++;~  /# Skip it./            | addi t2, t1, 1    |          |                | ~~                              |
+| {{{c( 2)}}}                                     | sd t2, 16(s2)     |          |                | ~~                              |
+| ~_end:~                                         |                   |          | {{{addr(08)}}} |                                 |
+| {{{c( 2)}}} /# Compute address and/             |                   |          |                |                                 |
+| {{{c( 2)}}} /# length of parsed input./         |                   |          |                |                                 |
+| {{{c( 2)}}} ~u@a0~ ~←~ ~end@t1~ ~-~ ~start@t0;~ | sub a0, t1, t0    |          |                | ~~                              |
+| {{{c( 2)}}} ~addr@a1 ← [TIB]~                   | ld t2, 8(s2)      |          |                | ~~                              |
+| {{{c(10)}}}         ~+ start@t0;~               | add a1, t2, t0    |          |                | ~~                              |
+| {{{c( 2)}}} ~return.~                           | jalr zero, 0(ra)  |          |                | ~~                              |
 
 *** Subroutine ~pname~                                             :noexport:
 
@@ -1785,6 +1835,10 @@ References:
 - [ ] Add a ~rex~ macro to annotate the REX byte?
 - [ ] Align ~\hookrightarrow~ properly.
 - [ ] If supported, make all subroutine table labels case-sensitive.
+- [ ] x86-64:
+  - [ ] Convert *Instruction* column to actual *Assembly*.
+  - [ ] Move *&* column after *Machine code*? It'd allow matching
+    addresses with their corresponding ~goto~​s.
 - [ ] Check there's no ~???~ or ~TODO~ left.
   
 *** Sections that I should include in the thesis
@@ -1808,8 +1862,8 @@ Volume 2:
 - B.1 MACHINE INSTRUCTION FORMAT
   - B.1.4.2 Reg Field (reg) for 64-Bit Mode
   - B.1.4.7 Condition Test (tttn) Field
-  - B.2.1 General Purpose Instruction Formats and Encodings for 64-Bit
-    Mode
+  - B.2.1 *General Purpose Instruction Formats and Encodings for
+    64-Bit Mode* -- this is GREAT.
 
 *** Maybe consider porting to RISC-V?
 The Wikipedia [[https://en.wikipedia.org/wiki/RISC-V][article]] states that "RISC-V encourages academic usage"
