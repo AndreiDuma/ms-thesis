@@ -315,6 +315,8 @@ RISC-V on QEMU:
 |------------+------------------------+---------------------------------------------------------------|
 | ~INPUT~    | ~RSI~                  | Source address of binary interpreter data and commands.       |
 | ~OUTPUT~   | ~RDI~                  | Destination address of binary interpreter operations.         |
+| ~VARS~     | ~R9~                   | Base address of globals stored in memory (~#IN~, ~TIB~ etc).  |
+|------------+------------------------+---------------------------------------------------------------|
 | ~#IN~      | ~0x10000000 (VARS)~    | The number of characters in the current line.                 |
 | ~TIB~      | ~0x10000008 (VARS+8)~  | The address where the current line begins.                    |
 | ~>IN~      | ~0x10000010 (VARS+16)~ | The number of /parsed/ characters in the current line.        |
@@ -329,6 +331,7 @@ RISC-V on QEMU:
 | ~INPUT~    | ~s0~                   | Source address of binary interpreter data and commands.       |
 | ~OUTPUT~   | ~s1~                   | Destination address of binary interpreter operations.         |
 | ~VARS~     | ~s2~                   | Base address of globals stored in memory (~#IN~, ~TIB~ etc).  |
+|------------+------------------------+---------------------------------------------------------------|
 | ~#IN~      | ~0x10000000 (VARS)~    | The number of characters in the current line.                 |
 | ~TIB~      | ~0x10000008 (VARS+8)~  | The address where the current line begins.                    |
 | ~>IN~      | ~0x10000010 (VARS+16)~ | The number of /parsed/ characters in the current line.        |
@@ -379,7 +382,7 @@ value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 
 ** Binary Interpreter
 
-*** The Binary Interpreter Loop
+*** The Binary Interpreter Loop                                    :noexport:
 
 #+CAPTION: The binary interpreter routine and loop (x86-64).
 #+LABEL: tbl:forth:bi:x
@@ -489,7 +492,7 @@ value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 | {{{i(1)}}}                                        | *jalr* zero, 0(t0)      | {{{off(0x000)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 02 00~  |
 |                                                   |                         |                                                                                                        | {{{addr(EC)}}} |                |
 
-*** Subroutine ~COMPL~
+*** Subroutine ~COMPL~                                             :noexport:
 
 Discuss:
 - Differences between the compiled ~CALL~​s in x86-64 and two
@@ -569,7 +572,7 @@ Discuss:
 | ~return.~  /# To interpreter loop./                                                            | *jalr* zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                 | ~93 84 44 00~                   |
 |                                                                                                |                      |                                                                                                        | {{{addr(128)}}} |                                 |
 
-*** Subroutine ~Head~
+*** Subroutine ~Head~                                              :noexport:
 
 #+CAPTION: Subroutine =Head= defines new words in the dictionary (x86-64).
 #+LABEL: tbl:forth:head:x
@@ -671,7 +674,7 @@ Discuss:
 
 ** A Way Out
 
-*** Subroutine ~BYE~
+*** Subroutine ~BYE~                                               :noexport:
 
 #+CAPTION: Subroutine ~BYE~ terminates the program by performing an ~exit~ syscall (x86-64).
 #+LABEL: tbl:forth:bye:x
@@ -709,7 +712,7 @@ Discuss:
   Why not save ~RSI~ and ~RDI~ inside ~TYPE~ rather than at call sites?
 :END:
 
-*** Subroutine ~TYPE~
+*** Subroutine ~TYPE~                                              :noexport:
 
 Citations:
 - Section "3.2 Calling convention" from [cite:@patterson2017]:
@@ -794,7 +797,7 @@ Citations:
 |                                                                       | *addi* sp, sp, 24        | {{{imm(0x01.8)}}}                    {{{rs1(0001.0)}}} {{{fn3(000)}}} {{{rd(0001.0)}}}  {{{op(0010011)}}} |                      | ~13 01 81 01~                |
 | {{{i(1)}}} ~return.~                                                  | *jalr* zero, 0(ra)       | {{{off(0x00.0)}}}                    {{{rs1(0000.1)}}} {{{fn3(000)}}} {{{rd(0000.0)}}}  {{{op(1100111)}}} |                      | ~67 80 00 00~                |
 
-*** Subroutine ~dbg~
+*** Subroutine ~dbg~                                               :noexport:
 
 Explain:
 - ~addr~ value of ~0x0FFFFFE0~ is chosen so that the first four words
@@ -853,7 +856,7 @@ Explain:
 | ~return.~                     | *jalr* zero, 0(ra)   | {{{off(0x00.0)}}}                    {{{rs1(0000.1)}}} {{{fn3(000)}}} {{{rd(0000.0)}}}  {{{op(1100111)}}} | ~67 80 00 00~             |
 |                               |                      |                                                                                                           |                           |
 
-*** Subroutine ~reg~
+*** Subroutine ~reg~                                               :noexport:
 
 #+CAPTION: Subroutine ~reg~ dumps the registers to ~STDOUT~ (x86-64).
 #+LABEL: tbl:forth:reg:x
@@ -974,10 +977,10 @@ Explain:
 # In Forth, to parse is to remove from the input stream. As a line is parsed, [>IN] increases from 0 to [#IN].
 # Forth's "parse area" is the part of the line not yet parsed.
 
-*** Subroutine ~REFILL~                                            :noexport:
+*** Subroutine ~REFILL~
 
-#+CAPTION: Subroutine ~REFILL~ TODO.
-#+LABEL: tbl:forth:refill
+#+CAPTION: Subroutine ~REFILL~ replenishes the /parse area/ by advancing ~TIB~ and ~#IN~ (x86-64).
+#+LABEL: tbl:forth:refill:x
 #+ATTR_LATEX: :align l|ll|l|lH
 | *Pseudocode*                                     | *Instruction*      | *Opcode*         | *&*            | *Machine code*                                            | *Intention*      |
 |--------------------------------------------------+--------------------+------------------+----------------+-----------------------------------------------------------+------------------|
@@ -985,33 +988,73 @@ Explain:
 | /# In/Out: ~( -​- )~/                             |                    |                  |                |                                                           |                  |
 | /#/                                              |                    |                  |                |                                                           |                  |
 | /# Advance ~TIB~ and ~#IN~ so/                   |                    |                  |                |                                                           |                  |
-| /# that ~[TIB, #IN)~ contains/                   |                    |                  |                |                                                           |                  |
+| /# that ~[TIB, TIB + #IN)~ contains/             |                    |                  |                |                                                           |                  |
 | /# a new line to be parsed./                     |                    |                  |                |                                                           |                  |
 |                                                  |                    |                  |                |                                                           |                  |
 | {{{i(1)}}} /# Base address of globals./          |                    |                  |                |                                                           |                  |
 | {{{i(1)}}} ~VARS@R9 ← 0x10000000;~               | MOV r/m64, /imm32/ | REX.W C7 /​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}} /~00 00 00 10~/        | r9 = VAR         |
-|                                                  |                    |                  |                |                                                           |                  |
+| {{{i(1)}}}                                       |                    |                  |                |                                                           |                  |
 | {{{i(1)}}} /# Advance ~TIB~​ by ~#IN~./           |                    |                  |                |                                                           |                  |
 | {{{i(1)}}} /#/                                   |                    |                  |                |                                                           |                  |
 | {{{i(1)}}} /# Note:         ~#IN~ is ~VARS+0~,/  |                    |                  |                |                                                           |                  |
 | {{{i(1)}}} /# {{{i(2.35)}}} ~TIB~ is ~VARS+8~,/  |                    |                  |                |                                                           |                  |
 | {{{i(1)}}} /# {{{i(2.35)}}} ~>IN~ is ~VARS+16~./ |                    |                  |                |                                                           |                  |
-| {{{i(1)}}} ~nIN@RAX ← [#IN];~                    | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(01,00,000,001)}}}                        | rax = [#IN]      |
-| {{{i(1)}}} ~[TIB] += nIN@RAX;~                   | ADD r/m64, r64     | REX.W 01 /r      |                | ~49 01~ {{{modrm(41,01,000,001)}}} {{{displ(08)}}}        | [TIB] += rax     |
+| {{{i(1)}}} ~#in@RAX ← [#IN];~                    | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(01,00,000,001)}}}                        | rax = [#IN]      |
+| {{{i(1)}}} ~[TIB] += #in@RAX;~                   | ADD r/m64, r64     | REX.W 01 /r      |                | ~49 01~ {{{modrm(41,01,000,001)}}} {{{displ(08)}}}        | [TIB] += rax     |
 | {{{i(1)}}} /# Reset ~#IN~ and ~>IN~ to 0./       |                    |                  |                |                                                           |                  |
 | {{{i(1)}}} ~[#IN] &= 0;~                         | AND r/m64, /imm8/  | REX.W 83 /​4 /ib/ |                | ~49 83~ {{{modrm(21,00,100,001)}}} /~00~/                 | [#IN] = 0        |
 | {{{i(1)}}} ~[>IN] &= 0;~                         | AND r/m64, /imm8/  | REX.W 83 /​4 /ib/ |                | ~49 83~ {{{modrm(61,01,100,001)}}} {{{displ(10)}}} /~00~/ | [>IN] = 0        |
-|                                                  |                    |                  |                |                                                           |                  |
+| {{{i(1)}}}                                       |                    |                  |                |                                                           |                  |
 | {{{i(1)}}} /# Advance ~#IN~ until just/          |                    |                  |                |                                                           |                  |
 | {{{i(1)}}} /# after first ~LF~ character./       |                    |                  |                |                                                           |                  |
-| ~_beg:~                                          |                    |                  | {{{addr(00)}}} |                                                           | _beg:            |
+| ~_begin:~                                        |                    |                  | {{{addr(00)}}} |                                                           | _beg:            |
 | {{{i(1)}}} ~[#IN]++;~                            | INC r/m64          | REX.W FF /0      |                | ~49 FF~ {{{modrm(01,00,000,001)}}}                        | [#IN]++          |
 | {{{i(1)}}} ~RAX ← [TIB];~                        | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(08)}}}        | rax = [TIB]      |
 | {{{i(1)}}} ~RAX += [#IN];~                       | ADD r64, r/m64     | REX.W 03 /r      |                | ~49 03~ {{{modrm(01,00,000,001)}}}                        | rax += [#IN]     |
 | {{{i(1)}}} /# Newline character?/                |                    |                  |                |                                                           |                  |
-| {{{i(1)}}} ~if [RAX-1] != 0x0A:~                 | CMP r/m8, /imm8/   | 80 /​7 /ib/       |                | ~80~ {{{modrm(78,01,111,000)}}} {{{displ(FF)}}} /~0A~/    | cmp [rax-1], LF  |
-| {{{i(2)}}}   ~goto _beg.~                        | JNE _rel8_         | 75 _cb_          |                | ~75~ {{{offset(F0,00-10)}}}                               | -jump _beg if != |
+| {{{i(1)}}} ~if [RAX - 1] != 0x0A:~               | CMP r/m8, /imm8/   | 80 /​7 /ib/       |                | ~80~ {{{modrm(78,01,111,000)}}} {{{displ(FF)}}} /~0A~/    | cmp [rax-1], LF  |
+| {{{i(2)}}}   ~goto _begin.~                      | JNE _rel8_         | 75 _cb_          |                | ~75~ {{{offset(F0,00-10)}}}                               | -jump _beg if != |
 | {{{i(1)}}} ~return.~                             | RET                | C3               | {{{addr(10)}}} | ~C3~                                                      | return           |
+
+#+CAPTION: Subroutine ~REFILL~ replenishes the /parse area/ by advancing ~TIB~ and ~#IN~ (RISC-V).
+#+LABEL: tbl:forth:refill:rv
+#+ATTR_LATEX: :align l|ll|l|l
+| *Pseudocode*                                     | *Instruction*       | *Encoding* | *&*            | *Machine code*                     |
+|--------------------------------------------------+---------------------+------------+----------------+------------------------------------|
+| /# Define:/ _~REFILL~_                           | ---                 | ---        |                | {{{define(06,52 45 46 49 4C 4C)}}} |
+| /# In/Out: ~( -​- )~/                             |                     |            |                |                                    |
+| /#/                                              |                     |            |                |                                    |
+| /# Advance ~TIB~ and ~#IN~ so/                   |                     |            |                |                                    |
+| /# that ~[TIB, TIB + #IN)~ contains/             |                     |            |                |                                    |
+| /# a new line to be parsed./                     |                     |            |                |                                    |
+|                                                  |                     |            |                |                                    |
+| {{{i(1)}}} /# Advance ~TIB~​ by ~#IN~./           |                     |            |                |                                    |
+| {{{i(1)}}} /#/                                   |                     |            |                |                                    |
+| {{{i(1)}}} /# Note:         ~#IN~ is ~VARS+0~,/  |                     |            |                |                                    |
+| {{{i(1)}}} /# {{{i(2.35)}}} ~TIB~ is ~VARS+8~,/  |                     |            |                |                                    |
+| {{{i(1)}}} /# {{{i(2.35)}}} ~>IN~ is ~VARS+16~./ |                     |            |                |                                    |
+| {{{i(1)}}} ~#in@t0 ← [#IN];~                     | ld t0, 0(s2)        |            |                | ~~                                 |
+| {{{i(1)}}} ~tib@t1 ← [TIB] + #in@t0;~            | ld t1, 8(s2)        |            |                | ~~                                 |
+| {{{i(1)}}}                                       | add t1, t1, t0      |            |                | ~~                                 |
+| {{{i(1)}}} ~[TIB] ← tib@t1;~                     | sd t1, 8(s2)        |            |                | ~~                                 |
+| {{{i(1)}}}                                       |                     |            |                |                                    |
+| {{{i(1)}}} /# Reset ~#IN~ and ~>IN~ to 0./       |                     |            |                |                                    |
+| {{{i(1)}}} ~#in@t0 &= 0;~                        | addi t0, zero, 0    |            |                | ~~                                 |
+| {{{i(1)}}} ~[>IN] &= 0;~                         | sd zero, 16(s2)     |            |                | ~~                                 |
+| {{{i(1)}}}                                       |                     |            |                |                                    |
+| {{{i(1)}}} /# Advance ~#IN~ until just/          |                     |            |                |                                    |
+| {{{i(1)}}} /# after first ~LF~ character./       |                     |            |                |                                    |
+| ~_begin:~                                        |                     |            | {{{addr(00)}}} |                                    |
+| {{{i(1)}}} ~#in@t0++;~                           | addi t0, t0, 1      |            |                | ~~                                 |
+| {{{i(1)}}} ~chr@t3 ← [tib@t1 + #in@t0 - 1];~     | add t2, t1, t0      |            |                | ~~                                 |
+| {{{i(1)}}}                                       | ld t3, -1(t2)       |            |                | ~~                                 |
+| {{{i(1)}}} /# Newline character?/                |                     |            |                |                                    |
+| {{{i(1)}}} ~if chr != 0x0A:~                     | addi t4, zero, 0x0A |            |                | ~~                                 |
+| {{{i(2)}}}   ~goto _begin.~                      | bne t3, t4, -??     |            | {{{addr(10)}}} | ~~                                 |
+| {{{i(1)}}}                                       |                     |            |                |                                    |
+| {{{i(1)}}} /# Store the new ~#IN~./              |                     |            |                |                                    |
+| {{{i(1)}}} ~[#IN] ← #in@t0;~                     | sd t0, 0(s2)        |            |                | ~~                                 |
+| {{{i(1)}}} ~return.~                             | jalr zero, 0(ra)    |            |                | ~~                                 |
 
 *** Subroutine ~seek~                                              :noexport:
 
@@ -1108,6 +1151,7 @@ Explain:
 | ~high@DL ← 0x21;~                       | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~21~/                     | (cl, dl) = (..., BL+1) |
 | ~call PARSE;~  /# Compiled./            |                |            | {{{compile(50,P)}}}             | Call PARSE             |
 | ~return.~                               | RET            | C3         | ~C3~                            | return                 |
+
 
 *** Subroutine ~[~                                                 :noexport:
 
