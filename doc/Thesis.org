@@ -46,11 +46,12 @@
 #+LATEX_HEADER: \newcolumntype{H}{>{\setbox0=\hbox\bgroup}c<{\egroup}@{}}
 
 # --- Indentation helper macros.
-#+MACRO: t    \hspace{1em}  # TODO: rewrite this one to use {{{c(x)}}}.
-#+MACRO: i    (eval (format "\\hspace{%sem}" $1))
-#+MACRO: c    (eval (format "\\hspace{%fem}" (* 0.5265 (string-to-number $1))))
-#+MACRO: b    (eval (format "\\hspace{%fem}" (* 3 0.5265 (string-to-number $1))))
-#+MACRO: io   \hspace{4.9em}
+#+MACRO: t      \hspace{1em}  # TODO: rewrite this one to use {{{c(x)}}}.
+#+MACRO: i      (eval (format "\\hspace{%sem}" $1))
+#+MACRO: c      (eval (format "\\hspace{%fem}" (* 0.5265 (string-to-number $1))))
+#+MACRO: b      (eval (format "\\hspace{%fem}" (* 3 0.5265 (string-to-number $1))))
+#+MACRO: io     \hspace{4.9em}
+#+MACRO: io--   \hspace{3.32em}
 
 # --- Byte annotation macros (x86-64).
 #+MACRO: modrm    ~$1~​$^{\text{\tiny ModR/M}}_{\text{\tiny $2·$3·$4}}$
@@ -985,7 +986,7 @@ Explain:
 | *Pseudocode*                                     | *Instruction*      | *Opcode*         | *&*            | *Machine code*                                            | *Intention*      |
 |--------------------------------------------------+--------------------+------------------+----------------+-----------------------------------------------------------+------------------|
 | /# Define:/ _~REFILL~_                           | ---                | ---              |                | {{{define(06,52 45 46 49 4C 4C)}}}                        | define REFILL    |
-| /# In/Out: ~( -​- )~/                             |                    |                  |                |                                                           |                  |
+| /# In/Out:/ ~( -​- )~                             |                    |                  |                |                                                           |                  |
 | /#/                                              |                    |                  |                |                                                           |                  |
 | /# Advance ~TIB~ and ~#IN~ so/                   |                    |                  |                |                                                           |                  |
 | /# that ~[TIB, TIB + #IN)~ contains/             |                    |                  |                |                                                           |                  |
@@ -1022,7 +1023,7 @@ Explain:
 | *Pseudocode*                                     | *Instruction*       | *Encoding* | *&*            | *Machine code*                     |
 |--------------------------------------------------+---------------------+------------+----------------+------------------------------------|
 | /# Define:/ _~REFILL~_                           | ---                 | ---        |                | {{{define(06,52 45 46 49 4C 4C)}}} |
-| /# In/Out: ~( -​- )~/                             |                     |            |                |                                    |
+| /# In/Out:/ ~( -​- )~                             |                     |            |                |                                    |
 | /#/                                              |                     |            |                |                                    |
 | /# Advance ~TIB~ and ~#IN~ so/                   |                     |            |                |                                    |
 | /# that ~[TIB, TIB + #IN)~ contains/             |                     |            |                |                                    |
@@ -1047,7 +1048,7 @@ Explain:
 | ~_begin:~                                        |                     |            | {{{addr(00)}}} |                                    |
 | {{{i(1)}}} ~#in@t0++;~                           | addi t0, t0, 1      |            |                | ~~                                 |
 | {{{i(1)}}} ~chr@t3 ← [tib@t1 + #in@t0 - 1];~     | add t2, t1, t0      |            |                | ~~                                 |
-| {{{i(1)}}}                                       | ld t3, -1(t2)       |            |                | ~~                                 |
+| {{{i(1)}}}                                       | lbu t3, -1(t2)      |            |                | ~~                                 |
 | {{{i(1)}}} /# Newline character?/                |                     |            |                |                                    |
 | {{{i(1)}}} ~if chr != 0x0A:~                     | addi t4, zero, 0x0A |            |                | ~~                                 |
 | {{{i(2)}}}   ~goto _begin.~                      | bne t3, t4, -??     |            | {{{addr(10)}}} | ~~                                 |
@@ -1056,42 +1057,78 @@ Explain:
 | {{{i(1)}}} ~[#IN] ← #in@t0;~                     | sd t0, 0(s2)        |            |                | ~~                                 |
 | {{{i(1)}}} ~return.~                             | jalr zero, 0(ra)    |            |                | ~~                                 |
 
-*** Subroutine ~seek~                                              :noexport:
+*** Subroutine ~seek~
 
-#+CAPTION: Subroutine ~seek~ parses characters until it finds one in a given range.
-#+LABEL: tbl:forth:seek
+#+CAPTION: Subroutine ~seek~ parses characters until it finds one in a given range (x86-64).
+#+LABEL: tbl:forth:seek:x
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                                  | *Instruction*      | *Opcode*         | *&*            | *Machine code*                                     | *Intention*                                 |
-|-----------------------------------------------+--------------------+------------------+----------------+----------------------------------------------------+---------------------------------------------|
-| /# Define:/ _~seek~_                          | ---                | ---              |                | {{{define(04,73 65 65 6B)}}}                       | define seek                                 |
-| /# In/Out:    ~( low@CL high@DL~/             |                    |                  |                |                                                    |                                             |
-| /# {{{c(8)}}} ​~"ccc"~/                        |                    |                  |                |                                                    |                                             |
-| /# {{{c(5)}}}​ ~-​- FLAGS )~/                   |                    |                  |                |                                                    |                                             |
-| /#/                                           |                    |                  |                |                                                    |                                             |
-| /# Advance ~>IN~ until next/                  |                    |                  |                |                                                    |                                             |
-| /# char is within ~[low, high)~/              |                    |                  |                |                                                    |                                             |
-| /# or parse area is empty./                   |                    |                  |                |                                                    |                                             |
-|                                               |                    |                  |                |                                                    |                                             |
-| {{{c(2)}}} ~VARS@R9 ← 0x10000000;~            | MOV r/m64, /imm32/ | REX.W C7 /​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}} /~00 00 00 10~/ | r9 = VAR                                    |
-| {{{c(2)}}} ~high@DL -= low@CL;~               | SUB r8, r/m8       | 2A /r            |                | ~2A~ {{{modrm(D1,11,010,001)}}}                    | dl -= cl                                    |
-| ~_beg:~                                       |                    |                  | {{{addr(00)}}} |                                                    | # _beg:  like WITHIN ( al cl dl -- eflags ) |
-| {{{c(2)}}} /# Is parse area empty?/           |                    |                  |                |                                                    |                                             |
-| {{{c(2)}}} ~RAX ← [>IN];~                     | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | rax = [>IN]                                 |
-| {{{c(2)}}} ~if RAX~ \ge{{{unsigned}}} ~[#IN]:~  | CMP r64, r/m64     | REX.W 3B /r      |                | ~49 3B~ {{{modrm(01,00,000,001)}}}                 | cmp rax, [#IN]                              |
-| {{{c(4)}}}   ~goto _end.~                     | JAE _rel8_         | 73 _cb_          |                | ~73~ {{{offset(16,1F-09)}}}                        | +jump _end if U>=                           |
-| {{{c(2)}}} /# Get current character./         |                    |                  | {{{addr(09)}}} |                                                    |                                             |
-| {{{c(2)}}} ~RAX ← [TIB];~                     | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(08)}}} | rax = [TIB]                                 |
-| {{{c(2)}}} ~RAX += [>IN];~                    | ADD r64, r/m64     | REX.W 03 /r      |                | ~49 03~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | rax += [>IN]                                |
-| {{{c(2)}}} ~chr@AL ← [RAX];~                  | MOV r8, r/m8       | 8A /r            |                | ~8A~ {{{modrm(00,00,000,000)}}}                    | al = [rax]                                  |
-| {{{c(2)}}} /# Is ~chr~ in ~[low, high)~?/     |                    |                  |                |                                                    |                                             |
-| {{{c(2)}}} ~AL -= low@CL;~                    | SUB r8, r/m8       | 2A /r            |                | ~2A~ {{{modrm(C1,11,000,001)}}}                    | al -= cl                                    |
-| {{{c(2)}}} ~if AL~ \lt{{{unsigned}}} ~high@DL:~ | CMP r8, r/m8       | 3A /r            |                | ~3A~ {{{modrm(C2,11,000,010)}}}                    | cmp al, dl                                  |
-| {{{c(4)}}}   ~goto _end.~                     | JB _rel8_          | 72 _cb_          |                | ~72~ {{{offset(06,1F-19)}}}                        | +jump _end if U<                            |
-| {{{c(2)}}} /# Go to next character./          |                    |                  | {{{addr(19)}}} |                                                    |                                             |
-| {{{c(2)}}} ~[>IN]++;~                         | INC r/m64          | REX.W FF /0      |                | ~49 FF~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | [>IN]++                                     |
-| {{{c(2)}}} ~goto _beg.~                       | JMP _rel8_         | EB _cb_          |                | ~EB~ {{{offset(E1,00-1F)}}}                        | -jump _beg                                  |
-| ~_end:~                                       |                    |                  | {{{addr(1F)}}} |                                                    | # _end:                                     |
-| {{{c(2)}}} ~return.~                          | RET                | C3               |                | ~C3~                                               | return                                      |
+| *Pseudocode*                                       | *Instruction*      | *Opcode*         | *&*            | *Machine code*                                     | *Intention*                                 |
+|----------------------------------------------------+--------------------+------------------+----------------+----------------------------------------------------+---------------------------------------------|
+| /# Define:/ _~seek~_                               | ---                | ---              |                | {{{define(04,73 65 65 6B)}}}                       | define seek                                 |
+| /# In/Out:/    ~( low@CL high@DL~                  |                    |                  |                |                                                    |                                             |
+| /#/{{{io}}}      ~"ccc"~                           |                    |                  |                |                                                    |                                             |
+| /#/{{{io--}}} ~-​- FLAGS )~                         |                    |                  |                |                                                    |                                             |
+| /#/                                                |                    |                  |                |                                                    |                                             |
+| /# Advance ~>IN~ until next/                       |                    |                  |                |                                                    |                                             |
+| /# char is within ~[low, high)~/                   |                    |                  |                |                                                    |                                             |
+| /# or parse area is empty./                        |                    |                  |                |                                                    |                                             |
+|                                                    |                    |                  |                |                                                    |                                             |
+| {{{c(2)}}} ~VARS@R9 ← 0x10000000;~                 | MOV r/m64, /imm32/ | REX.W C7 /​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}} /~00 00 00 10~/ | r9 = VAR                                    |
+| {{{c(2)}}} ~high@DL -= low@CL;~                    | SUB r8, r/m8       | 2A /r            |                | ~2A~ {{{modrm(D1,11,010,001)}}}                    | dl -= cl                                    |
+| ~_begin:~                                          |                    |                  | {{{addr(00)}}} |                                                    | # _beg:  like WITHIN ( al cl dl -- eflags ) |
+| {{{c(2)}}} /# Is parse area empty?/                |                    |                  |                |                                                    |                                             |
+| {{{c(2)}}} ~>in@RAX ← [>IN];~                      | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | rax = [>IN]                                 |
+| {{{c(2)}}} ~if >in@RAX~ \ge{{{unsigned}}} ~[#IN]:~   | CMP r64, r/m64     | REX.W 3B /r      |                | ~49 3B~ {{{modrm(01,00,000,001)}}}                 | cmp rax, [#IN]                              |
+| {{{c(4)}}}   ~goto _end.~                          | JAE _rel8_         | 73 _cb_          |                | ~73~ {{{offset(16,1F-09)}}}                        | +jump _end if U>=                           |
+| {{{c(2)}}} /# Get current character./              |                    |                  | {{{addr(09)}}} |                                                    |                                             |
+| {{{c(2)}}} ~RAX ← [TIB];~                          | MOV r64, r/m64     | REX.W 8B /r      |                | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(08)}}} | rax = [TIB]                                 |
+| {{{c(2)}}} ~RAX += [>IN];~                         | ADD r64, r/m64     | REX.W 03 /r      |                | ~49 03~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | rax += [>IN]                                |
+| {{{c(2)}}} ~chr@AL ← [RAX];~                       | MOV r8, r/m8       | 8A /r            |                | ~8A~ {{{modrm(00,00,000,000)}}}                    | al = [rax]                                  |
+| {{{c(2)}}} /# Is ~chr~ in ~[low, high)~?/          |                    |                  |                |                                                    |                                             |
+| {{{c(2)}}} ~chr'@AL -= low@CL;~                    | SUB r8, r/m8       | 2A /r            |                | ~2A~ {{{modrm(C1,11,000,001)}}}                    | al -= cl                                    |
+| {{{c(2)}}} ~if chr'@AL~ \lt{{{unsigned}}} ~high@DL:~ | CMP r8, r/m8       | 3A /r            |                | ~3A~ {{{modrm(C2,11,000,010)}}}                    | cmp al, dl                                  |
+| {{{c(4)}}}   ~goto _end.~                          | JB _rel8_          | 72 _cb_          |                | ~72~ {{{offset(06,1F-19)}}}                        | +jump _end if U<                            |
+| {{{c(2)}}} /# Go to next character./               |                    |                  | {{{addr(19)}}} |                                                    |                                             |
+| {{{c(2)}}} ~[>IN]++;~                              | INC r/m64          | REX.W FF /0      |                | ~49 FF~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | [>IN]++                                     |
+| {{{c(2)}}} ~goto _begin.~                          | JMP _rel8_         | EB _cb_          |                | ~EB~ {{{offset(E1,00-1F)}}}                        | -jump _beg                                  |
+| ~_end:~                                            |                    |                  | {{{addr(1F)}}} |                                                    | # _end:                                     |
+| {{{c(2)}}} ~return.~                               | RET                | C3               |                | ~C3~                                               | return                                      |
+
+#+CAPTION: Subroutine ~seek~ parses characters until it finds one in a given range (RISC-V).
+#+LABEL: tbl:forth:seek:rv
+#+ATTR_LATEX: :align l|ll|l|l
+| *Pseudocode*                                     | *Instruction*    | *Opcode* | *&*            | *Machine code*               |
+|--------------------------------------------------+------------------+----------+----------------+------------------------------|
+| /# Define:/ _~seek~_                             | ---              | ---      |                | {{{define(04,73 65 65 6B)}}} |
+| /# In/Out:/    ~( low@a0 high@a1~                |                  |          |                |                              |
+| /#/{{{io}}}      ~"ccc"~                         |                  |          |                |                              |
+| /#/{{{io--}}} ~-​- FLAGS )~                       |                  |          |                |                              |
+| /#/                                              |                  |          |                |                              |
+| /# Advance ~>IN~ until next/                     |                  |          |                |                              |
+| /# char is within ~[low, high)~/                 |                  |          |                |                              |
+| /# or parse area is empty./                      |                  |          |                |                              |
+|                                                  |                  |          |                |                              |
+| {{{c(2)}}} ~high'@a1 ← high@a1 - low@a0;~        | sub a1, a1, a0   |          |                | ~~                           |
+| ~_begin:~                                        |                  |          | {{{addr(00)}}} |                              |
+| {{{c(2)}}} /# Is parse area empty?/              |                  |          |                |                              |
+| {{{c(2)}}} ~>in@t2 ← [>IN];~                     | ld t2, 16(s2)    |          |                | ~~                           |
+| {{{c(2)}}} ~#in@t0 ← [#IN];~                     | ld t0, 0(s2)     |          |                | ~~                           |
+| {{{c(2)}}} ~if >in@t2~ \ge{{{unsigned}}} ~#in@t0:~ |                  |          |                |                              |
+| {{{c(4)}}}   ~goto _end.~                        | bgeu t2, t0, +?? |          | {{{addr(08)}}} | ~~                           |
+| {{{c(2)}}} /# Get current character./            |                  |          |                |                              |
+| {{{c(2)}}} ~tib@t1 ← [TIB];~                     | ld t1, 8(s2)     |          |                | ~~                           |
+| {{{c(2)}}} ~chr@t3 ← [tib@t1 + >in@t2];~         | add t4, t1, t2   |          |                | ~~                           |
+| {{{c(2)}}}                                       | lbu t3, 0(t4)    |          |                | ~~                           |
+| {{{c(2)}}} /# Is ~chr~ in ~[low, high)~?/        |                  |          |                |                              |
+| {{{c(2)}}} ~chr'@t3 ← chr@t3 - low@a0;~          | sub t3, t3, a0   |          |                | ~~                           |
+| {{{c(2)}}} ~if t3~ \lt{{{unsigned}}} ~high'@a1:~   |                  |          |                |                              |
+| {{{c(4)}}}   ~goto _end.~                        | bltu t3, a1, +?? |          | {{{addr(1C)}}} | ~~                           |
+| {{{c(2)}}} /# Go to next character./             |                  |          |                |                              |
+| {{{c(2)}}} ~>in@t2++;~                           | addi t2, t2, 1   |          |                | ~~                           |
+| {{{c(2)}}} ~goto _begin.~                        | jal zero, -??    |          | {{{addr(24)}}} | ~~                           |
+| ~_end:~                                          |                  |          | {{{addr(28)}}} |                              |
+| {{{c(2)}}} ~[>IN] ← >in@t2;~                     | sd t2, 16(s2)    |          |                | ~~                           |
+| {{{c(2)}}} ~return.~                             | jalr zero, 0(ra) |          |                | ~~                           |
 
 *** Subroutine ~PARSE~                                             :noexport:
 
@@ -1689,40 +1726,42 @@ Explain:
 
 * Analysis
 
-| *Instruction*           | *Type* | *Encoding*                                                                                             |                                                                            |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------|
-| ecall                   | I      | ~000000000000~                      ~00000~          {{{fn3(000)}}} ~00000~          {{{op(1110011)}}} | ~000000000000             00000  000  00000           1110011~             |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------|
-| slli rd, rs1, shamt     | I      | ~000000~ {{{shamt(bbbbbb)}}}        {{{rs1(rrrrr)}}} {{{fn3(001)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} | ~0000000 shamt            rs1    001  rd              0010011~             |
-| srli rd, rs1, shamt     | I      | ~000000~ {{{shamt(bbbbbb)}}}        {{{rs1(rrrrr)}}} {{{fn3(101)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} | ~0000000 shamt            rs1    101  rd              0010011~             |
-| addi rd, rs1, immediate | I      | {{{imm(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} | ~immediate[11:0]          rs1    000  rd              0010011~             |
-| andi rd, rs1, immediate | I      | {{{imm(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(111)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} | ~immediate[11:0]          rs1    111  rd              0010011~             |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------|
-| lb  rd, offset(rs1)     | I ?    | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    000  rd              0000011~             |
-| lw  rd, offset(rs1)     | I ?    | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(010)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    010  rd              0000011~             |
-| ld  rd, offset(rs1)     | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(011)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    011  rd              0000011~             |
-| lbu rd, offset(rs1)     | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(100)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    100  rd              0000011~             |
-| lwu rd, offset(rs1)     | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(110)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    110  rd              0000011~             |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------|
-| jalr rd, offset(rs1)    | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(1100111)}}} | ~offset[11:0]             rs1    000  rd              1100111~             |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------|
-| add rd, rs1, rs2        | R      | {{{fn7(0000000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} | ~0000000           rs2    rs1    000  rd              0110011~             |
-| or  rd, rs1, rs2        | R      | {{{fn7(0000000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(110)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} | ~0000000           rs2    rs1    110  rd              0110011~             |
-| and rd, rs1, rs2        | R      | {{{fn7(0000000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(111)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} | ~0000000           rs2    rs1    111  rd              0110011~             |
-| sub rd, rs1, rs2        | R      | {{{fn7(0100000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} | ~0100000           rs2    rs1    111  rd              0110011~             |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------|
-| sb rs2, offset(rs1)     | S      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(0100011)}}} | ~offset[11:5]      rs2    rs1    000  offset[4:0]     0100011~             |
-| sw rs2, offset(rs1)     | S      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(010)}}} {{{off(bbbbb)}}} {{{op(0100011)}}} | ~offset[11:5]      rs2    rs1    010  offset[4:0]     0100011~             |
-| sd rs2, offset(rs1)     | S      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(011)}}} {{{off(bbbbb)}}} {{{op(0100011)}}} | ~offset[11:5]      rs2    rs1    011  offset[4:0]     0100011~             |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------|
-| beq rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    000  offset[4:1\vert11]  1100011~     |
-| bne rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(001)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    001  offset[4:1\vert11]  1100011~     |
-| blt rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(100)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    100  offset[4:1\vert11]  1100011~     |
-| bge rs1, rs2, offset    | B ?    | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(101)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    101  offset[4:1\vert11]  1100011~     |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------|
-| auipc rd, immediate     | U      | {{{imm(0xhhhhh)}}}                                                  {{{rd(rrrrr)}}}  {{{op(0010111)}}} | ~immediate[31:12]                     rd              0010111~             |
-| lui rd, immediate       | U      | {{{imm(0xhhhhh)}}}                                                  {{{rd(rrrrr)}}}  {{{op(0110111)}}} | ~immediate[31:12]                     rd              0110111~             |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------|
+| *Instruction*           | *Type* | *Encoding*                                                                                             |                                                                |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
+| ecall                   | I      | ~000000000000~                      ~00000~          {{{fn3(000)}}} ~00000~          {{{op(1110011)}}} | ~000000000000             00000  000  00000           1110011~ |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
+| slli rd, rs1, shamt     | I      | ~000000~​{{{shamt(bbbbbb)}}}         {{{rs1(rrrrr)}}} {{{fn3(001)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}}  | ~0000000 shamt            rs1    001  rd              0010011~ |
+| srli rd, rs1, shamt     | I      | ~000000~​{{{shamt(bbbbbb)}}}         {{{rs1(rrrrr)}}} {{{fn3(101)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} | ~0000000 shamt            rs1    101  rd              0010011~ |
+| addi rd, rs1, immediate | I      | {{{imm(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} | ~immediate[11:0]          rs1    000  rd              0010011~ |
+| andi rd, rs1, immediate | I      | {{{imm(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(111)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} | ~immediate[11:0]          rs1    111  rd              0010011~ |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
+| lb  rd, offset(rs1)     | I ?    | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    000  rd              0000011~ |
+| lw  rd, offset(rs1)     | I ?    | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(010)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    010  rd              0000011~ |
+| ld  rd, offset(rs1)     | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(011)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    011  rd              0000011~ |
+| lbu rd, offset(rs1)     | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(100)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    100  rd              0000011~ |
+| lwu rd, offset(rs1)     | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(110)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    110  rd              0000011~ |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
+| jalr rd, offset(rs1)    | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(1100111)}}} | ~offset[11:0]             rs1    000  rd              1100111~ |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
+| add rd, rs1, rs2        | R      | {{{fn7(0000000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} | ~0000000           rs2    rs1    000  rd              0110011~ |
+| or  rd, rs1, rs2        | R      | {{{fn7(0000000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(110)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} | ~0000000           rs2    rs1    110  rd              0110011~ |
+| and rd, rs1, rs2        | R      | {{{fn7(0000000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(111)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} | ~0000000           rs2    rs1    111  rd              0110011~ |
+| sub rd, rs1, rs2        | R      | {{{fn7(0100000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} | ~0100000           rs2    rs1    111  rd              0110011~ |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
+| sb rs2, offset(rs1)     | S      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(0100011)}}} | ~offset[11:5]      rs2    rs1    000  offset[4:0]     0100011~ |
+| sw rs2, offset(rs1)     | S      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(010)}}} {{{off(bbbbb)}}} {{{op(0100011)}}} | ~offset[11:5]      rs2    rs1    010  offset[4:0]     0100011~ |
+| sd rs2, offset(rs1)     | S      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(011)}}} {{{off(bbbbb)}}} {{{op(0100011)}}} | ~offset[11:5]      rs2    rs1    011  offset[4:0]     0100011~ |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
+| beq rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    000  offset[4:1\vert11]  1100011~ |
+| bne rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(001)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    001  offset[4:1\vert11]  1100011~ |
+| blt rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(100)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    100  offset[4:1\vert11]  1100011~ |
+| bge rs1, rs2, offset    | B ?    | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(101)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    101  offset[4:1\vert11]  1100011~ |
+| bltu rs1, rs2, offset   | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(110)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    110  offset[4:1\vert11]  1100011~ |
+| bgeu rs1, rs2, offset   | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(111)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    111  offset[4:1\vert11]  1100011~ |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
+| auipc rd, immediate     | U      | {{{imm(0xhhhhh)}}}                                                  {{{rd(rrrrr)}}}  {{{op(0010111)}}} | ~immediate[31:12]                     rd              0010111~ |
+| lui rd, immediate       | U      | {{{imm(0xhhhhh)}}}                                                  {{{rd(rrrrr)}}}  {{{op(0110111)}}} | ~immediate[31:12]                     rd              0110111~ |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
 | jal rd, offset          | J      | {{{off(bbbbbbbbbbbbbbbbbbbb)}}}                                     {{{rd(rrrrr)}}}  {{{op(1101111)}}} | ~offset[20\vert10:1\vert11\vert19:12]             rd              1101111~ |
 
 
