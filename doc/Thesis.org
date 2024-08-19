@@ -686,7 +686,7 @@ Discuss:
 | *Pseudocode*                       | *Instruction*  | *Opcode* | *&*             | *Machine code*                  | *Intention*            |
 |------------------------------------+----------------+----------+-----------------+---------------------------------+------------------------|
 | /# Define:/ _~BYE~_                | ---            | ---      | {{{addr(172)}}} | {{{define(03,42 59 45)}}}       | define BYE             |
-| /# In/Out: ~( -​- )~/               |                |          |                 |                                 |                        |
+| /# In/Out:/ ~( -​- )~               |                |          |                 |                                 |                        |
 |                                    |                |          |                 |                                 |                        |
 | /# Goodbye, world (exit syscall)./ |                |          |                 |                                 |                        |
 | ~nr@RAX ← 0x3C;~  /# ~__NR_exit~./ | PUSH /imm8/    | 6A /ib/  |                 | ~6A~ /~3C~/                     | rax = exit (no return) |
@@ -700,7 +700,7 @@ Discuss:
 | *Pseudocode*                       | *Instruction*          | *Opcode*                                                                                               | *Machine code*            |
 |------------------------------------+------------------------+--------------------------------------------------------------------------------------------------------+---------------------------|
 | /# Define:/ _~BYE~_                | ---                    | ---                                                                                                    | {{{define(03,42 59 45)}}} |
-| /# In/Out: ~( -​- )~/               |                        |                                                                                                        | {{{padding(00)}}}         |
+| /# In/Out:/ ~( -​- )~               |                        |                                                                                                        | {{{padding(00)}}}         |
 |                                    |                        |                                                                                                        |                           |
 | /# Goodbye, world (exit syscall)./ |                        |                                                                                                        |                           |
 | ~nr@a7 ← 93;~  /# ~__NR_exit~./    | *addi* a7, zero, 0x05D | {{{imm(0x05D)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(10001)}}}  {{{op(0010011)}}} | ~93 08 D0 05~             |
@@ -729,7 +729,7 @@ Citations:
 |--------------------------------------------------+-----------------+-------------+----------------------+------------------------------------+-----------------------|
 | /# Define:/ _~TYPE~_                             | ---             | ---         |                      | {{{define(04,54 59 50 45)}}}       | define TYPE           |
 | /# In/Out:/    ~( addr@RSI u@RDX~                |                 |             |                      |                                    |                       |
-| /#{{{c(6)}}}/ ~-​- ?@RSI ?@RDI )~                 |                 |             |                      |                                    |                       |
+| /#{{{io--}}}/ ~-​- ?@RSI ?@RDI )~                 |                 |             |                      |                                    |                       |
 | /#/                                              |                 |             |                      |                                    |                       |
 | /# Dump memory range ~[addr, addr+u)~./          |                 |             |                      |                                    |                       |
 |                                                  |                 |             |                      |                                    |                       |
@@ -814,7 +814,7 @@ Explain:
 | *Pseudocode*                           | *Instruction*    | *Opcode*   | *Machine code*            | *Intention* |
 |----------------------------------------+------------------+------------+---------------------------+-------------|
 | /# Define:/ _~dbg~_                    | ---              | ---        | {{{define(03,64 52 67)}}}​ | define dbg  |
-| /# In/Out: ~( -​- )~/                   |                  |            |                           |             |
+| /# In/Out:/ ~( -​- )~                   |                  |            |                           |             |
 | /#/                                    |                  |            |                           |             |
 | /# Dump working memory./               |                  |            |                           |             |
 |                                        |                  |            |                           |             |
@@ -838,7 +838,7 @@ Explain:
 | *Pseudocode*                  | *Instruction*        | *Opcode*                                                                                                  | *Machine code*            |
 |-------------------------------+----------------------+-----------------------------------------------------------------------------------------------------------+---------------------------|
 | /# Define:/ _~dbg~_           | ---                  | ---                                                                                                       | {{{define(03,64 52 67)}}}​ |
-| /# In/Out: ~( -​- )~/          |                      |                                                                                                           | {{{padding(00)}}}         |
+| /# In/Out:/ ~( -​- )~          |                      |                                                                                                           | {{{padding(00)}}}         |
 | /#/                           |                      |                                                                                                           |                           |
 | /# Dump working memory./      |                      |                                                                                                           |                           |
 |                               |                      |                                                                                                           |                           |
@@ -868,7 +868,7 @@ Explain:
 | *Pseudocode*                             | *Instruction*     | *Opcode*         | *Machine code*                        | *Intention*             |
 |------------------------------------------+-------------------+------------------+---------------------------------------+-------------------------|
 | /# Define:/ _~reg~_                      | ---               | ---              | {{{define(03,72 65 67)}}}             | define reg              |
-| /# In/Out: ~( -​- )~/                     |                   |                  |                                       |                         |
+| /# In/Out:/ ~( -​- )~                     |                   |                  |                                       |                         |
 | /#/                                      |                   |                  |                                       |                         |
 | /# Dump the registers./                  |                   |                  |                                       |                         |
 |                                          |                   |                  |                                       |                         |
@@ -909,7 +909,7 @@ Explain:
 | *Pseudocode*                           | *Instruction*        | *Opcode*                                                                                                  | *Machine code*            |
 |----------------------------------------+----------------------+-----------------------------------------------------------------------------------------------------------+---------------------------|
 | /# Define:/ _~reg~_                    | ---                  | ---                                                                                                       | {{{define(03,72 65 67)}}} |
-| /# In/Out: ~( -​- )~/                   |                      |                                                                                                           | {{{padding(00)}}}         |
+| /# In/Out:/ ~( -​- )~                   |                      |                                                                                                           | {{{padding(00)}}}         |
 | /#/                                    |                      |                                                                                                           |                           |
 | /# Dump the registers./                |                      |                                                                                                           |                           |
 |                                        |                      |                                                                                                           |                           |
@@ -1289,7 +1289,7 @@ Explain:
 | *Pseudocode*                      | *Instruction* | *Opcode* | *Machine code*                                                                    | *Intention*          |
 |-----------------------------------+---------------+----------+-----------------------------------------------------------------------------------+----------------------|
 | /# Define immediate:/ _~[~_       | ---           | ---      | {{{define(81,5B)}}}                                                               | define [             |
-| /# In/Out:    ~( -​- )~/           |               |          |                                                                                   |                      |
+| /# In/Out:/ ~( -​- )~              |               |          |                                                                                   |                      |
 | /#/                               |               |          |                                                                                   |                      |
 | /# Switch to interpreting state./ |               |          |                                                                                   |                      |
 |                                   |               |          |                                                                                   |                      |
@@ -1306,7 +1306,7 @@ Explain:
 | *Pseudocode*                   | *Instruction* | *Opcode* | *Machine code*                                                                    | *Intention*       |
 |--------------------------------+---------------+----------+-----------------------------------------------------------------------------------+-------------------|
 | /# Define:/ _~]~_              | ---           | ---      | {{{define(01,5D)}}}                                                               | define ]          |
-| /# In/Out: ~( -​- )~/           |               |          |                                                                                   |                   |
+| /# In/Out:/ ~( -​- )~           |               |          |                                                                                   |                   |
 | /#/                            |               |          |                                                                                   |                   |
 | /# Switch to compiling state./ |               |          |                                                                                   |                   |
 |                                |               |          |                                                                                   |                   |
@@ -1323,7 +1323,7 @@ Explain:
 | *Pseudocode*                    | *Instruction*  | *Opcode*    | *Machine code*                                                                       | *Intention* |
 |---------------------------------+----------------+-------------+--------------------------------------------------------------------------------------+-------------|
 | /# Define immediate:/ _~\~_     | ---            | ---         | {{{define(81,5C)}}}                                                                  | define \    |
-| /# In/Out: ~( "ccc<eol>" -​- )~/ |                |             |                                                                                      |             |
+| /# In/Out:/ ~( "ccc<eol>" -​- )~ |                |             |                                                                                      |             |
 | /#/                             |                |             |                                                                                      |             |
 | /# Consumes all characters/     |                |             |                                                                                      |             |
 | /# left on the current line./   |                |             |                                                                                      |             |
@@ -1340,7 +1340,7 @@ Explain:
 | *Pseudocode*                               | *Instruction*  | *Opcode*   | *Machine code*      | *Intention*                                                                 |
 |--------------------------------------------+----------------+------------+---------------------+-----------------------------------------------------------------------------|
 | /# Define immediate:/ _~(~_                | ---            | ---        | {{{define(81,28)}}} | define (                                                                    |
-| /# In/Out: ~( "ccc<rparen>" -​- )~/         |                |            |                     |                                                                             |
+| /# In/Out:/ ~( "ccc<rparen>" -​- )~         |                |            |                     |                                                                             |
 | /#/                                        |                |            |                     |                                                                             |
 | /# Consume characters until a ')' occurs./ |                |            |                     |                                                                             |
 |                                            |                |            |                     |                                                                             |
@@ -1357,7 +1357,7 @@ Explain:
 | *Pseudocode*                              | *Instruction*     | *Opcode*          | *Machine code*                            | *Intention*                            |
 |-------------------------------------------+-------------------+-------------------+-------------------------------------------+----------------------------------------|
 | /# Define:/ _~':'~_                       | ---               | ---               | {{{define(01,3A)}}}                       | define :                               |
-| /# In/Out: ~( "<spaces>ccc<space>" -​- )~/ |                   |                   |                                           |                                        |
+| /# In/Out:/ ~( "<spaces>ccc<space>" -​- )~ |                   |                   |                                           |                                        |
 | /#/                                       |                   |                   |                                           |                                        |
 | /# *TODO*​/                                |                   |                   |                                           |                                        |
 |                                           |                   |                   |                                           |                                        |
@@ -1385,7 +1385,7 @@ Explain:
 | *Pseudocode*                              | *Instruction*     | *Opcode*         | *Machine code*                                              | *Intention*          |
 |-------------------------------------------+-------------------+------------------+-------------------------------------------------------------+----------------------|
 | /# Define immediate:/ _~;~_               | ---               | ---              | {{{define(81,3B)}}}                                         | define ;             |
-| /# In/Out: ~( C: -​- )~/                   |                   |                  |                                                             |                      |
+| /# In/Out:/ ~( C: -​- )~                   |                   |                  |                                                             |                      |
 | /#/                                       |                   |                  |                                                             |                      |
 | /# Finalize a colon definition and/       |                   |                  |                                                             |                      |
 | /# switch back to interpreting state./    |                   |                  |                                                             |                      |
@@ -1412,7 +1412,7 @@ Explain:
 #+ATTR_LATEX: :align l|ll|lH
 | *Pseudocode*                     | *Instruction*     | *Opcode*         | *Machine code*                          | *Intention*  |
 | /# Define:/ _~.~_                | ---               | ---              | {{{define(01,2E)}}}                     | define .     |
-| /# In/Out: ~( chr -​- )~/         |                   |                  |                                         |              |
+| /# In/Out:/ ~( chr -​- )~         |                   |                  |                                         |              |
 | /#/                              |                   |                  |                                         |              |
 | /# Non-standard name for ~C,~./  |                   |                  |                                         |              |
 | /#/                              |                   |                  |                                         |              |
@@ -1432,7 +1432,7 @@ Explain:
 | *Pseudocode*                                                | *Instruction*     | *Opcode*         | *Machine code*                          | *Intention*             |
 |-------------------------------------------------------------+-------------------+------------------+-----------------------------------------+-------------------------|
 | /# Define immediate:/ _~LIT~_                               | ---               | ---              | {{{define(83,4C 49 54)}}}               | define LIT              |
-| /# In/Out: ~( C: x -​- ) ( -- x )~/                          |                   |                  |                                         |                         |
+| /# In/Out:/ ~( C: x -​- ) ( -- x )~                          |                   |                  |                                         |                         |
 | /#/                                                         |                   |                  |                                         |                         |
 | /# Pop a byte off the data stack at compile time/           |                   |                  |                                         |                         |
 | /# Compile it as the immediate byte of a PUSH/              |                   |                  |                                         |                         |
@@ -1490,9 +1490,9 @@ Explain:
 | *Pseudocode*                                       | *Instruction*     | *Opcode*         | *&*            | *Machine code*                                     | *Intention*             |
 |----------------------------------------------------+-------------------+------------------+----------------+----------------------------------------------------+-------------------------|
 | /# Define:/ _~xt=~_                                | ---               | ---              |                | {{{define(03,78 74 3D)}}}                          | define xt=              |
-| /# In/Out:    ~( addr@RBP u@RAX xt@RBX~/           |                   |                  |                |                                                    |                         |
-| /# {{{c(6)}}}​~-​- xt@RBX FLAGS~/                    |                   |                  |                |                                                    |                         |
-| /# {{{c(8)}}}   ~?@RAX ?@RDI )~/                   |                   |                  |                |                                                    |                         |
+| /# In/Out:/    ~( addr@RBP u@RAX xt@RBX~           |                   |                  |                |                                                    |                         |
+| /#/{{{io--}}} ~-​- xt@RBX FLAGS~/                   |                   |                  |                |                                                    |                         |
+| /#/{{{io}}}      ~?@RAX ?@RDI )~                   |                   |                  |                |                                                    |                         |
 | /#/                                                |                   |                  |                |                                                    |                         |
 | /# Checks if execution token ~xt~ is/              |                   |                  |                |                                                    |                         |
 | /# either zero or is not hidden and/               |                   |                  |                |                                                    |                         |
@@ -1540,9 +1540,9 @@ Explain:
 | *Pseudocode*                               | *Instruction*  | *Opcode*    | *&*            | *Machine code*                                              | *Intention*      |
 |--------------------------------------------+----------------+-------------+----------------+-------------------------------------------------------------+------------------|
 | /# Define:/ _~FIND~_                       | ---            | ---         |                | {{{define(04,46 49 4E 44)}}}                                | define FIND      |
-| /# In/Out:    ~( addr@RBP u@RAX~/          |                |             |                |                                                             |                  |
-| /# {{{c(6)}}}​~-​- addr@RBP u@RAX~/          |                |             |                |                                                             |                  |
-| /# {{{c(8)}}}   ~xt@RBX )~/                |                |             |                |                                                             |                  |
+| /# In/Out:/    ~( addr@RBP u@RAX~          |                |             |                |                                                             |                  |
+| /#/{{{c(6)}}} ~-​- addr@RBP u@RAX~          |                |             |                |                                                             |                  |
+| /#/{{{c(8)}}}    ~xt@RBX )~                |                |             |                |                                                             |                  |
 | /#/                                        |                |             |                |                                                             |                  |
 | /# Search the dictionary for a/            |                |             |                |                                                             |                  |
 | /# word with name matching/                |                |             |                |                                                             |                  |
@@ -1582,8 +1582,8 @@ Explain:
 | *Pseudocode*                             | *Instruction*     | *Opcode*         | *&*            | *Machine code*                            | *Intention*        |
 |------------------------------------------+-------------------+------------------+----------------+-------------------------------------------+--------------------|
 | /# Define:/ _~Num~_                      | ---               | ---              |                | {{{define(03,4E 75 6D)}}}                 | define Num         |
-| /# In/Out:    ~( addr@RBP u@RAX~/        |                   |                  |                |                                           |                    |
-| /# {{{c(6)}}}​~-​- n )~/                   |                   |                  |                |                                           |                    |
+| /# In/Out:/    ~( addr@RBP u@RAX~        |                   |                  |                |                                           |                    |
+| /#/{{{io--}}} ~-​- n )~                   |                   |                  |                |                                           |                    |
 | /#/                                      |                   |                  |                |                                           |                    |
 | /# Parse string given by ~addr~​/​~u~/     |                   |                  |                |                                           |                    |
 | /# as a number and return it on/         |                   |                  |                |                                           |                    |
@@ -1626,9 +1626,9 @@ Explain:
 | *Pseudocode*                           | *Instruction*     | *Opcode*    | *&*            | *Machine code*                                           | *Intention*           |
 |----------------------------------------+-------------------+-------------+----------------+----------------------------------------------------------+-----------------------|
 | /# Define:/ _~miss~_                   | ---               | ---         |                | {{{define(04,6D 69 73 73)}}}                             | define miss           |
-| /# In/Out:     ~( addr@RBP u@RAX~/     |                   |             |                |                                                          |                       |
-| /#{{{c(9)}}}    ~xt@RXB~/              |                   |             |                |                                                          |                       |
-| /#{{{c(6)}}}​~-​- [n] xt@RXB )~/         |                   |             |                |                                                          |                       |
+| /# In/Out:/     ~( addr@RBP u@RAX~     |                   |             |                |                                                          |                       |
+| /#/{{{io}}}       ~xt@RXB~             |                   |             |                |                                                          |                       |
+| /#/{{{io--}}} ~-​- [n] xt@RXB )~        |                   |             |                |                                                          |                       |
 | /#/                                    |                   |             |                |                                                          |                       |
 | /# If ~xt~ is zero, try parsing/       |                   |             |                |                                                          |                       |
 | /# the string given by ~addr~​/​~u~/     |                   |             |                |                                                          |                       |
@@ -1665,7 +1665,7 @@ Explain:
 | *Pseudocode*                    | *Instruction*    | *Opcode*   | *Machine code*                  | *Intention*  |
 |---------------------------------+------------------+------------+---------------------------------+--------------|
 | /# Define:/ _~EXEC~_            | ---              | ---        | {{{define(04,45 58 45 43)}}}    | define EXEC  |
-| /# In/Out: ~( xt@RXB -- )~/     |                  |            |                                 |              |
+| /# In/Out:/ ~( xt@RXB -- )~     |                  |            |                                 |              |
 | /#/                             |                  |            |                                 |              |
 | /# ???/                         |                  |            |                                 |              |
 | /# ???/                         |                  |            |                                 |              |
@@ -1696,7 +1696,7 @@ Explain:
 | *Pseudocode*                                    | *Instruction*  | *Opcode* | *&*            | *Machine code*               | *Intention*        |
 |-------------------------------------------------+----------------+----------+----------------+------------------------------+--------------------|
 | /# Define:/ _~exec~_                            | ---            | ---      |                | {{{define(04,65 78 65 63)}}} | define exec        |
-| /# In/Out: ~( imm+state@AL xt@RBX -- )~/        |                |          |                |                              |                    |
+| /# In/Out:/ ~( imm+state@AL xt@RBX -- )~        |                |          |                |                              |                    |
 | /#/                                             |                |          |                |                              |                    |
 | /# Execute ~xt~ if we're in interpreting state/ |                |          |                |                              |                    |
 | /# or if it's immediate. In other words,/       |                |          |                |                              |                    |
@@ -1718,8 +1718,8 @@ Explain:
 | *Pseudocode*                                | *Instruction*  | *Opcode*   | *&*            | *Machine code*                  | *Intention*         |
 |---------------------------------------------+----------------+------------+----------------+---------------------------------+---------------------|
 | /# Define:/ _~compl~_                       | ---            | ---        |                | {{{define(05,63 6F 6D 70 6C)}}} | define compl        |
-| /# In/Out:    ~( imm+state@AL xt@RBX~/      |                |            |                |                                 |                     |
-| /# {{{c(5)}}} ~-- imm+state@AL xt@RBX )~/   |                |            |                |                                 |                     |
+| /# In/Out:/    ~( imm+state@AL xt@RBX~      |                |            |                |                                 |                     |
+| /#/{{{io--}}} ~-- imm+state@AL xt@RBX )~    |                |            |                |                                 |                     |
 | /#/                                         |                |            |                |                                 |                     |
 | /# Compile ~xt~ in the current definition/  |                |            |                |                                 |                     |
 | /# if we're in compiling state and ~xt~ is/ |                |            |                |                                 |                     |
@@ -1742,7 +1742,7 @@ Explain:
 | *Pseudocode*                                      | *Instruction*   | *Opcode*    | *&*            | *Machine code*                                           | *Intention*         |
 |---------------------------------------------------+-----------------+-------------+----------------+----------------------------------------------------------+---------------------|
 | /# Define:/ _~hit~_                               | ---             | ---         |                | {{{define(03,68 69 74)}}}                                | define hit          |
-| /# In/Out: ~( xt@RBX -- )~/                       |                 |             |                |                                                          |                     |
+| /# In/Out:/ ~( xt@RBX -- )~                       |                 |             |                |                                                          |                     |
 | /#/                                               |                 |             |                |                                                          |                     |
 | /# ???/                                           |                 |             |                |                                                          |                     |
 | /# ???/                                           |                 |             |                |                                                          |                     |
@@ -1769,7 +1769,7 @@ Explain:
 | *Pseudocode*                                      | *Instruction*  | *Opcode*    | *&*            | *Machine code*                                              | *Intention*     |
 |---------------------------------------------------+----------------+-------------+----------------+-------------------------------------------------------------+-----------------|
 | /# Define:/ _~SVAL~_                              | ---            | ---         |                | {{{define(04,53 56 41 4C)}}}                                | define SVAL     |
-| /# In/Out: ~( i*x -- j*x )~/                      |                |             |                |                                                             |                 |
+| /# In/Out:/ ~( i*x -- j*x )~                      |                |             |                |                                                             |                 |
 | /#/                                               |                |             |                |                                                             |                 |
 | /# ???/                                           |                |             |                |                                                             |                 |
 | /# ???/                                           |                |             |                |                                                             |                 |
@@ -1798,7 +1798,7 @@ Explain:
 | *Pseudocode*                                       | *Instruction*      | *Opcode*         | *&*            | *Machine code*                                     | *Intention*           |
 |----------------------------------------------------+--------------------+------------------+----------------+----------------------------------------------------+-----------------------|
 | /# Define:/ _~ti~_                                 | ---                | ---              |                | {{{define(02,74 69)}}}                             | define ti             |
-| /# In/Out: ~( -- )~/                               |                    |                  |                |                                                    |                       |
+| /# In/Out:/ ~( -- )~                               |                    |                  |                |                                                    |                       |
 | /#/                                                |                    |                  |                |                                                    |                       |
 | /# text interpreter ???/                           |                    |                  |                |                                                    |                       |
 | /# ???/                                            |                    |                  |                |                                                    |                       |
@@ -1872,7 +1872,7 @@ References:
 - [X] Check all returns/gotos end with ~.~ and all calls with ~;~.
 - [X] Check that compiled calls don't end in ~()~.
 - [ ] Change *Opcode* col. name to *Encoding* everywhere.
-- [ ] Properly align /In/Out/ sections.
+- [X] Properly align /In/Out/ sections.
 - [ ] Add a ~rex~ macro to annotate the REX byte?
 - [ ] Align ~\hookrightarrow~ properly.
 - [ ] If supported, make all subroutine table labels case-sensitive.
