@@ -53,11 +53,19 @@
 #+MACRO: io     \hspace{4.9em}
 #+MACRO: io--   \hspace{3.35em}
 
+# --- Byte interpreter macros.
+#+MACRO: define  ~[99~ $^{d}$​~$1~ _~$2~_​~]~
+#+MACRO: compile ~[99~ $^{c}$​~$1~​$_{$2}$​~]~
+#+MACRO: execute ~[99~ $^{e}$​~$1~​$_{$2}$​~]~
+
 # --- Byte annotation macros (x86-64).
 #+MACRO: modrm    ~$1~​$^{\text{\tiny ModR/M}}_{\text{\tiny $2·$3·$4}}$
 #+MACRO:   sib    ~$1~​$^{\text{\tiny    SIB}}_{\text{\tiny $1·$2·$3}}$
 #+MACRO: offset   _~$1~_​$_{\text{\tiny $2}}$
 #+MACRO: displ    $^{\text{\tiny +}}$​_~$1~_
+
+# --- Byte annotation macros (RISC-V).
+#+MACRO: padding   ~[$1~​$^{pad}$​~]~
 
 # --- Encoding annotation macros (RISC-V).
 #+MACRO: imm     /~$1~/
@@ -69,11 +77,6 @@
 #+MACRO: fn7     ~$1~
 #+MACRO: fn3     ~$1~
 #+MACRO: op      ~$1~
-
-# --- Byte interpreter macros.
-#+MACRO: define  ~[99~ $^{d}$​~$1~ _~$2~_​~]~
-#+MACRO: compile ~[99~ $^{c}$​~$1~​$_{$2}$​~]~
-#+MACRO: execute ~[99~ $^{e}$​~$1~​$_{$2}$​~]~
 
 # -- Other annotation macros.
 #+MACRO: addr     (eval (if (string-equal $1 "00") (format "$\\overline{\\texttt{%s}}$" $1) (format "\\texttt{%s}" $1)))
@@ -539,7 +542,7 @@ Discuss:
 | *Pseudocode*                                                                                   | *Instruction*        | *Encoding*                                                                                             | *&*             | *Machine code*                  |
 |------------------------------------------------------------------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------+-----------------+---------------------------------|
 | /# Define:/ _~COMPL~_                                                                          | ---                  | ---                                                                                                    | {{{addr(EC)}}}  | {{{define(05,43 4F 4D 50 4C)}}} |
-| /# In/Out:/ ~( xt@a0 -- )~                                                                     |                      |                                                                                                        |                 | ~[00]~                          |
+| /# In/Out:/ ~( xt@a0 -- )~                                                                     |                      |                                                                                                        |                 | {{{padding(00)}}}               |
 |                                                                                                |                      |                                                                                                        |                 |                                 |
 | /# Generate two instructions which,/                                                           |                      |                                                                                                        |                 |                                 |
 | /# combined, set the PC to ~[xt]~:/                                                            |                      |                                                                                                        |                 |                                 |
@@ -697,7 +700,7 @@ Discuss:
 | *Pseudocode*                       | *Instruction*          | *Opcode*                                                                                               | *Machine code*            |
 |------------------------------------+------------------------+--------------------------------------------------------------------------------------------------------+---------------------------|
 | /# Define:/ _~BYE~_                | ---                    | ---                                                                                                    | {{{define(03,42 59 45)}}} |
-| /# In/Out: ~( -​- )~/               |                        |                                                                                                        | ~[00]~                    |
+| /# In/Out: ~( -​- )~/               |                        |                                                                                                        | {{{padding(00)}}}         |
 |                                    |                        |                                                                                                        |                           |
 | /# Goodbye, world (exit syscall)./ |                        |                                                                                                        |                           |
 | ~nr@a7 ← 93;~  /# ~__NR_exit~./    | *addi* a7, zero, 0x05D | {{{imm(0x05D)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(10001)}}}  {{{op(0010011)}}} | ~93 08 D0 05~             |
@@ -835,7 +838,7 @@ Explain:
 | *Pseudocode*                  | *Instruction*        | *Opcode*                                                                                                  | *Machine code*            |
 |-------------------------------+----------------------+-----------------------------------------------------------------------------------------------------------+---------------------------|
 | /# Define:/ _~dbg~_           | ---                  | ---                                                                                                       | {{{define(03,64 52 67)}}}​ |
-| /# In/Out: ~( -​- )~/          |                      |                                                                                                           | ~[00]~                    |
+| /# In/Out: ~( -​- )~/          |                      |                                                                                                           | {{{padding(00)}}}         |
 | /#/                           |                      |                                                                                                           |                           |
 | /# Dump working memory./      |                      |                                                                                                           |                           |
 |                               |                      |                                                                                                           |                           |
@@ -906,7 +909,7 @@ Explain:
 | *Pseudocode*                           | *Instruction*        | *Opcode*                                                                                                  | *Machine code*            |
 |----------------------------------------+----------------------+-----------------------------------------------------------------------------------------------------------+---------------------------|
 | /# Define:/ _~reg~_                    | ---                  | ---                                                                                                       | {{{define(03,72 65 67)}}} |
-| /# In/Out: ~( -​- )~/                   |                      |                                                                                                           | ~[00]~                    |
+| /# In/Out: ~( -​- )~/                   |                      |                                                                                                           | {{{padding(00)}}}         |
 | /#/                                    |                      |                                                                                                           |                           |
 | /# Dump the registers./                |                      |                                                                                                           |                           |
 |                                        |                      |                                                                                                           |                           |
@@ -1097,45 +1100,45 @@ Explain:
 #+CAPTION: Subroutine ~seek~ parses characters until it finds one in a given range (RISC-V).
 #+LABEL: tbl:forth:seek:rv
 #+ATTR_LATEX: :align l|ll|l|l
-| *Pseudocode*                                     | *Instruction*    | *Opcode* | *&*            | *Machine code*               |
-|--------------------------------------------------+------------------+----------+----------------+------------------------------|
-| /# Define:/ _~seek~_                             | ---              | ---      |                | {{{define(04,73 65 65 6B)}}} |
-| /# In/Out:/    ~( low@a0 high@a1~                |                  |          |                |                              |
-| /#/{{{io}}}      ~"ccc"~                         |                  |          |                |                              |
-| /#/{{{io--}}} ~-​- eof@a0 )~                      |                  |          |                |                              |
-| /#/                                              |                  |          |                |                              |
-| /# Advance ~>IN~ until next/                     |                  |          |                |                              |
-| /# char is within ~[low, high)~/                 |                  |          |                |                              |
-| /# or parse area is empty./                      |                  |          |                |                              |
-| /# Return ~1~ if the latter./                    |                  |          |                |                              |
-|                                                  |                  |          |                |                              |
-| {{{c(2)}}} ~eof@a0 ← 0;~                         | addi a0, zero, 0 |          |                | ~~                           |
-| {{{c(2)}}} ~high'@a1 ← high@a1~                  |                  |          |                |                              |
-| {{{c(11)}}}         ~- low@a0;~                  | sub a1, a1, a0   |          |                | ~~                           |
-| ~_begin:~                                        |                  |          | {{{addr(00)}}} |                              |
-| {{{c(2)}}} /# Is parse area empty?/              |                  |          |                |                              |
-| {{{c(2)}}} ~>in@t2 ← [>IN];~                     | ld t2, 16(s2)    |          |                | ~~                           |
-| {{{c(2)}}} ~#in@t0 ← [#IN];~                     | ld t0, 0(s2)     |          |                | ~~                           |
-| {{{c(2)}}} ~if >in@t2~ \ge{{{unsigned}}} ~#in@t0:~ |                  |          |                |                              |
-| {{{c(4)}}}   ~goto _end.~                        | bgeu t2, t0, +?? |          | {{{addr(08)}}} | ~~                           |
-| {{{c(2)}}} /# Get current character./            |                  |          |                |                              |
-| {{{c(2)}}} ~tib@t1 ← [TIB];~                     | ld t1, 8(s2)     |          |                | ~~                           |
-| {{{c(2)}}} ~chr@t3 ← [tib@t1~                    |                  |          |                |                              |
-| {{{c(10)}}}        ~+ >in@t2];~                  | add t4, t1, t2   |          |                | ~~                           |
-| {{{c(2)}}}                                       | lbu t3, 0(t4)    |          |                | ~~                           |
-| {{{c(2)}}} /# Is ~chr~ in ~[low, high)~?/        |                  |          |                |                              |
-| {{{c(2)}}} ~chr'@t3 ← chr@t3~                    |                  |          |                |                              |
-| {{{c(10)}}}        ~- low@a0;~                   | sub t3, t3, a0   |          |                | ~~                           |
-| {{{c(2)}}} ~if t3~ \lt{{{unsigned}}} ~high'@a1:~   |                  |          |                |                              |
-| {{{c(4)}}}   ~goto _end.~                        | bltu t3, a1, +?? |          | {{{addr(1C)}}} | ~~                           |
-| {{{c(2)}}} /# Go to next character./             |                  |          |                |                              |
-| {{{c(2)}}} ~>in@t2++;~                           | addi t2, t2, 1   |          |                | ~~                           |
-| {{{c(2)}}} ~goto _begin.~                        | jal zero, -??    |          | {{{addr(24)}}} | ~~                           |
-| ~_end_eof:~                                      |                  |          | {{{addr(28)}}} |                              |
-| {{{c(2)}}} ~eof@a0 ← 1;~                         | addi a0, zero, 1 |          |                | ~~                           |
-| ~_end:~                                          |                  |          | {{{addr(2C)}}} |                              |
-| {{{c(2)}}} ~[>IN] ← >in@t2;~                     | sd t2, 16(s2)    |          |                | ~~                           |
-| {{{c(2)}}} ~return.~                             | jalr zero, 0(ra) |          |                | ~~                           |
+| *Pseudocode*                                     | *Instruction*    | *Encoding* | *&*            | *Machine code*               |
+|--------------------------------------------------+------------------+------------+----------------+------------------------------|
+| /# Define:/ _~seek~_                             | ---              | ---        |                | {{{define(04,73 65 65 6B)}}} |
+| /# In/Out:/    ~( low@a0 high@a1~                |                  |            |                |                              |
+| /#/{{{io}}}      ~"ccc"~                         |                  |            |                |                              |
+| /#/{{{io--}}} ~-​- eof@a0 )~                      |                  |            |                |                              |
+| /#/                                              |                  |            |                |                              |
+| /# Advance ~>IN~ until next/                     |                  |            |                |                              |
+| /# char is within ~[low, high)~/                 |                  |            |                |                              |
+| /# or parse area is empty./                      |                  |            |                |                              |
+| /# Return ~1~ if the latter./                    |                  |            |                |                              |
+|                                                  |                  |            |                |                              |
+| {{{c(2)}}} ~eof@a0 ← 0;~                         | addi a0, zero, 0 |            |                | ~~                           |
+| {{{c(2)}}} ~high'@a1 ← high@a1~                  |                  |            |                |                              |
+| {{{c(11)}}}         ~- low@a0;~                  | sub a1, a1, a0   |            |                | ~~                           |
+| ~_begin:~                                        |                  |            | {{{addr(00)}}} |                              |
+| {{{c(2)}}} /# Is parse area empty?/              |                  |            |                |                              |
+| {{{c(2)}}} ~>in@t2 ← [>IN];~                     | ld t2, 16(s2)    |            |                | ~~                           |
+| {{{c(2)}}} ~#in@t0 ← [#IN];~                     | ld t0, 0(s2)     |            |                | ~~                           |
+| {{{c(2)}}} ~if >in@t2~ \ge{{{unsigned}}} ~#in@t0:~ |                  |            |                |                              |
+| {{{c(4)}}}   ~goto _end.~                        | bgeu t2, t0, +?? |            | {{{addr(08)}}} | ~~                           |
+| {{{c(2)}}} /# Get current character./            |                  |            |                |                              |
+| {{{c(2)}}} ~tib@t1 ← [TIB];~                     | ld t1, 8(s2)     |            |                | ~~                           |
+| {{{c(2)}}} ~chr@t3 ← [tib@t1~                    |                  |            |                |                              |
+| {{{c(10)}}}        ~+ >in@t2];~                  | add t4, t1, t2   |            |                | ~~                           |
+| {{{c(2)}}}                                       | lbu t3, 0(t4)    |            |                | ~~                           |
+| {{{c(2)}}} /# Is ~chr~ in ~[low, high)~?/        |                  |            |                |                              |
+| {{{c(2)}}} ~chr'@t3 ← chr@t3~                    |                  |            |                |                              |
+| {{{c(10)}}}        ~- low@a0;~                   | sub t3, t3, a0   |            |                | ~~                           |
+| {{{c(2)}}} ~if t3~ \lt{{{unsigned}}} ~high'@a1:~   |                  |            |                |                              |
+| {{{c(4)}}}   ~goto _end.~                        | bltu t3, a1, +?? |            | {{{addr(1C)}}} | ~~                           |
+| {{{c(2)}}} /# Go to next character./             |                  |            |                |                              |
+| {{{c(2)}}} ~>in@t2++;~                           | addi t2, t2, 1   |            |                | ~~                           |
+| {{{c(2)}}} ~goto _begin.~                        | jal zero, -??    |            | {{{addr(24)}}} | ~~                           |
+| ~_end_eof:~                                      |                  |            | {{{addr(28)}}} |                              |
+| {{{c(2)}}} ~eof@a0 ← 1;~                         | addi a0, zero, 1 |            |                | ~~                           |
+| ~_end:~                                          |                  |            | {{{addr(2C)}}} |                              |
+| {{{c(2)}}} ~[>IN] ← >in@t2;~                     | sd t2, 16(s2)    |            |                | ~~                           |
+| {{{c(2)}}} ~return.~                             | jalr zero, 0(ra) |            |                | ~~                           |
 
 *** Subroutine ~PARSE~                                             :noexport:
 
@@ -1183,68 +1186,99 @@ Explain:
 #+CAPTION: Subroutine ~PARSE~ returns the address and size of a newly parsed string (RISC-V).
 #+LABEL: tbl:forth:parse:rv
 #+ATTR_LATEX: :align l|ll|l|l
-| *Pseudocode*                                    | *Instruction*     | *Opcode* | *&*            | *Machine code*                  |
-|-------------------------------------------------+-------------------+----------+----------------+---------------------------------|
-| /# Define:/ _~PARSE~_                           | ---               | ---      |                | {{{define(04,50 41 52 53 45)}}} |
-| /# In/Out:/    ~( low@a0 high@a1~               |                   |          |                | ~[00]~                          |
-| /#/{{{io}}}     ​~"ccc<char>"~                   |                   |          |                |                                 |
-| /#/{{{io--}}}​ ~-​- addr@a0 u@a1 )~               |                   |          |                |                                 |
-| /#/                                             |                   |          |                |                                 |
-| /# Parse until end of parse area/               |                   |          |                |                                 |
-| /# or until a character in range/               |                   |          |                |                                 |
-| /# ~[low, high)~ is encountered./               |                   |          |                |                                 |
-| /# Return parsed string as its/                 |                   |          |                |                                 |
-| /# address and length./                         |                   |          |                |                                 |
-|                                                 |                   |          |                |                                 |
-| {{{c( 2)}}} ~push ra;~                          | addi sp, sp, -16  |          |                | ~~                              |
-| {{{c( 2)}}}                                     | sd ra, 8(sp)      |          |                | ~~                              |
-| {{{c( 2)}}} ~start@t0 ← [>IN];~                 | ld t0, 16(s2)     |          |                | ~~                              |
-| {{{c( 2)}}} ~push start@t0;~                    | sd t0, 0(sp)      |          |                | ~~                              |
-| {{{c( 2)}}} /# Compile a call to ~seek~/        |                   |          |                |                                 |
-| {{{c( 2)}}} /# that advances ~>IN~./            |                   |          |                |                                 |
-| {{{c( 2)}}} ~call seek;~  /# Compiled./         | ---               | ---      |                | {{{compile(73,s)}}}             |
-| {{{c( 2)}}} ~end@t1 ← [>IN];~                   | ld t1, 16(s2)     |          |                | ~~                              |
-| {{{c( 2)}}} ~restore start@t0;~                 | ld t0, 0(sp)      |          |                | ~~                              |
-| {{{c( 2)}}} /# Did ~seek()~ encounter the/      |                   |          |                |                                 |
-| {{{c( 2)}}} /# end of the parse area?/          |                   |          |                |                                 |
-| {{{c( 2)}}} ~if eof@a0 = 0:~                    |                   |          |                |                                 |
-| {{{c( 4)}}}   ~goto _end.~                      | beq t0, zero, +?? |          | {{{addr(00)}}} | ~~                              |
-| {{{c( 2)}}} /# A character in range/            |                   |          |                |                                 |
-| {{{c( 2)}}} /# ~[low, high)~ was found./        |                   |          |                |                                 |
-| {{{c( 2)}}} ~[>IN]++;~  /# Skip it./            | addi t2, t1, 1    |          |                | ~~                              |
-| {{{c( 2)}}}                                     | sd t2, 16(s2)     |          |                | ~~                              |
-| ~_end:~                                         |                   |          | {{{addr(08)}}} |                                 |
-| {{{c( 2)}}} /# Compute address and/             |                   |          |                |                                 |
-| {{{c( 2)}}} /# length of parsed input./         |                   |          |                |                                 |
-| {{{c( 2)}}} ~u@a0~ ~←~ ~end@t1~ ~-~ ~start@t0;~ | sub a0, t1, t0    |          |                | ~~                              |
-| {{{c( 2)}}} ~addr@a1 ← [TIB]~                   | ld t2, 8(s2)      |          |                | ~~                              |
-| {{{c(10)}}}         ~+ start@t0;~               | add a1, t2, t0    |          |                | ~~                              |
-| {{{c( 2)}}} ~pop ra;~                           | ld ra, 8(sp)      |          |                | ~~                              |
-| {{{c( 2)}}}                                     | addi sp, sp, 16   |          |                | ~~                              |
-| {{{c( 2)}}} ~return.~                           | jalr zero, 0(ra)  |          |                | ~~                              |
+| *Pseudocode*                                    | *Instruction*     | *Encoding* | *&*            | *Machine code*                  |
+|-------------------------------------------------+-------------------+------------+----------------+---------------------------------|
+| /# Define:/ _~PARSE~_                           | ---               | ---        |                | {{{define(04,50 41 52 53 45)}}} |
+| /# In/Out:/    ~( low@a0 high@a1~               |                   |            |                | {{{padding(00)}}}               |
+| /#/{{{io}}}     ​~"ccc<char>"~                   |                   |            |                |                                 |
+| /#/{{{io--}}}​ ~-​- addr@a0 u@a1 )~               |                   |            |                |                                 |
+| /#/                                             |                   |            |                |                                 |
+| /# Parse until end of parse area/               |                   |            |                |                                 |
+| /# or until a character in range/               |                   |            |                |                                 |
+| /# ~[low, high)~ is encountered./               |                   |            |                |                                 |
+| /# Return parsed string as its/                 |                   |            |                |                                 |
+| /# address and length./                         |                   |            |                |                                 |
+|                                                 |                   |            |                |                                 |
+| {{{c( 2)}}} ~push ra;~                          | addi sp, sp, -16  |            |                | ~~                              |
+| {{{c( 2)}}}                                     | sd ra, 8(sp)      |            |                | ~~                              |
+| {{{c( 2)}}} ~start@t0 ← [>IN];~                 | ld t0, 16(s2)     |            |                | ~~                              |
+| {{{c( 2)}}} ~push start@t0;~                    | sd t0, 0(sp)      |            |                | ~~                              |
+| {{{c( 2)}}} /# Compile a call to ~seek~/        |                   |            |                |                                 |
+| {{{c( 2)}}} /# that advances ~>IN~./            |                   |            |                |                                 |
+| {{{c( 2)}}} ~call seek;~  /# Compiled./         | ---               | ---        |                | {{{compile(73,s)}}}             |
+| {{{c( 2)}}} ~end@t1 ← [>IN];~                   | ld t1, 16(s2)     |            |                | ~~                              |
+| {{{c( 2)}}} ~restore start@t0;~                 | ld t0, 0(sp)      |            |                | ~~                              |
+| {{{c( 2)}}} /# Did ~seek()~ encounter the/      |                   |            |                |                                 |
+| {{{c( 2)}}} /# end of the parse area?/          |                   |            |                |                                 |
+| {{{c( 2)}}} ~if eof@a0 = 0:~                    |                   |            |                |                                 |
+| {{{c( 4)}}}   ~goto _end.~                      | beq t0, zero, +?? |            | {{{addr(00)}}} | ~~                              |
+| {{{c( 2)}}} /# A character in range/            |                   |            |                |                                 |
+| {{{c( 2)}}} /# ~[low, high)~ was found./        |                   |            |                |                                 |
+| {{{c( 2)}}} ~[>IN]++;~  /# Skip it./            | addi t2, t1, 1    |            |                | ~~                              |
+| {{{c( 2)}}}                                     | sd t2, 16(s2)     |            |                | ~~                              |
+| ~_end:~                                         |                   |            | {{{addr(08)}}} |                                 |
+| {{{c( 2)}}} /# Compute address and/             |                   |            |                |                                 |
+| {{{c( 2)}}} /# length of parsed input./         |                   |            |                |                                 |
+| {{{c( 2)}}} ~u@a0~ ~←~ ~end@t1~ ~-~ ~start@t0;~ | sub a0, t1, t0    |            |                | ~~                              |
+| {{{c( 2)}}} ~addr@a1 ← [TIB]~                   | ld t2, 8(s2)      |            |                | ~~                              |
+| {{{c(10)}}}         ~+ start@t0;~               | add a1, t2, t0    |            |                | ~~                              |
+| {{{c( 2)}}} ~pop ra;~                           | ld ra, 8(sp)      |            |                | ~~                              |
+| {{{c( 2)}}}                                     | addi sp, sp, 16   |            |                | ~~                              |
+| {{{c( 2)}}} ~return.~                           | jalr zero, 0(ra)  |            |                | ~~                              |
 
 *** Subroutine ~pname~
 
-#+CAPTION: Subroutine ~pname~ TODO.
-#+LABEL: tbl:forth:pname
+#+CAPTION: Subroutine ~pname~ parses a token and returns it as a string (x86-64).
+#+LABEL: tbl:forth:pname:x
 #+ATTR_LATEX: :align l|ll|lH
-| *Pseudocode*                            | *Instruction*  | *Opcode*   | *Machine code*                  | *Intention*            |
-|-----------------------------------------+----------------+------------+---------------------------------+------------------------|
-| /# Define:/ _~pname~_                   | ---            | ---        | {{{define(05,70 6E 61 6D 65)}}} | define pname           |
-| /# In/Out:/   ~( "<spaces>ccc<space>"~  |                |            |                                 |                        |
-| /#/{{{io--}}} ~-​- addr@RBP u@RAX )~     |                |            |                                 |                        |
-| /#/                                     |                |            |                                 |                        |
-| /# *TODO*: PARSE-NAME???/               |                |            |                                 |                        |
-| /# -- addr: where ccc begins/           |                |            |                                 |                        |
-| /# -- u: length of ccc/                 |                |            |                                 |                        |
-|                                         |                |            |                                 |                        |
-| ~low@CL ← 0x21;~   /# ??/               | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~21~/                     |                        |
-| ~high@DL ← 0x7F;~  /# ??/               | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~7F~/                     | (cl, dl) = (BL+1, ...) |
-| ~call seek;~  /# Compiled./             | ---            | ---        | {{{compile(73,s)}}}             | Call seek              |
-| ~low@CL ← 0x7F;~                        | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~7F~/                     |                        |
-| ~high@DL ← 0x21;~                       | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~21~/                     | (cl, dl) = (..., BL+1) |
-| ~call PARSE;~  /# Compiled./            |                |            | {{{compile(50,P)}}}             | Call PARSE             |
-| ~return.~                               | RET            | C3         | ~C3~                            | return                 |
+| *Pseudocode*                        | *Instruction*  | *Opcode*   | *Machine code*                  | *Intention*            |
+|-------------------------------------+----------------+------------+---------------------------------+------------------------|
+| /# Define:/ _~pname~_               | ---            | ---        | {{{define(05,70 6E 61 6D 65)}}} | define pname           |
+| /# In/Out:/   ~( "<SPCs>ccc<SPC>"~  |                |            |                                 |                        |
+| /#/{{{io--}}} ~-​- addr@RBP u@RAX )~ |                |            |                                 |                        |
+| /#/                                 |                |            |                                 |                        |
+| /# Parse a token: first skip over/  |                |            |                                 |                        |
+| /# non-printable characters, then/  |                |            |                                 |                        |
+| /# parse the word itself./          |                |            |                                 |                        |
+|                                     |                |            |                                 |                        |
+| /# Skip non-printables./            |                |            |                                 |                        |
+| ~low@CL ← 0x21;~   /# Char ~'!'~./  | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~21~/                     |                        |
+| ~high@DL ← 0x7F;~  /# Char ~DEL~./  | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~7F~/                     | (cl, dl) = (BL+1, ...) |
+| ~call seek;~  /# Compiled./         | ---            | ---        | {{{compile(73,s)}}}             | Call seek              |
+| /# Parse token, stopping at first/  |                |            |                                 |                        |
+| /# non-printable character./        |                |            |                                 |                        |
+| ~low@CL ← 0x7F;~                    | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~7F~/                     |                        |
+| ~high@DL ← 0x21;~                   | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~21~/                     | (cl, dl) = (..., BL+1) |
+| ~call PARSE;~  /# Compiled./        | ---            | ---        | {{{compile(50,P)}}}             | Call PARSE             |
+| ~return.~                           | RET            | C3         | ~C3~                            | return                 |
+
+#+CAPTION: Subroutine ~pname~ parses a token and returns it as a string (RISC-V).
+#+LABEL: tbl:forth:pname:rv
+#+ATTR_LATEX: :align l|ll|l
+| *Pseudocode*                       | *Instruction*   | *Encoding* | *Machine code*                  |
+|------------------------------------+-----------------+------------+---------------------------------|
+| /# Define:/ _~pname~_              | ---             | ---        | {{{define(05,70 6E 61 6D 65)}}} |
+| /# In/Out:/   ~( "<SPCs>ccc<SPC>"~ |                 |            | {{{padding(00)}}}               |
+| /#/{{{io--}}} ~-​- addr@a0 u@a1 )~  |                 |            |                                 |
+| /#/                                |                 |            |                                 |
+| /# Parse a token: first skip over/ |                 |            |                                 |
+| /# non-printable characters, then/ |                 |            |                                 |
+| /# parse the word itself./         |                 |            |                                 |
+|                                    |                 |            |                                 |
+| ~push ra;~                         | addi sp, sp, -8 |            |                                 |
+|                                    | sd ra, 0(sp)    |            |                                 |
+| /# Skip non-printables./           |                 |            |                                 |
+| ~low@a0 ← 0x21;~   /# Char ~'!'~./ |                 |            |                                 |
+| ~high@a1 ← 0x7F;~  /# Char ~DEL~./ |                 |            |                                 |
+| ~call seek;~  /# Compiled./        | ---             | ---        | {{{compile(73,s)}}}             |
+| /# Parse token, stopping at first/ |                 |            |                                 |
+| /# non-printable character./       |                 |            |                                 |
+| ~low@a0 ← 0x7F;~                   |                 |            |                                 |
+| ~high@a1 ← 0x21;~                  |                 |            |                                 |
+| ~call PARSE;~  /# Compiled./       | ---             | ---        | {{{compile(50,P)}}}             |
+| ~pop ra;~                          | ld ra, 0(sp)    |            |                                 |
+|                                    | addi sp, sp, 8  |            |                                 |
+| ~return.~                          |                 |            |                                 |
 
 
 *** Subroutine ~[~                                                 :noexport:
