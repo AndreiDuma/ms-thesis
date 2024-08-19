@@ -697,7 +697,7 @@ Discuss:
 #+CAPTION: Subroutine ~BYE~ terminates the program by performing an ~exit~ syscall (RISC-V).
 #+LABEL: tbl:forth:bye:rv
 #+ATTR_LATEX: :align l|ll|l
-| *Pseudocode*                       | *Instruction*          | *Opcode*                                                                                               | *Machine code*            |
+| *Pseudocode*                       | *Instruction*          | *Encoding*                                                                                             | *Machine code*            |
 |------------------------------------+------------------------+--------------------------------------------------------------------------------------------------------+---------------------------|
 | /# Define:/ _~BYE~_                | ---                    | ---                                                                                                    | {{{define(03,42 59 45)}}} |
 | /# In/Out:/ ~( -​- )~               |                        |                                                                                                        | {{{padding(00)}}}         |
@@ -835,7 +835,7 @@ Explain:
 #+CAPTION: Subroutine ~dbg~ dumps the working memory to ~STDOUT~ (RISC-V).
 #+LABEL: tbl:forth:dbg:rv
 #+ATTR_LATEX: :align l|ll|l
-| *Pseudocode*                  | *Instruction*        | *Opcode*                                                                                                  | *Machine code*            |
+| *Pseudocode*                  | *Instruction*        | *Encoding*                                                                                                | *Machine code*            |
 |-------------------------------+----------------------+-----------------------------------------------------------------------------------------------------------+---------------------------|
 | /# Define:/ _~dbg~_           | ---                  | ---                                                                                                       | {{{define(03,64 52 67)}}}​ |
 | /# In/Out:/ ~( -​- )~          |                      |                                                                                                           | {{{padding(00)}}}         |
@@ -894,7 +894,7 @@ Explain:
 | /# Print top 128 stack bytes using/      |                   |                  |                                       |                         |
 | /# subroutine ~TYPE(addr, u)~./          |                   |                  |                                       |                         |
 | ~addr@RSI ← RSP;~                        | MOV r64, r/m64    | REX.W 8B /r      | ~48 8B~ {{{modrm(F4,11,110,100)}}}    | rsi = rsp               |
-| ~u@RDX ← 0x80;~                           | MOV r32, /imm32/  | B8+rd /id/       | ~BA~ /~80 00 00 00~/                  | rdx = u                 |
+| ~u@RDX ← 0x80;~                          | MOV r32, /imm32/  | B8+rd /id/       | ~BA~ /~80 00 00 00~/                  | rdx = u                 |
 | ~call TYPE;~  /# Compiled./              | ---               | ---              | {{{compile(54,T)}}}                   | Call TYPE               |
 | /# Clean the stack./                     |                   |                  |                                       |                         |
 | ~pop 16 quads;~                          | SUB r/m64, /imm8/ | REX.W 83 /5 /ib/ | ~48 83~ {{{modrm(EC,11,101,100)}}} 80 | rsp -= -80              |
@@ -906,7 +906,7 @@ Explain:
 #+CAPTION: Subroutine ~reg~ dumps the registers to ~STDOUT~ (RISC-V).
 #+LABEL: tbl:forth:reg:rv
 #+ATTR_LATEX: :align l|ll|l
-| *Pseudocode*                           | *Instruction*        | *Opcode*                                                                                                  | *Machine code*            |
+| *Pseudocode*                           | *Instruction*        | *Encoding*                                                                                                | *Machine code*            |
 |----------------------------------------+----------------------+-----------------------------------------------------------------------------------------------------------+---------------------------|
 | /# Define:/ _~reg~_                    | ---                  | ---                                                                                                       | {{{define(03,72 65 67)}}} |
 | /# In/Out:/ ~( -​- )~                   |                      |                                                                                                           | {{{padding(00)}}}         |
