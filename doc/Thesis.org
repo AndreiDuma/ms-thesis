@@ -1107,10 +1107,11 @@ Explain:
 | /# Advance ~>IN~ until next/                     |                  |          |                |                              |
 | /# char is within ~[low, high)~/                 |                  |          |                |                              |
 | /# or parse area is empty./                      |                  |          |                |                              |
-| /#/                                              |                  |          |                |                              |
-| /# *TODO*: Set eof@a0./                          |                  |          |                |                              |
+| /# Return ~1~ if the latter./                    |                  |          |                |                              |
 |                                                  |                  |          |                |                              |
-| {{{c(2)}}} ~high'@a1 ← high@a1 - low@a0;~        | sub a1, a1, a0   |          |                | ~~                           |
+| {{{c(2)}}} ~eof@a0 ← 0;~                         | addi a0, zero, 0 |          |                | ~~                           |
+| {{{c(2)}}} ~high'@a1 ← high@a1~                  |                  |          |                |                              |
+| {{{c(11)}}}         ~- low@a0;~                  | sub a1, a1, a0   |          |                | ~~                           |
 | ~_begin:~                                        |                  |          | {{{addr(00)}}} |                              |
 | {{{c(2)}}} /# Is parse area empty?/              |                  |          |                |                              |
 | {{{c(2)}}} ~>in@t2 ← [>IN];~                     | ld t2, 16(s2)    |          |                | ~~                           |
@@ -1119,20 +1120,24 @@ Explain:
 | {{{c(4)}}}   ~goto _end.~                        | bgeu t2, t0, +?? |          | {{{addr(08)}}} | ~~                           |
 | {{{c(2)}}} /# Get current character./            |                  |          |                |                              |
 | {{{c(2)}}} ~tib@t1 ← [TIB];~                     | ld t1, 8(s2)     |          |                | ~~                           |
-| {{{c(2)}}} ~chr@t3 ← [tib@t1 + >in@t2];~         | add t4, t1, t2   |          |                | ~~                           |
+| {{{c(2)}}} ~chr@t3 ← [tib@t1~                    |                  |          |                |                              |
+| {{{c(10)}}}        ~+ >in@t2];~                  | add t4, t1, t2   |          |                | ~~                           |
 | {{{c(2)}}}                                       | lbu t3, 0(t4)    |          |                | ~~                           |
 | {{{c(2)}}} /# Is ~chr~ in ~[low, high)~?/        |                  |          |                |                              |
-| {{{c(2)}}} ~chr'@t3 ← chr@t3 - low@a0;~          | sub t3, t3, a0   |          |                | ~~                           |
+| {{{c(2)}}} ~chr'@t3 ← chr@t3~                    |                  |          |                |                              |
+| {{{c(10)}}}        ~- low@a0;~                   | sub t3, t3, a0   |          |                | ~~                           |
 | {{{c(2)}}} ~if t3~ \lt{{{unsigned}}} ~high'@a1:~   |                  |          |                |                              |
 | {{{c(4)}}}   ~goto _end.~                        | bltu t3, a1, +?? |          | {{{addr(1C)}}} | ~~                           |
 | {{{c(2)}}} /# Go to next character./             |                  |          |                |                              |
 | {{{c(2)}}} ~>in@t2++;~                           | addi t2, t2, 1   |          |                | ~~                           |
 | {{{c(2)}}} ~goto _begin.~                        | jal zero, -??    |          | {{{addr(24)}}} | ~~                           |
-| ~_end:~                                          |                  |          | {{{addr(28)}}} |                              |
+| ~_end_eof:~                                      |                  |          | {{{addr(28)}}} |                              |
+| {{{c(2)}}} ~eof@a0 ← 1;~                         | addi a0, zero, 1 |          |                | ~~                           |
+| ~_end:~                                          |                  |          | {{{addr(2C)}}} |                              |
 | {{{c(2)}}} ~[>IN] ← >in@t2;~                     | sd t2, 16(s2)    |          |                | ~~                           |
 | {{{c(2)}}} ~return.~                             | jalr zero, 0(ra) |          |                | ~~                           |
 
-*** Subroutine ~PARSE~
+*** Subroutine ~PARSE~                                             :noexport:
 
 #+CAPTION: Subroutine ~PARSE~ returns the address and size of a newly parsed string (x86-64).
 #+LABEL: tbl:forth:parse:x
@@ -1181,7 +1186,7 @@ Explain:
 | *Pseudocode*                                    | *Instruction*     | *Opcode* | *&*            | *Machine code*                  |
 |-------------------------------------------------+-------------------+----------+----------------+---------------------------------|
 | /# Define:/ _~PARSE~_                           | ---               | ---      |                | {{{define(04,50 41 52 53 45)}}} |
-| /# In/Out:/    ~( low@a0 high@a1~               |                   |          |                |                                 |
+| /# In/Out:/    ~( low@a0 high@a1~               |                   |          |                | ~[00]~                          |
 | /#/{{{io}}}     ​~"ccc<char>"~                   |                   |          |                |                                 |
 | /#/{{{io--}}}​ ~-​- addr@a0 u@a1 )~               |                   |          |                |                                 |
 | /#/                                             |                   |          |                |                                 |
@@ -1214,9 +1219,11 @@ Explain:
 | {{{c( 2)}}} ~u@a0~ ~←~ ~end@t1~ ~-~ ~start@t0;~ | sub a0, t1, t0    |          |                | ~~                              |
 | {{{c( 2)}}} ~addr@a1 ← [TIB]~                   | ld t2, 8(s2)      |          |                | ~~                              |
 | {{{c(10)}}}         ~+ start@t0;~               | add a1, t2, t0    |          |                | ~~                              |
+| {{{c( 2)}}} ~pop ra;~                           | ld ra, 8(sp)      |          |                | ~~                              |
+| {{{c( 2)}}}                                     | addi sp, sp, 16   |          |                | ~~                              |
 | {{{c( 2)}}} ~return.~                           | jalr zero, 0(ra)  |          |                | ~~                              |
 
-*** Subroutine ~pname~                                             :noexport:
+*** Subroutine ~pname~
 
 #+CAPTION: Subroutine ~pname~ TODO.
 #+LABEL: tbl:forth:pname
@@ -1224,8 +1231,8 @@ Explain:
 | *Pseudocode*                            | *Instruction*  | *Opcode*   | *Machine code*                  | *Intention*            |
 |-----------------------------------------+----------------+------------+---------------------------------+------------------------|
 | /# Define:/ _~pname~_                   | ---            | ---        | {{{define(05,70 6E 61 6D 65)}}} | define pname           |
-| /# In/Out:    ~( "<spaces>ccc<space>"~/ |                |            |                                 |                        |
-| /# {{{c(6)}}}​ ~-​- addr@RBP u@RAX )~/    |                |            |                                 |                        |
+| /# In/Out:/   ~( "<spaces>ccc<space>"~  |                |            |                                 |                        |
+| /#/{{{io--}}} ~-​- addr@RBP u@RAX )~     |                |            |                                 |                        |
 | /#/                                     |                |            |                                 |                        |
 | /# *TODO*: PARSE-NAME???/               |                |            |                                 |                        |
 | /# -- addr: where ccc begins/           |                |            |                                 |                        |
