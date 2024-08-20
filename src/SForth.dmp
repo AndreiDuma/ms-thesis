@@ -469,7 +469,7 @@ B7 15 00 00	     # ~u@a1 ← 0xA00;~
 13 01 81 10          #                                       
 67 80 00 00          # ~return.~
 
-99 F2 99 C2          # reg BYE
+# 99 F2 99 C2          # reg BYE
 
 
 # ============= TEXT INTERPRETER
@@ -487,248 +487,122 @@ B7 15 00 00	     # ~u@a1 ← 0xA00;~
 # Forth's "parse area" is the part of the line not yet parsed.
 
 99 06 52 45 46 49 4C 4C # REFILL ( -- ) ==========================================================
-49 C7 C1 00 00 00 10    # r9 = VAR                  mov r/m64, imm32    REX.W C7 /0 id  11 000 001
-49 8B 01                # rax = [#IN]               mov r64, r/m64      REX.W 8B /r     00 000 001
-49 01 41 08             # [TIB] += rax              add r/m64, r64      REX.W 01 /r     01 000 001
-49 83 21 00             # [#IN] = 0                 and r/m64, imm8     REX.W 83 /4 ib  00 100 001
-49 83 61 10 00          # [>IN] = 0                 and r/m64, imm8     REX.W 83 /4 ib  01 100 001
-# _beg:                 #                        00
-49 FF 01                # [#IN]++                   inc r/m64           REX.W FF /0     00 000 001
-49 8B 41 08             # rax = [TIB]               mov r64, r/m64      REX.W 8B /r     01 000 001
-49 03 01                # rax += [#IN]              add r64, r/m64      REX.W 03 /r     00 000 001
-80 78 FF 0A             # cmp [rax-1], LF           cmp r/m8, imm8      80 /7 ib        01 111 000
-75 F0                   #-jump _beg if !=        10 jne rel8            75 cb
-C3                      # return                    ret                 C3
+                     # {{{i(1)}}} /# Advance ~TIB~​ by ~#IN~./      
+                     # {{{i(1)}}} /#/                                  
+                     # {{{i(1)}}} /# Note:         ~#IN~ is ~VARS+0~,/ 
+                     # {{{i(1)}}} /# {{{i(2.35)}}} ~TIB~ is ~VARS+8~,/ 
+                     # {{{i(1)}}} /# {{{i(2.35)}}} ~>IN~ is ~VARS+16~./
+83 32 09 00          # {{{i(1)}}} ~#in@t0 ← [#IN];~                    
+03 33 89 00          # {{{i(1)}}} ~tib@t1 ← [TIB] + #in@t0;~           
+33 03 53 00          # {{{i(1)}}}                                      
+23 34 69 00          # {{{i(1)}}} ~[TIB] ← tib@t1;~                    
+                     # {{{i(1)}}}                                      
+                     # {{{i(1)}}} /# Reset ~#IN~ and ~>IN~ to 0./      
+93 02 00 00          # {{{i(1)}}} ~#in@t0 &= 0;~                       
+23 38 09 00          # {{{i(1)}}} ~[>IN] &= 0;~                        
+                     # {{{i(1)}}}                                      
+                     # {{{i(1)}}} /# Advance ~#IN~ until just/         
+                     # {{{i(1)}}} /# after first ~LF~ character./      
+                     # ~_begin:~                                       
+93 82 12 00          # {{{i(1)}}} ~#in@t0++;~                          
+b3 03 53 00          # {{{i(1)}}} ~chr@t3 ← [tib@t1 + #in@t0 - 1];~    
+03 ce f3 ff          # {{{i(1)}}}                                      
+                     # {{{i(1)}}} /# Newline character?/               
+93 0e a0 00          # {{{i(1)}}} ~if chr != 0x0A:~                    
+e3 18 de ff          # {{{i(2)}}}   ~goto _begin.~                     
+                     # {{{i(1)}}}                                      
+                     # {{{i(1)}}} /# Store the new ~#IN~./             
+23 30 59 00          # {{{i(1)}}} ~[#IN] ← #in@t0;~                    
+67 80 00 00          # {{{i(1)}}} ~return.~
+
 
 99 04 73 65 65 6B ####### seek ( cl dl "ccc" -- eflags ) parse until 1st char of parse area is within [cl, dl) or parse area is empty
-49 C7 C1 00 00 00 10    # r9 = VAR                  mov r/m64, imm32    REX.W C7 /0 id  11 000 001
-2A D1                   # dl -= cl                  sub r8, r/m8        2A /r           11 010 001
-# _beg:                 #                        00                 like WITHIN ( al cl dl -- eflags )
-49 8B 41 10             # rax = [>IN]               mov r64, r/m64      REX.W 8B /r     01 000 001
-49 3B 01                # cmp rax, [#IN]            cmp r64, r/m64      REX.W 3B /r     00 000 001
-73 16                   #+jump _end if U>=       09 jae rel8            73 cb
-49 8B 41 08             # rax = [TIB]               mov r64, r/m64      REX.W 8B /r     01 000 001
-49 03 41 10             # rax += [>IN]              add r64, r/m64      REX.W 03 /r     01 000 001
-8A 00                   # al = [rax]                mov r8, r/m8        8A /r           00 000 000
-2A C1                   # al -= cl                  sub r8, r/m8        2A /r           11 000 001
-3A C2                   # cmp al, dl                cmp r8, r/m8        3A /r           11 000 010
-72 06                   #+jump _end if U<        19 jb rel8             72 cb
-49 FF 41 10             # [>IN]++                   inc r/m64           REX.W FF /0     01 000 001
-EB E1                   #-jump _beg              1F jmp rel8            EB cb
-# _end:                 #                        1F
-C3                      # return                    ret                 C3
+13 0f 00 00          # {{{c(2)}}} ~eof@a0 ← 0;~                        
+                     # {{{c(2)}}} ~high'@a1 ← high@a1~                 
+b3 85 a5 40          # {{{c(11)}}}         ~- low@a0;~                 
+83 33 09 01          # {{{c(2)}}} ~>in@t2 ← [>IN];~                    
+83 32 09 00          # {{{c(2)}}} ~#in@t0 ← [#IN];~                    
+                     # ~_begin:~                                       
+                     # {{{c(2)}}} /# Is parse area empty?/             
+                     # {{{c(2)}}} ~if >in@t2~ \ge{{{unsigned}}} ~#in@t0:~
+63 f0 53 02          # {{{c(4)}}}   ~goto _end_eof.~                   
+                     # {{{c(2)}}} /# Get current character./           
+03 33 89 00          # {{{c(2)}}} ~tib@t1 ← [TIB];~                    
+                     # {{{c(2)}}} ~chr@t3 ← [tib@t1~                   
+b3 0e 73 00          # {{{c(10)}}}        ~+ >in@t2];~                 
+03 ce 0e 00          # {{{c(2)}}}                                      
+                     # {{{c(2)}}} /# Is ~chr~ in ~[low, high)~?/       
+                     # {{{c(2)}}} ~chr'@t3 ← chr@t3~                   
+33 0e ae 40          # {{{c(10)}}}        ~- low@a0;~                  
+                     # {{{c(2)}}} ~if t3~ \lt{{{unsigned}}} ~high'@a1:~  
+63 68 be 00          # {{{c(4)}}}   ~goto _end.~                       
+                     # {{{c(2)}}} /# Go to next character./            
+93 83 13 00          # {{{c(2)}}} ~>in@t2++;~                          
+6f f0 5f fe          # {{{c(2)}}} ~goto _begin.~                       
+                     # ~_end_eof:~                                     
+13 0f 10 00          # {{{c(2)}}} ~eof@a0 ← 1;~                        
+                     # ~_end:~                                         
+23 38 79 00          # {{{c(2)}}} ~[>IN] ← >in@t2;~                    
+13 05 0f 00          # {{{c(2)}}} ~eof@a0 ← eof@t5;~                                        
+67 80 00 00          # {{{c(2)}}} ~return.~
+
 
 99 05 50 41 52 53 45 #### PARSE ( cl dl "ccc<char>" -- rbp=addr rax=u ) addr: where ccc begins ; u: length of ccc
-49 C7 C1 00 00 00 10    # r9 = VAR                  mov r/m64, imm32    REX.W C7 /0 id  11 000 001
-49 8B 69 10             # rbp = [>IN]               mov r64, r/m64      REX.W 8B /r     01 101 001
-99 73                   # Call seek         parse until 1st instance within [cl, dl) is parsed or parse area empty
-49 8B 41 10             # rax = [>IN]               mov r64, r/m64      REX.W 8B /r     01 000 001
-73 04                   #+jump _end if U>=       00 jae rel8            73 cb
-49 FF 41 10             # [>IN]++                   inc r/m64           REX.W FF /0     01 000 001
-# _end:                 #                        04
-48 29 E8                # rax -= rbp                sub r/m64, r64      REX.W 29 /r     11 101 000
-49 03 69 08             # rbp += [TIB]              add r64, r/m64      REX.W 03 /r     01 101 001
-C3                      # return                    ret                 C3
+00                   #
+13 01 01 ff          # {{{c( 2)}}} ~push ra;~                         
+23 34 11 00          # {{{c( 2)}}}                                    
+83 32 09 01          # {{{c( 2)}}} ~start@t0 ← [>IN];~                
+23 30 51 00          # {{{c( 2)}}} ~push start@t0;~                   
+                     # {{{c( 2)}}} /# Compile a call to ~seek~/       
+                     # {{{c( 2)}}} /# that advances ~>IN~./           
+99 73                # {{{c( 2)}}} ~call seek;~  /# Compiled./        
+03 33 09 01          # {{{c( 2)}}} ~end@t1 ← [>IN];~                  
+83 32 01 00          # {{{c( 2)}}} ~restore start@t0;~                
+                     # {{{c( 2)}}} /# Did ~seek()~ encounter the/     
+                     # {{{c( 2)}}} /# end of the parse area?/         
+                     # {{{c( 2)}}} ~if eof@a0 != 0:~                   
+63 96 02 00          # {{{c( 4)}}}   ~goto _end.~                     
+                     # {{{c( 2)}}} /# A character in range/           
+                     # {{{c( 2)}}} /# ~[low, high)~ was found./       
+93 03 13 00          # {{{c( 2)}}} ~[>IN]++;~  /# Skip it./           
+23 38 79 00          # {{{c( 2)}}}                                    
+                     # ~_end:~                                        
+                     # {{{c( 2)}}} /# Compute address and/            
+                     # {{{c( 2)}}} /# length of parsed input./        
+83 33 89 00          # {{{c( 2)}}} ~addr@a0 ← [TIB]~                  
+33 85 53 00          # {{{c(10)}}}         ~+ start@t0;~              
+b3 05 53 40          # {{{c( 2)}}} ~u@a0~ ~←~ ~end@t1~ ~-~ ~start@t0;~
+83 30 81 00          # {{{c( 2)}}} ~pop ra;~                          
+13 01 01 01          # {{{c( 2)}}}                                    
+67 80 00 00          # {{{c( 2)}}} ~return.~                          
+
 
 99 05 70 6E 61 6D 65 #### pname ( "<spaces>ccc<space>" -- rbp=addr rax=u ) PARSE-NAME ============
-B1 21 B2 7F             # (cl, dl) = (BL+1, ...)    mov r8, imm8        B0+rb ib
-99 73                   # Call seek
-B1 7F B2 21             # (cl, dl) = (..., BL+1)    mov r8, imm8        B0+rb ib
-99 50                   # Call PARSE
-C3                      # return                    ret                 C3
+00                   #
+13 01 81 ff          # ~push ra;~                        
+23 30 11 00          #                                   
+                     # /# Skip non-printables./          
+13 05 10 02          # ~low@a0 ← 0x21;~   /# Char ~'!'~./
+93 05 f0 07          # ~high@a1 ← 0x7F;~  /# Char ~DEL~./
+99 73                # ~call seek;~  /# Compiled./       
+                     # /# Parse token, stopping at first/
+                     # /# non-printable character./      
+13 05 f0 07          # ~low@a0 ← 0x7F;~                  
+93 05 10 02          # ~high@a1 ← 0x21;~                 
+99 50                # ~call PARSE;~  /# Compiled./      
+83 30 01 00          # ~pop ra;~                         
+13 01 81 00          #                                   
+67 80 00 00          # ~return.~
 
-99 81 5B ################ [ ( -- ) lbracket IMMEDIATE ============================================
-6A 00                   # push 0(Interpreting)      push imm8           6A ib
-8F 04 25 20 00 00 10    # pop [STATE]               pop r/m64           8F /0           00 000 100  00 100 101
-C3                      # return                    ret                 C3
 
-99 01 5D ################ ] ( -- ) rbracket ======================================================
-6A 01                   # push 1(Compiling)         push imm8           6A ib
-8F 04 25 20 00 00 10    # pop [STATE]               pop r/m64           8F /0           00 000 100  00 100 101 
-C3                      # return                    ret                 C3
+99 03 61 62 63 ############# abc ( -- ) testing function ============================================= TEMPORARY ============= 0x00000000100003f4
+00                   #
+b7 09 00 10          # {{{c(2)}}} ~STACK@s3 ← 0x10000000;~     
+93 89 09 00          # {{{c(2)}}}                              
+23 34 89 00          # {{{c(2)}}} ~[TIB] ← INPUT@s0;~          
+99 52                # {{{c(2)}}} ~call REFILL;~  /# Compiled./
+                     # ~_begin:~                               
+99 70                # {{{c(2)}}} ~call pname;~   /# Compiled./
+6f f0 9f ff          # {{{c(2)}}} ~goto _begin.~               
 
-99 81 5C ################ \ ( "ccc<eol>" -- ) backslash IMMEDIATE ================================
-48 8B 04 25 00 00 00 10 # rax = [#IN]               mov r64, r/m64      REX.W 8B /r     00 000 100  00 100 101
-48 89 04 25 10 00 00 10 # [>IN] = rax               mov r/m64, r64      REX.W 89 /r     00 000 100  00 100 101
-C3                      # return                    ret                 C3
-
-99 81 28 ################ ( ( "ccc<rparen>" -- ) lparen IMMEDIATE ================================
-B1 29 B2 2A             # (cl, dl) = (RP, RP+1)     mov r8, imm8        B0+rb ib
-99 50                   # Call PARSE            Forth 2012 implies comment ends at rparen or newline.
-C3                      # return                    ret                 C3
-
-99 01 3A ################ : ( "<spaces>ccc<space>" -- ) colon ====================================
-99 70                   # Call pname                            See Forth 2012 Table 2.1
-48 89 EE                # rsi = rbp                 mov r/m64, r64      REX.W 89 /r     11 101 110
-BA 28 00 00 10          # rdx = Latest              mov r32, imm32      B8+rd id
-99 48                   # Call Head
-48 8B 0A                # rcx = [rdx]               mov r64, r/m64      REX.W 8B /r     00 001 010
-48 83 C1 10             # rcx += 10                 add r/m64, imm8     REX.W 83 /0 ib  11 000 001
-80 09 40                # [rcx] |= 40(HIDDEN)       or r/m8, imm8       80 /1 ib        00 001 001
-99 5D                   # Call ]
-C3                      # return                    ret                 C3
-
-99 81 3B ################ ; ( C: -- ) semicolon IMMEDIATE ========================================
-B0 C3                   # al = opcode ret           mov r8, imm8        B0+rb ib
-AA                      # [rdi++] = al              stos m8             AA
-48 8B 0C 25 28 00 00 10 # rcx = [Latest]            mov r64, r/m64      REX.W 8B /r     00 001 100  00 100 101
-48 83 C1 10             # rcx += 10                 add r/m64, imm8     REX.W 83 /0 ib  11 000 001
-80 21 BF                # [rcx] &= BF(~HIDDEN)      and r/m8, imm8      80 /4 ib        00 100 001
-99 5B                   # Call [
-C3                      # return                    ret                 C3
-
-99 01 2E ################ . ( char -- ) nonstandard name for C, ==================================
-41 8A 07                # al = [r15]                mov r8, r/m8        REX 8A /r       00 000 111
-49 83 C7 08             # r15 += 8                  add r/m64, imm8     REX.W 83 /0 ib  11 000 111
-AA                      # [rdi++] = al              stos m8             AA
-C3                      # return                    ret                 C3
-
-99 83 4C 49 54 ########## LIT ( C: x -- ) ( -- x ) IMMEDIATE ===================================== TODO compare xchg r15, rsp ; push imm8 ; xchg r15, rsp
-B8 49 83 EF 08 AB       # compile r15 -= 8          sub r/m64, imm8     REX.W 83 /5 ib  11 101 111
-B8 6A 41 8F 07 AA       # eax = push x ; pop [r15]  push i8 ; pop r/m64 6A ib;REX 8F /0 00 000 111
-41 8A 07 AB             # al = [r15] ; compile      mov r8, r/m8        REX 8A /r       00 000 111
-49 83 C7 08             # r15 += 8                  add r/m64, imm8     REX.W 83 /0 ib  11 000 111
-C3                      # return                    ret                 C3
-
-99 03 78 74 3D ########## xt= ( rbp=addr rax=u rbx=xt -- rbx=xt rax=? rdi=? eflags ) rbx == 0 or unhidden and matches
-48 85 DB                # rbx(xt) ?                 test r/m64, r64     REX.W 85 /r     11 011 011
-75 01                   #+jump _nonzero if != 0     jnz rel8            75 cb
-C3                      # return                    ret                 C3
-# _nonzero:             #
-48 8B C8                # rcx = rax(u)              mov r64, r/m64      REX.W 8B /r     11 001 000
-48 8D 73 10             # rsi = rbx(xt) + 10        lea r64, m          REX.W 8D /r     01 110 011
-AC                      # al = [rsi++]              lods m8             AC
-A8 40                   # al & 40(HIDDEN) ?         test al, imm8       A8 ib
-74 01                   #+jump _unhidden if == 0    jz rel8             74 cb
-C3                      # return                    ret                 C3
-# _unhidden:            #
-48 83 E0 1F             # rax &= 1F(Length)         and r/m64, imm8     REX.W 83 /4 ib  11 100 000
-48 39 C8                # cmp rax, rcx              cmp r/m64, r64      REX.W 39 /r     11 001 000
-74 01                   #+jump _lengthEq if ==      je rel8             74 cb
-C3                      # return                    ret                 C3
-# _lengthEq:            #                          
-48 8B FD                # rdi = rbp                 mov r64, r/m64      REX.W 8B /r     11 111 101
-F3 A6                   # strings equal ?           repe cmps m8, m8    F3 A6
-C3                      # return                    ret                 C3
-
-99 04 46 49 4E 44 ####### FIND ( rbp=addr rax=u -- rbp=addr rax=u rbx=xt ) xt==0 if not found ====
-48 8B 1C 25 28 00 00 10 # rbx = [Latest]            mov r64, r/m64      REX.W 8B /r     00 011 100  00 100 101
-# _beg:                 #
-E8 03 00 00 00          #+call (FIND)               call rel32          E8 cd
-75 F9                   #-jump _beg if !=           jne rel8            75 cb
-C3                      # return                    ret                 C3
-# # # # # # # # # # # # # (FIND)
-50 57                   # push rax, rdi             push r64            50+rd
-99 78                   # Call xt=  
-5F 58                   # pop rdi, rax              pop r64             58+rd
-74 04                   #+jump _end if ==           je rel8             74 cb
-48 8B 5B 08             # rbx = [rbx+8]             mov r64, r/m64      REX.W 8B /r     01 011 011
-# _end:                 #
-C3                      # return                    ret                 C3
-
-99 03 4E 75 6D ########## Num ( rbp=addr rax=u -- n ) ============================================
-49 83 EF 08             # r15 -= 8                  sub r/m64, imm8     REX.W 83 /5 ib  11 101 111
-49 83 27 00             # [r15] = 0                 and r/m64, imm8     REX.W 83 /4 ib  00 100 111
-48 89 C1                # rcx = rax                 mov r/m64, r64      REX.W 89 /r     11 000 001  
-48 8B F5                # rsi = rbp                 mov r64, r/m64      REX.W 8B /r     11 110 101
-# _beg:                 #                        
-E8 03 00 00 00          #+call (Num)                call rel32          E8 cd
-E2 F9                   #-jump beg if --rcx         loop rel8           E2 cb
-C3                      # return                    ret                 C3
-# # # # # # # # # # # # # (Num)
-AC                      # al = [rsi++]              lods m8             AC
-3C 41                   # cmp al, 'A'               cmp al, imm8        3C ib
-7C 02                   #+jump _digit if <          jl rel8             7C cb
-# _letter:              #
-2C 07                   # al -= 7                   sub al, imm8        2C ib
-# _digit:               #
-2C 30                   # al -= 30                  sub al, imm8        2C ib
-49 C1 27 04             # [r15] <<= 4               sal r/m64, imm8     REX.W C1 /4 ib  00 100 111
-49 09 07                # [r15] |= rax              or r/m64, r64       REX.W 09 /r     00 000 111
-C3                      # return                    ret                 C3
-
-99 04 6D 69 73 73 ####### miss ( rbp=addr rax=u rbx=xt -- |n rbx=xt ) n present iff u nonzero ====
-48 85 DB                # rbx(xt) ?                 test r/m64, r64     REX.W 85 /r     11 011 011
-74 01                   #+jump (miss) if == 0       jz rel8             74 cb
-C3                      # return                    ret                 C3
-# # # # # # # # # # # # # (miss)
-48 85 C0                # rax(u) ?                  test r/m64, r64     REX.W 85 /r     11 000 000
-75 01                   #+jump _nonempty if !=      jne rel8            75 cb
-C3                      # return                    ret                 C3
-# _nonempty:            #
-99 4E                   # Call Num
-F6 04 25 20 00 00 10 01 # [STATE] ?                 test r/m8, imm8     F6 /0 ib        00 000 100  00 100 101
-75 01                   #+jump _lit if != 0         jnz rel8            75 cb
-C3                      # return                    ret                 C3
-# _lit:                 #
-99 4C                   # Call LIT
-C3                      # return                    ret                 C3
-
-99 04 45 58 45 43 ####### EXEC ( rbx=xt -- ) =====================================================
-B9 F8 FF FF 7F          # rcx = _                   mov r32, imm32      B8+rd id
-57                      # push rdi                  push r64            50+rd
-89 CF                   # rdi = rcx                 mov r/m32, r32      89 /r           11 001 111
-99 43                   # Call COMPL
-B0 C3                   # al = C3                   mov r8, imm8        B0+rb ib
-AA                      # [rdi++] = al              stos m8             AA
-5F                      # pop rdi                   pop r64             58+rd
-FF D1                   # call rcx                  call r/m64          FF /2           11 010 001
-C3                      # return                    ret                 C3
-
-99 04 65 78 65 63 ####### exec ( al rbx=xt -- ) iff al != 1 ======================================
-3C 01                   # cmp al, 1                 cmp al, imm8        3C ib
-75 01                   #+jump (exec) if !=         jne rel8            75 cb
-C3                      # return                    ret                 C3
-# # # # # # # # # # # # # (exec)
-99 45                   # Call EXEC
-C3                      # return                    ret                 C3
-
-99 05 63 6F 6D 70 6C #### compl ( al -- al ) iff al == 1 ==========================================
-3C 01                   # cmp al, 1                 cmp al, imm8        3C ib
-74 01                   #+jump (compl) if ==        je rel8             74 cb
-C3                      # return                    ret                 C3
-# # # # # # # # # # # # # (compl)
-99 43                   # Call COMPL
-B0 01                   # al = 1                    mov r8, imm8        B0+rb ib
-C3                      # return                    ret                 C3
-
-99 03 68 69 74 ########## hit ( rbx=xt -- ) ======================================================
-48 85 DB                # rbx(xt) ?                 test r/m64, r64     REX.W 85 /r     11 011 011
-75 01                   #+jump (hit) if != 0        jnz rel8            75 cb
-C3                      # return                    ret                 C3
-# # # # # # # # # # # # # (hit)
-40 8A 43 10             # al = [rbx+10]             mov r8, r/m8        REX 8A /r       01 000 011
-24 80                   # al &= 80(IMMEDIATE)       and al, imm8        24 ib
-0A 04 25 20 00 00 10    # al |= [STATE]             or r8, r/m8         0A /r           00 000 100  00 100 101
-99 63                   # Call compl
-99 65                   # Call exec
-C3                      # return                    ret                 C3
-
-99 04 53 56 41 4C ####### SVAL ( i*x -- j*x ) == 00 EVALUATE =====================================
-E8 03 00 00 00          #+call (SVAL)            05 call rel32          E8 cd
-7C F9                   #-jump SVAL if <         07 jl rel8             7C cb
-C3                      # return                    ret                 C3
-# # # # # # # # # # # # # (SVAL)                 08
-99 70                   # Call pname
-99 46                   # Call FIND
-99 6D                   # Call miss
-99 68                   # Call hit
-48 8B 04 25 10 00 00 10 # rax = [>IN]               mov r64, r/m64      REX.W 8B /r     00 000 100  00 100 101
-48 3B 04 25 00 00 00 10 # cmp rax, [#IN]            cmp r64, r/m64      REX.W 3B /r     00 000 100  00 100 101
-C3                      # return                    ret                 C3
-
-99 02 74 69 ############# ti ( -- ) text interpreter =============================================
-49 C7 C7 00 00 00 10    # r15(stack) = 10000000     mov r/m64, imm32    REX.W C7 /0 id  11 000 111
-49 89 77 08             # [TIB] = rsi               mov r/m64, r64      REX.W 89 /r     01 110 111
-99 5B                   # Call [
-# _beg:                 #
-E8 02 00 00 00          #+call (ti)                 call rel32          E8 cd
-EB F9                   #-jump _beg                 jmp rel8            EB cb
-# # # # # # # # # # # # # (ti)
-99 52                   # Call REFILL
-99 53                   # Call SVAL
-C3                      # return                    ret                 C3
-
-# 99 E4 99 C2             # dbg BYE
-
-99 F4                   # ti
+99 e1                # abc
