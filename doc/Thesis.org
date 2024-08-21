@@ -1365,8 +1365,8 @@ Explain:
 
 *** Subroutine ~\~                                                 :noexport:
 
-#+CAPTION: Subroutine ~'\'~ implements line comments.
-#+LABEL: tbl:forth:backslash
+#+CAPTION: Subroutine ~'\'~ implements line comments (x86-64).
+#+LABEL: tbl:forth:backslash:x
 #+ATTR_LATEX: :align l|ll|lH
 | *Pseudocode*                    | *Instruction*  | *Opcode*    | *Machine code*                                                                       | *Intention* |
 |---------------------------------+----------------+-------------+--------------------------------------------------------------------------------------+-------------|
@@ -1379,6 +1379,21 @@ Explain:
 | ~RAX ← [#IN];~                  | MOV r64, r/m64 | REX.W 8B /r | ~48 8B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(00 00 00 10)}}} | rax = [#IN] |
 | ~[>IN] ← RAX;~                  | MOV r/m64, r64 | REX.W 89 /r | ~48 89~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(10 00 00 10)}}} | [>IN] = rax |
 | ~return.~                       | RET            | C3          | ~C3~                                                                                 | return      |
+
+#+CAPTION: Subroutine ~'\'~ implements line comments (RISC-V).
+#+LABEL: tbl:forth:backslash:rv
+#+ATTR_LATEX: :align l|ll|l
+| *Pseudocode*                    | *Instruction*    | *Encoding*                                                                                             | *Machine code*      |
+|---------------------------------+------------------+--------------------------------------------------------------------------------------------------------+---------------------|
+| /# Define immediate:/ _~\~_     | ---              | ---                                                                                                    | {{{define(81,5C)}}} |
+| /# In/Out:/ ~( "ccc<eol>" -​- )~ |                  |                                                                                                        | {{{padding(00)}}}   |
+| /#/                             |                  |                                                                                                        |                     |
+| /# Consumes all characters/     |                  |                                                                                                        |                     |
+| /# left on the current line./   |                  |                                                                                                        |                     |
+|                                 |                  |                                                                                                        |                     |
+| ~#in@t0 ← [#IN];~               | ld t0, 0(s2)     | {{{off(0x000)}}}                    {{{rs1(10010)}}} {{{fn3(011)}}} {{{rd(00101)}}}  {{{op(0000011)}}} | ~83 32 09 00~       |
+| ~[>IN] ← #in@t0;~               | sd t0, 16(s2)    | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(10000)}}} {{{op(0100011)}}} | ~23 38 59 00~       |
+| ~return.~                       | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
 
 *** Subroutine ~(~                                                 :noexport:
 
