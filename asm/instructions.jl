@@ -16,9 +16,14 @@ encode(::Val{:ebreak}; fmt::Symbol=:bin) =
     encode(IInstr(1, 0, 0, 0, UInt32(0b1110011)), Val(fmt), Val(:env))
 
 # Shifts
-# RV32I
+# RV32I, RV64I
 @encode_i_instr(:slli, :shift, 0b001, 0b0010011)
 @encode_i_instr(:srli, :shift, 0b101, 0b0010011)
+@encode_i_instr(:srai, :shift, 0b101, 0b0010011)
+# RV64I
+@encode_i_instr(:slliw, :shift, 0b001, 0b0011011)
+@encode_i_instr(:srliw, :shift, 0b101, 0b0011011)
+@encode_i_instr(:sraiw, :shift, 0b101, 0b0011011)
 
 # Arithmetic & logic
 # RV32I
@@ -28,6 +33,8 @@ encode(::Val{:ebreak}; fmt::Symbol=:bin) =
 @encode_i_instr(:xori, :math, 0b100, 0b0010011)
 @encode_i_instr(:ori, :math, 0b110, 0b0010011)
 @encode_i_instr(:andi, :math, 0b111, 0b0010011)
+# RV64I
+@encode_i_instr(:addiw, :math, 0b000, 0b0011011)
 
 # Loads
 # RV32I
@@ -41,7 +48,6 @@ is_load(::Val{:lw}) = true
 is_load(::Val{:lbu}) = true
 @encode_i_instr(:lhu, :load, 0b101, 0b0000011)
 is_load(::Val{:lhu}) = true
-
 # RV64I
 @encode_i_instr(:lwu, :load, 0b110, 0b0000011)
 is_load(::Val{:lwu}) = true
@@ -53,6 +59,22 @@ is_load(::Val{:ld}) = true
 @encode_i_instr(:jalr, :jump, 0b000, 0b1100111)
 is_jump(::Val{:jalr}) = true
 
+# Fence
+# RV32I
+encode(::Val{:fence}, pred::UInt32, succ::UInt32; fmt::Symbol=:bin) =
+    encode(IInstr(0b000 | pred << 4 | succ, 0, 0, 0, UInt32(0b0001111)), Val(fmt), Val(:fence))
+encode(::Val{Symbol("fence.i")}; fmt::Symbol=:bin) =
+    encode(IInstr(0, 0, UInt32(0b001), 0, UInt32(0b0001111)), Val(fmt), Val(:fence))
+
+# CSR
+# RV32I
+@encode_i_instr(:csrrw, :csr, 0b001, 0b1110011)
+@encode_i_instr(:csrrs, :csr, 0b010, 0b1110011)
+@encode_i_instr(:csrrc, :csr, 0b011, 0b1110011)
+@encode_i_instr(:csrrwi, :csr, 0b101, 0b1110011)
+@encode_i_instr(:csrrsi, :csr, 0b110, 0b1110011)
+@encode_i_instr(:csrrci, :csr, 0b111, 0b1110011)
+
 
 ### R instructions ###
 
@@ -61,10 +83,23 @@ macro encode_r_instr(mnemonic, funct7, funct3, opcode)
         encode(RInstr(UInt32($funct7), rs2, rs1, UInt32($funct3), rd, UInt32($opcode)), Val(fmt)))
 end
 
+# RV32I
 @encode_r_instr(:add, 0b0000000, 0b000, 0b0110011)
-@encode_r_instr(:or, 0b0000000, 0b000, 0b0110011)
-@encode_r_instr(:and, 0b0000000, 0b000, 0b0110011)
-@encode_r_instr(:sub, 0b0000000, 0b000, 0b0110011)
+@encode_r_instr(:sub, 0b0100000, 0b000, 0b0110011)
+@encode_r_instr(:sll, 0b0000000, 0b001, 0b0110011)
+@encode_r_instr(:slt, 0b0000000, 0b010, 0b0110011)
+@encode_r_instr(:sltu, 0b0000000, 0b011, 0b0110011)
+@encode_r_instr(:xor, 0b0000000, 0b100, 0b0110011)
+@encode_r_instr(:srl, 0b0000000, 0b101, 0b0110011)
+@encode_r_instr(:sra, 0b0100000, 0b101, 0b0110011)
+@encode_r_instr(:or, 0b0000000, 0b110, 0b0110011)
+@encode_r_instr(:and, 0b0000000, 0b111, 0b0110011)
+# RV64I
+@encode_r_instr(:addw, 0b0000000, 0b000, 0b0111011)
+@encode_r_instr(:subw, 0b0100000, 0b000, 0b0111011)
+@encode_r_instr(:sllw, 0b0000000, 0b001, 0b0111011)
+@encode_r_instr(:srlw, 0b0000000, 0b101, 0b0111011)
+@encode_r_instr(:sraw, 0b0100000, 0b101, 0b0111011)
 
 
 ### S instructions ###
@@ -176,9 +211,6 @@ function parse(instr::String)
         splice!(instr_components, 3:4, [instr_components[4], instr_components[3]])
     end
 
-    # convert registers to symbols
-    instr_components[2:end-1] .= Symbol.(instr_components[2:end-1])
-
     # convert immediate to number
     if is_u_instr(mnemonic)
         instr_components[end] = tryparse(UInt32, instr_components[end])
@@ -188,6 +220,9 @@ function parse(instr::String)
             instr_components[end] = imm
         end
     end
+
+    # convert registers to symbols
+    instr_components = [isa(comp, SubString) ? Symbol(comp) : comp for comp in instr_components]
 
     return Tuple(instr_components)
 end
