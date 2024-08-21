@@ -1300,7 +1300,7 @@ Explain:
 | {{{c(2)}}} ~goto _begin.~                | jal zero, -8       | {{{addr(08)}}} | ~6f f0 9f ff~             |
 
 
-*** Subroutine ~[~
+*** Subroutine ~[~                                                 :noexport:
 
 #+CAPTION: Subroutine ~'['~ changes Forth's ~STATE~ to interpreting (x86-64).
 #+LABEL: tbl:forth:lbracket:x
@@ -1415,7 +1415,7 @@ Explain:
 #+CAPTION: Subroutine ~'('~ implements inline comments, ending with a corresponding ~')'~ (RISC-V).
 #+LABEL: tbl:forth:lparen:rv
 #+ATTR_LATEX: :align l|ll|l
-| *Pseudocode*                               | *Instruction*     | *Opcode*                                                                                               | *Machine code*      |
+| *Pseudocode*                               | *Instruction*     | *Encoding*                                                                                             | *Machine code*      |
 |--------------------------------------------+-------------------+--------------------------------------------------------------------------------------------------------+---------------------|
 | /# Define immediate:/ _~(~_                | ---               | ---                                                                                                    | {{{define(81,28)}}} |
 | /# In/Out:/ ~( "ccc<rparen>" -​- )~         |                   |                                                                                                        | {{{padding(00)}}}   |
@@ -1431,7 +1431,7 @@ Explain:
 |                                            | addi sp, sp, 8    | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | 13 01 81 00         |
 | ~return.~                                  | jalr zero, 0(ra)  | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | 67 80 00 00         |
 
-*** Subroutine ~:~
+*** Subroutine ~:~                                                 :noexport:
 
 #+CAPTION: Subroutine ~':'~ (colon) begins compiling a word after setting up its dictionary entry (x86-64).
 #+LABEL: tbl:forth:colon:x
@@ -1467,7 +1467,7 @@ Explain:
 #+CAPTION: Subroutine ~':'~ (colon) begins compiling a word after setting up its dictionary entry (RISC-V).
 #+LABEL: tbl:forth:colon:rv
 #+ATTR_LATEX: :align l|ll|l
-| *Pseudocode*                                                                          | *Instruction*      | *Opcode*                                                                                               | *Machine code*      |
+| *Pseudocode*                                                                          | *Instruction*      | *Encoding*                                                                                             | *Machine code*      |
 |---------------------------------------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+---------------------|
 | /# Define:/ _~':'~_                                                                   | ---                | ---                                                                                                    | {{{define(01,3A)}}} |
 | /# In/Out:/ ~( "<SPCs>ccc<SPC>" -​- )~                                                 |                    |                                                                                                        | {{{padding(00)}}}   |
@@ -1496,7 +1496,7 @@ Explain:
 | /# the dictionary entry's flag./                                                      |                    |                                                                                                        |                     |
 | ~xt@t0 ← [LATEST];~                                                                   | ld t0, 40(s2)      | {{{off(0x028)}}}                    {{{rs1(10010)}}} {{{fn3(011)}}} {{{rd(00101)}}}  {{{op(0000011)}}} | ~83 32 89 02~       |
 | ~flag@t1 ← [xt@t0 + 16];~                                                             | lbu t1, 16(t0)     | {{{off(0x010)}}}                    {{{rs1(00101)}}} {{{fn3(100)}}} {{{rd(00110)}}}  {{{op(0000011)}}} | ~03 C3 02 01~       |
-| ~flag@t1~ \vert{}​~=~ ~0x40;~                                                                | ori t1, t1, 0x040  | {{{imm(0x040)}}}                    {{{rs1(00110)}}} {{{fn3(110)}}} {{{rd(00110)}}}  {{{op(0010011)}}} | ~13 63 03 04~       |
+| ~flag@t1~ \vert{}​~=~ ~0b01000000;~  /# ~HIDDEN~./                                           | ori t1, t1, 0x040  | {{{imm(0x040)}}}                    {{{rs1(00110)}}} {{{fn3(110)}}} {{{rd(00110)}}}  {{{op(0010011)}}} | ~13 63 03 04~       |
 | ~[xt@t0 + 16] ← flag@t1;~                                                             | sb t1, 16(t0)      | {{{off(0000000)}}} {{{rs2(00110)}}} {{{rs1(00101)}}} {{{fn3(000)}}} {{{off(10000)}}} {{{op(0100011)}}} | ~23 88 62 00~       |
 |                                                                                       |                    |                                                                                                        |                     |
 | /# Generate a prologue that pushes/                                                   |                    |                                                                                                        |                     |
@@ -1530,33 +1530,98 @@ Explain:
 |                                                                                       | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 00~       |
 | ~return.~                                                                             | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
 
-*** Subroutine ~;~                                                 :noexport:
+*** Subroutine ~;~
 
-#+CAPTION: Subroutine ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting.
-#+LABEL: tbl:forth:semicolon
+#+CAPTION: Subroutine ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting (x86-64).
+#+LABEL: tbl:forth:semicolon:x
 #+ATTR_LATEX: :align l|ll|lH
-| *Pseudocode*                              | *Instruction*     | *Opcode*         | *Machine code*                                              | *Intention*          |
-|-------------------------------------------+-------------------+------------------+-------------------------------------------------------------+----------------------|
-| /# Define immediate:/ _~;~_               | ---               | ---              | {{{define(81,3B)}}}                                         | define ;             |
-| /# In/Out:/ ~( C: -​- )~                   |                   |                  |                                                             |                      |
-| /#/                                       |                   |                  |                                                             |                      |
-| /# Finalize a colon definition and/       |                   |                  |                                                             |                      |
-| /# switch back to interpreting state./    |                   |                  |                                                             |                      |
-|                                           |                   |                  |                                                             |                      |
-| /# Write a RET instr. to ~OUTPUT~./       |                   |                  |                                                             |                      |
-| ~op@AL ← 0xC3;~  /# RET opcode./          | MOV r8, /imm8/    | B0+rb /ib/       | ~B0~ /~C3~/                                                 | al = opcode ret      |
-| ~[OUTPUT@RDI++] ← op@AL;~                 | STOS m8           | AA               | ~AA~                                                        | [rdi++] = al         |
-|                                           |                   |                  |                                                             |                      |
-| /# Clear the HIDDEN flag (~0x40~)/        |                   |                  |                                                             |                      |
-| /# on the dictionary entry./              |                   |                  |                                                             |                      |
-| ~RCX ← [LATEST];~                         | MOV r64, r/m64    | REX.W 8B /r      | ~48 8B~ {{{modrm(0C,00,001,100)}}} {{{sib(25,00,100,101)}}} | rcx = [Latest]       |
-|                                           |                   |                  | \hookrightarrow {{{c(2)}}} {{{displ(28 00 00 10)}}}         |                      |
-| ~RCX += 0x10;~                            | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~48 83~ {{{modrm(C1,11,000,001)}}} /10/                     | rcx += 10            |
-| ~[flagRCX] &= 0b10111111;~                | AND r/m8, /imm8/  | 80 /4 /ib/       | ~80~ {{{modrm(21,00,100,001)}}} /BF/                        | [rcx] &= BF(~HIDDEN) |
-|                                           |                   |                  |                                                             |                      |
-| /# Switch to interpreting state./         |                   |                  |                                                             |                      |
-| ~call lbracket;~  /# Compiled./           |                   |                  | {{{compile(5B,[)}}}                                         | Call [               |
-| ~return.~                                 | RET               | C3               | ~C3~                                                        | return               |
+| *Pseudocode*                           | *Instruction*     | *Opcode*         | *Machine code*                                              | *Intention*          |
+|----------------------------------------+-------------------+------------------+-------------------------------------------------------------+----------------------|
+| /# Define immediate:/ _~;~_            | ---               | ---              | {{{define(81,3B)}}}                                         | define ;             |
+| /# In/Out:/ ~( C: -​- )~                |                   |                  |                                                             |                      |
+| /#/                                    |                   |                  |                                                             |                      |
+| /# Finalize a colon definition and/    |                   |                  |                                                             |                      |
+| /# switch back to interpreting state./ |                   |                  |                                                             |                      |
+|                                        |                   |                  |                                                             |                      |
+| /# Write a RET instr. to ~OUTPUT~./    |                   |                  |                                                             |                      |
+| ~op@AL ← 0xC3;~  /# RET opcode./       | MOV r8, /imm8/    | B0+rb /ib/       | ~B0~ /~C3~/                                                 | al = opcode ret      |
+| ~[OUTPUT@RDI++] ← op@AL;~              | STOS m8           | AA               | ~AA~                                                        | [rdi++] = al         |
+|                                        |                   |                  |                                                             |                      |
+| /# Clear the ~HIDDEN~ bit (~0x40~) on/ |                   |                  |                                                             |                      |
+| /# the dictionary entry's flag./       |                   |                  |                                                             |                      |
+| ~xt@RCX ← [LATEST];~                   | MOV r64, r/m64    | REX.W 8B /r      | ~48 8B~ {{{modrm(0C,00,001,100)}}} {{{sib(25,00,100,101)}}} | rcx = [Latest]       |
+|                                        |                   |                  | \hookrightarrow {{{c(2)}}} {{{displ(28 00 00 10)}}}         |                      |
+| ~flag@RCX ← xt@RCX + 0x10;~            | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~48 83~ {{{modrm(C1,11,000,001)}}} /10/                     | rcx += 10            |
+| ~[flag@RCX] &= 0b10111111;~            | AND r/m8, /imm8/  | 80 /4 /ib/       | ~80~ {{{modrm(21,00,100,001)}}} /BF/                        | [rcx] &= BF(~HIDDEN) |
+|                                        |                   |                  |                                                             |                      |
+| /# Switch to interpreting state./      |                   |                  |                                                             |                      |
+| ~call lbracket;~  /# Compiled./        |                   |                  | {{{compile(5B,[)}}}                                         | Call [               |
+| ~return.~                              | RET               | C3               | ~C3~                                                        | return               |
+
+#+CAPTION: Subroutine ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting (RISC-V).
+#+LABEL: tbl:forth:semicolon:rv
+#+ATTR_LATEX: :align l|ll|l
+| *Pseudocode*                                                                          | *Instruction*      | *Encoding*                                                                                             | *Machine code*      |
+|---------------------------------------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+---------------------|
+| /# Define immediate:/ _~;~_                                                           | ---                | ---                                                                                                    | {{{define(81,3B)}}} |
+| /# In/Out:/ ~( C: -​- )~                                                               |                    |                                                                                                        | {{{padding(00)}}}   |
+| /#/                                                                                   |                    |                                                                                                        |                     |
+| /# Finalize a colon definition and/                                                   |                    |                                                                                                        |                     |
+| /# switch back to interpreting state./                                                |                    |                                                                                                        |                     |
+| /#/                                                                                   |                    |                                                                                                        |                     |
+| /# RISC-V only: similar to the/                                                       |                    |                                                                                                        |                     |
+| /# prologue in ~`:`~, we need to/                                                     |                    |                                                                                                        |                     |
+| /# compile an epilogue that pops/                                                     |                    |                                                                                                        |                     |
+| /# the return address off the stack./                                                 |                    |                                                                                                        |                     |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# Generate an epilogue as follows:/                                                  |                    |                                                                                                        |                     |
+| /# 1. Restore return address register:/                                               |                    |                                                                                                        |                     |
+| /# – instruction:/ ~lb ra, 0(sp)~                                                     |                    |                                                                                                        |                     |
+| /# – encoded:/ {{{off(0x000)}}} {{{rs1(00010)}}}                                      |                    |                                                                                                        |                     |
+| /#/{{{i(5.1)}}} \(\hookrightarrow\) {{{fn3(000)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |                    |                                                                                                        |                     |
+| /# 2. Deallocate stack space:/                                                        |                    |                                                                                                        |                     |
+| /# – instruction:/ ~addi sp, sp, 8~                                                   |                    |                                                                                                        |                     |
+| /# – encoded:/ {{{imm(0x008)}}} {{{rs1(00010)}}}                                      |                    |                                                                                                        |                     |
+| /#/{{{i(5.1)}}} \(\hookrightarrow\) {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                    |                                                                                                        |                     |
+| /# 3. Return to calling word:/                                                        |                    |                                                                                                        |                     |
+| /# – instruction:/ ~jalr zero, 0(ra)~                                                 |                    |                                                                                                        |                     |
+| /# – encoded:/ {{{off(0x000)}}} {{{rs1(00001)}}}                                      |                    |                                                                                                        |                     |
+| /#/{{{i(5.1)}}} \(\hookrightarrow\) {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                    |                                                                                                        |                     |
+| /#/                                                                                   |                    |                                                                                                        |                     |
+| /# Thus we generate code as follows:/                                                 |                    |                                                                                                        |                     |
+| /#/{{{c(2)}}}​~0x83·00·01·00~                                                          |                    |                                                                                                        |                     |
+| /#/{{{c(2)}}}​~0x13·01·81·00~                                                          |                    |                                                                                                        |                     |
+| /#/{{{c(2)}}}​~0x67·80·00·00~                                                          |                    |                                                                                                        |                     |
+|                                                                                       |                    |                                                                                                        |                     |
+| ~push ra;~                                                                            | addi sp, sp, -8    |                                                                                                        |                     |
+|                                                                                       | sd ra, 0(sp)       |                                                                                                        |                     |
+| /# 1. Assemble and write ~lb~./                                                       |                    |                                                                                                        |                     |
+| ~t0 ← 0x83000100;~                                                                    | lui t0, 0x83000    |                                                                                                        |                     |
+|                                                                                       | addi t0, t0, 0x100 |                                                                                                        |                     |
+| ~[OUTPUT@s1] ← t0;~                                                                   | sd t0, 0(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 B0 54 00~       |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# 2. Assemble and write ~addi~./                                                     |                    |                                                                                                        |                     |
+| ~t0 ← 0x13018100;~                                                                    | lui t0, 0x13018    |                                                                                                        |                     |
+|                                                                                       | addi t0, t0, 0x100 |                                                                                                        |                     |
+| ~[OUTPUT@s1 + 4] ← t0;~                                                               | sd t0, 0(s1)       |                                                                                                        |                     |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# 3. Assemble and write ~jalr~./                                                     |                    |                                                                                                        |                     |
+| ~t0 ← 0x67800000;~                                                                    | lui t0, 0x67800    |                                                                                                        |                     |
+| ~[OUTPUT@s1 + 8] ← t0;~                                                               | sd t0, 0(s1)       |                                                                                                        |                     |
+| ~OUTPUT@s1 += 12;~                                                                    | addi s1, s1, 12    |                                                                                                        |                     |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# Clear the ~HIDDEN~ bit (~0x40~) on/                                                |                    |                                                                                                        |                     |
+| /# the dictionary entry's flag./                                                      |                    |                                                                                                        |                     |
+| ~xt@t0 ← [LATEST];~                                                                   | ld t0, 40(s2)      | {{{off(0x028)}}}                    {{{rs1(10010)}}} {{{fn3(011)}}} {{{rd(00101)}}}  {{{op(0000011)}}} | ~83 32 89 02~       |
+| ~flag@t1 ← [xt@t0 + 16];~                                                             | lbu t1, 16(t0)     | {{{off(0x010)}}}                    {{{rs1(00101)}}} {{{fn3(100)}}} {{{rd(00110)}}}  {{{op(0000011)}}} | ~03 C3 02 01~       |
+| ~flag@t1 &= 0b10111111;~  /# =~HIDDEN=.                                               |                    |                                                                                                        |                     |
+| ~[xt@t0 + 16] ← flag@t1;~                                                             | sb t1, 16(t0)      | {{{off(0000000)}}} {{{rs2(00110)}}} {{{rs1(00101)}}} {{{fn3(000)}}} {{{off(10000)}}} {{{op(0100011)}}} | ~23 88 62 00~       |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# Switch to interpreting state./                                                     |                    |                                                                                                        |                     |
+| ~call lbracket;~  /# Compiled./                                                       |                    |                                                                                                        | {{{compile(5B,[)}}} |
+| ~pop ra;~                                                                             | ld ra, 0(sp)       |                                                                                                        |                     |
+|                                                                                       | addi sp, sp, 8     |                                                                                                        |                     |
+| ~return.~                                                                             | jalr zero, 0(ra)   |                                                                                                        |                     |
 
 *** Subroutine ~.~                                                 :noexport:
 
@@ -1990,7 +2055,7 @@ Explain:
 | {{{c(2)}}} ~goto _begin.~                          | jal zero, -4       | {{{off(11111111110111111111)}}}                                     {{{rd(00000)}}}  {{{op(1101111)}}} | {{{addr(04)}}} | ~6f f0 df ff~          |
 
 
-* Analysis
+* Analysis                                                         :noexport:
 
 | *Instruction*           | *Type* | *Encoding*                                                                                             |                                                                |
 |-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
@@ -2048,6 +2113,7 @@ References:
 - [X] Check that compiled calls don't end in ~()~.
 - [X] Properly align /In/Out/ sections.
 - [ ] If supported, make all subroutine table labels case-sensitive.
+- [ ] Macrofy ~\hookrightarrow~.
 - [ ] Convert all bytes to uppercase.
 - [ ] x86-64:
   - [ ] Convert *Instruction* column to actual *Assembly*.
