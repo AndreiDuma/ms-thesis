@@ -64,6 +64,11 @@ end
 
 pick_str(bits::UInt32, from::Int, to::Int) = bitstring(bits)[end-from:end-to]
 
+function pick_hex(bits::UInt32, from::Int, to::Int)
+    s = string(pick(bits, from, to); base=16) |> uppercase
+    return lpad(s, (from - to + 1) ÷ 4, '0')
+end
+
 
 ### I instructions ###
 
@@ -105,7 +110,6 @@ end
 
 function encode(instr::IInstr, ::Val{:emacs}, ::Val{:shift})
     shamt = string("~000000~​{{{shamt(", pick_str(instr.imm12, 5, 0), ")}}}")
-    # shamt = string("​{{{shamt(", pick_str(instr.imm12, 11, 0), ")}}}")
     rs1 = string("{{{rs1(", pick_str(instr.rs1, 4, 0), ")}}}")
     fn3 = string("{{{fn3(", pick_str(instr.funct3, 2, 0), ")}}}")
     rd = string("{{{rd(", pick_str(instr.rd, 4, 0), ")}}}")
@@ -115,7 +119,7 @@ function encode(instr::IInstr, ::Val{:emacs}, ::Val{:shift})
 end
 
 function encode(instr::IInstr, ::Val{:emacs}, ::Val{:math})
-    imm12 = string("{{{imm(0x", repr(instr.imm12)[end-2:end], ")}}}")
+    imm12 = string("{{{imm(0x", pick_hex(instr.imm12, 11, 0), ")}}}")
     rs1 = string("{{{rs1(", pick_str(instr.rs1, 4, 0), ")}}}")
     fn3 = string("{{{fn3(", pick_str(instr.funct3, 2, 0), ")}}}")
     rd = string("{{{rd(", pick_str(instr.rd, 4, 0), ")}}}")
@@ -125,7 +129,7 @@ function encode(instr::IInstr, ::Val{:emacs}, ::Val{:math})
 end
 
 function encode(instr::IInstr, ::Val{:emacs}, ::Val{:load})
-    off12 = string("{{{off(0x", repr(instr.imm12)[end-2:end], ")}}}")
+    off12 = string("{{{off(0x", pick_hex(instr.imm12, 11, 0), ")}}}")
     rs1 = string("{{{rs1(", pick_str(instr.rs1, 4, 0), ")}}}")
     fn3 = string("{{{fn3(", pick_str(instr.funct3, 2, 0), ")}}}")
     rd = string("{{{rd(", pick_str(instr.rd, 4, 0), ")}}}")
@@ -135,7 +139,7 @@ function encode(instr::IInstr, ::Val{:emacs}, ::Val{:load})
 end
 
 function encode(instr::IInstr, ::Val{:emacs}, ::Val{:jump})
-    off12 = string("{{{off(0x", repr(instr.imm12)[end-2:end], ")}}}")
+    off12 = string("{{{off(0x", pick_hex(instr.imm12, 11, 0), ")}}}")
     rs1 = string("{{{rs1(", pick_str(instr.rs1, 4, 0), ")}}}")
     fn3 = string("{{{fn3(", pick_str(instr.funct3, 2, 0), ")}}}")
     rd = string("{{{rd(", pick_str(instr.rd, 4, 0), ")}}}")
@@ -297,7 +301,7 @@ encode(instr::UInstr, ::Val{:bin}) =
     instr.opcode
 
 function encode(instr::UInstr, ::Val{:emacs})
-    imm20 = string("{{{imm(0x", repr(instr.imm20)[end-4:end], ")}}}")
+    imm20 = string("{{{imm(0x", pick_hex(instr.imm20, 19, 0), ")}}}")
     rd = string("{{{rd(", pick_str(instr.rd, 4, 0), ")}}}")
     op = string("{{{op(", pick_str(instr.opcode, 6, 0), ")}}}")
 

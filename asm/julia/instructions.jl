@@ -131,7 +131,7 @@ end
 
 # Dispatch...
 function encode_hex(instr::Symbol, args...)
-    enc_str = encode(instr, args...) |> bswap |> repr
+    enc_str = encode(instr, args...) |> bswap |> repr |> uppercase
 
     return string(enc_str[3:4], " ", enc_str[5:6], " ", enc_str[7:8], " ", enc_str[9:10])
 end
