@@ -418,7 +418,7 @@ value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
 | {{{i(1)}}} /# – ~0bi00ccccc~: define;/       |                  |               |                |                                         |                         |
 | {{{i(1)}}} /# – ~0b011ccccc~: compile;/      |                  |               |                |                                         |                         |
 | {{{i(1)}}} /# – ~0b111ccccc~: execute./      |                  |               |                |                                         |                         |
-| {{{i(1)}}} ~if arg & 0b01100000 = 0:~        | TEST AL, /imm8/  | A8 /ib/       |                | ~A8~ /~60~/                             | al & 60(graphic)?       |
+| {{{i(1)}}} ~if arg@AL & 0b01100000 = 0:~     | TEST AL, /imm8/  | A8 /ib/       |                | ~A8~ /~60~/                             | al & 60(graphic)?       |
 | {{{i(2)}}}     /# _Define_ a new word./      |                  |               |                |                                         |                         |
 | {{{i(2)}}}     ~goto Head.~                  | JZ _rel8_        | 74 _cb_       |                | ~74~ {{{offset(31,CB-9A)}}}             | jump Head if zero       |
 | {{{i(1)}}} /# Get latest dictionary word./   |                  |               | {{{addr(9A)}}} |                                         |                         |
@@ -586,7 +586,7 @@ Discuss:
 | *Pseudocode*                           | *Instruction*     | *Opcode*         | *&*            | *Machine code*                          | *Intention*   |
 |----------------------------------------+-------------------+------------------+----------------+-----------------------------------------+---------------|
 | /# Define:/ _~Head~_                   | ---               | ---              | {{{addr(C5)}}} | {{{define(04,48 65 61 64)}}}            | define Head   |
-| /# In/Out:/ ~( LATEST@RDX~             |                   |                  |                |                                         |               |
+| /# In/Out:/ ~( latest@RDX~             |                   |                  |                |                                         |               |
 | /#/{{{io}}}   ~flag@AL -​- )~           |                   |                  |                |                                         |               |
 |                                        |                   |                  |                |                                         |               |
 | /# 16-bit align ~OUTPUT~./             |                   |                  |                |                                         |               |
@@ -597,9 +597,9 @@ Discuss:
 | /#/                                    |                   |                  |                |                                         |               |
 | /# 1. Set the _link_ field, then set/  |                   |                  |                |                                         |               |
 | /# ~LATEST~ to the new entry./         |                   |                  |                |                                         |               |
-| ~latest@RCX ← [LATEST@RDX];~           | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(0A,00,001,010)}}}      | rcx = [rdx]   |
+| ~latest@RCX ← [latest@RDX];~           | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(0A,00,001,010)}}}      | rcx = [rdx]   |
 | ~[OUTPUT@RDI+8] ← latest@RCX;~         | MOV r/m64, r64    | REX.W 89 /r      |                | ~48 89~ {{{modrm(4F,01,001,111)}}} ~08~ | [rdi+8] = rcx |
-| ~[LATEST@RDX] ← OUTPUT@RDI;~           | MOV r/m64, r64    | REX.W 89 /r      |                | ~48 89~ {{{modrm(3A,00,111,010)}}}      | [rdx] = rdi   |
+| ~[latest@RDX] ← OUTPUT@RDI;~           | MOV r/m64, r64    | REX.W 89 /r      |                | ~48 89~ {{{modrm(3A,00,111,010)}}}      | [rdx] = rdi   |
 |                                        |                   |                  |                |                                         |               |
 | /# 2. Set the _flag+length_ field./    |                   |                  |                |                                         |               |
 | ~OUTPUT@RDI += 0x10;~                  | ADD r/m64, /imm8/ | REX.W 83 /0 /ib/ |                | ~48 83~ {{{modrm(C7,11,000,111)}}} ~10~ | rdi += 10     |
@@ -615,7 +615,7 @@ Discuss:
 |                                        |                   |                  |                |                                         |               |
 | /# 4. Point _code_ field to the code/  |                   |                  |                |                                         |               |
 | /# about to be generated at ~OUTPUT~./ |                   |                  |                |                                         |               |
-| ~code@RCX ← [LATEST@RDX];~             | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(0A,00,001,010)}}}      | rcx = [rdx]   |
+| ~code@RCX ← [latest@RDX];~             | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(0A,00,001,010)}}}      | rcx = [rdx]   |
 | ~[code@RCX] ← OUTPUT@RDI;~             | MOV r/m64, r64    | REX.W 89 /r      |                | ~48 89~ {{{modrm(39,00,111,001)}}}      | [rcx] = rdi   |
 | ~return.~  /# To interpreter loop./    | RET               | C3               |                | ~C3~                                    | return        |
 
@@ -1397,8 +1397,8 @@ Explain:
 
 *** Subroutine ~(~                                                 :noexport:
 
-#+CAPTION: Subroutine ~'('~ implements inline comments (ending with a corresponding ~')'~).
-#+LABEL: tbl:forth:lparen
+#+CAPTION: Subroutine ~'('~ implements inline comments, ending with a corresponding ~')'~ (x86-64).
+#+LABEL: tbl:forth:lparen:x
 #+ATTR_LATEX: :align l|ll|lH
 | *Pseudocode*                               | *Instruction*  | *Opcode*   | *Machine code*      | *Intention*                                                                 |
 |--------------------------------------------+----------------+------------+---------------------+-----------------------------------------------------------------------------|
@@ -1412,33 +1412,123 @@ Explain:
 | ~call PARSE;~  /# Compiled./               | ---            | ---        | {{{compile(50,P)}}} | Call PARSE            Forth 2012 implies comment ends at rparen or newline. |
 | ~return.~                                  | RET            | C3         | ~C3~                | return                                                                      |
 
-*** Subroutine ~:~                                                 :noexport:
+#+CAPTION: Subroutine ~'('~ implements inline comments, ending with a corresponding ~')'~ (RISC-V).
+#+LABEL: tbl:forth:lparen:rv
+#+ATTR_LATEX: :align l|ll|l
+| *Pseudocode*                               | *Instruction*     | *Opcode*                                                                                               | *Machine code*      |
+|--------------------------------------------+-------------------+--------------------------------------------------------------------------------------------------------+---------------------|
+| /# Define immediate:/ _~(~_                | ---               | ---                                                                                                    | {{{define(81,28)}}} |
+| /# In/Out:/ ~( "ccc<rparen>" -​- )~         |                   |                                                                                                        | {{{padding(00)}}}   |
+| /#/                                        |                   |                                                                                                        |                     |
+| /# Consume characters until a ')' occurs./ |                   |                                                                                                        |                     |
+|                                            |                   |                                                                                                        |                     |
+| ~push ra;~                                 | addi sp, sp, -8   | {{{imm(0xFF8)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | 13 01 81 FF         |
+|                                            | sd ra, 0(sp)      | {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | 23 30 11 00         |
+| ~low@a0 ← ')';~                            | addi a0, zero, 41 | {{{imm(0x029)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(01010)}}}  {{{op(0010011)}}} | 13 05 90 02         |
+| ~high@a1 ← ')' + 1;~                       | addi a0, zero, 42 | {{{imm(0x02A)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(01010)}}}  {{{op(0010011)}}} | 13 05 A0 02         |
+| ~call PARSE;~  /# Compiled./               | ---               | ---                                                                                                    | {{{compile(50,P)}}} |
+| ~pop ra;~                                  | ld ra, 0(sp)      | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} | 83 30 01 00         |
+|                                            | addi sp, sp, 8    | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | 13 01 81 00         |
+| ~return.~                                  | jalr zero, 0(ra)  | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | 67 80 00 00         |
 
-#+CAPTION: Subroutine ~:~ (colon) begins compiling a word after setting up its dictionary entry.
-#+LABEL: tbl:forth:colon
+*** Subroutine ~:~
+
+#+CAPTION: Subroutine ~':'~ (colon) begins compiling a word after setting up its dictionary entry (x86-64).
+#+LABEL: tbl:forth:colon:x
 #+ATTR_LATEX: :align l|ll|lH
-| *Pseudocode*                              | *Instruction*     | *Opcode*          | *Machine code*                            | *Intention*                            |
-|-------------------------------------------+-------------------+-------------------+-------------------------------------------+----------------------------------------|
-| /# Define:/ _~':'~_                       | ---               | ---               | {{{define(01,3A)}}}                       | define :                               |
-| /# In/Out:/ ~( "<spaces>ccc<space>" -​- )~ |                   |                   |                                           |                                        |
-| /#/                                       |                   |                   |                                           |                                        |
-| /# *TODO*​/                                |                   |                   |                                           |                                        |
-|                                           |                   |                   |                                           |                                        |
-| /# TODO./                                 |                   |                   |                                           |                                        |
-| ~call pname;~  /# Compiled./              | ---               | ---               | {{{compile(70,p)}}}                       | Call pname  (See Forth 2012 Table 2.1) |
-| ~RSI ← RBP;~                              | MOV r/m64, r64    | REX.W 89 /r       | ~48 89~ {{{modrm(EE,11,101,110)}}}        | rsi = rbp                              |
-| ~RDX ← LATEST;~                           | MOV r32, /imm32/  | B8+rd /id/        | ~BA~ /~28 00 00 10~/                      | rdx = Latest                           |
-| ~call Head;~  /# Compiled./               | ---               | ---               | {{{compile(48,H)}}}                       | Call Head                              |
-|                                           |                   |                   |                                           |                                        |
-| /# Set the HIDDEN flag (~0x40~)/          |                   |                   |                                           |                                        |
-| /# on the dictionary entry./              |                   |                   |                                           |                                        |
-| ~RCX ← [RDX];~                            | MOV r64, r/m64    | REX.W 8B /r       | ~48 8B~ {{{modrm(0A,00,001,010)}}}        | rcx = [rdx]                            |
-| ~RCX += 16;~                              | ADD r/m64, /imm8/ | 9REX.W 83 /​0 /ib/ | ~48 83~ {{{modrm(C1,11,000,001)}}} /~10~/ | rcx += 10                              |
-| ~[RCX]~ \vert{}​~=~ ~0x40;~                      | OR r/m8, /imm8/   | 80 /​1 /ib/        | ~80~ {{{modrm(09,00,001,001)}}} /~40~/    | [rcx] ¦= 40 HIDDEN                     |
-|                                           |                   |                   |                                           |                                        |
-| /# Switch to compiling state./            |                   |                   |                                           |                                        |
-| ~call rbracket;~  /# Compiled./           | ---               | ---               | {{{compile(5D,])}}}                       | Call ]                                 |
-| ~return.~                                 | RET               | C3                | ~C3~                                      | return                                 |
+| *Pseudocode*                          | *Instruction*     | *Opcode*          | *Machine code*                            | *Intention*                            |
+|---------------------------------------+-------------------+-------------------+-------------------------------------------+----------------------------------------|
+| /# Define:/ _~':'~_                   | ---               | ---               | {{{define(01,3A)}}}                       | define :                               |
+| /# In/Out:/ ~( "<SPCs>ccc<SPC>" -​- )~ |                   |                   |                                           |                                        |
+| /#/                                   |                   |                   |                                           |                                        |
+| /# Start a word definition and enter/ |                   |                   |                                           |                                        |
+| /# compiling mode. Temporarily hide/  |                   |                   |                                           |                                        |
+| /# the word being defined until its/  |                   |                   |                                           |                                        |
+| /# definition is completed by ~';'~./ |                   |                   |                                           |                                        |
+|                                       |                   |                   |                                           |                                        |
+| /# Parse word name and create/        |                   |                   |                                           |                                        |
+| /# its dictionary entry./             |                   |                   |                                           |                                        |
+| ~call pname;~  /# Compiled./          | ---               | ---               | {{{compile(70,p)}}}                       | Call pname  (See Forth 2012 Table 2.1) |
+| ~INPUT@RSI ← addr@RBP;~               | MOV r/m64, r64    | REX.W 89 /r       | ~48 89~ {{{modrm(EE,11,101,110)}}}        | rsi = rbp                              |
+| ~latest@RDX ← LATEST;~                | MOV r32, /imm32/  | B8+rd /id/        | ~BA~ /~28 00 00 10~/                      | rdx = Latest                           |
+| /# *TODO*: What about ~flag@AL~???    |                   |                   |                                           |                                        |
+| ~call Head;~  /# Compiled./           | ---               | ---               | {{{compile(48,H)}}}                       | Call Head                              |
+|                                       |                   |                   |                                           |                                        |
+| /# Set the ~HIDDEN~ bit (~0x40~) on/  |                   |                   |                                           |                                        |
+| /# the dictionary entry's flag./      |                   |                   |                                           |                                        |
+| ~xt@RCX ← [latest@RDX];~              | MOV r64, r/m64    | REX.W 8B /r       | ~48 8B~ {{{modrm(0A,00,001,010)}}}        | rcx = [rdx]                            |
+| ~flag@RCX ← xt@RCX + 16;~             | ADD r/m64, /imm8/ | 9REX.W 83 /​0 /ib/ | ~48 83~ {{{modrm(C1,11,000,001)}}} /~10~/ | rcx += 10                              |
+| ~[flag@RCX]~ \vert{}​~=~ ~0x40;~             | OR r/m8, /imm8/   | 80 /​1 /ib/        | ~80~ {{{modrm(09,00,001,001)}}} /~40~/    | [rcx] ¦= 40 HIDDEN                     |
+|                                       |                   |                   |                                           |                                        |
+| /# Switch to compiling state./        |                   |                   |                                           |                                        |
+| ~call rbracket;~  /# Compiled./       | ---               | ---               | {{{compile(5D,])}}}                       | Call ]                                 |
+| ~return.~                             | RET               | C3                | ~C3~                                      | return                                 |
+
+#+CAPTION: Subroutine ~':'~ (colon) begins compiling a word after setting up its dictionary entry (RISC-V).
+#+LABEL: tbl:forth:colon:rv
+#+ATTR_LATEX: :align l|ll|l
+| *Pseudocode*                                                                          | *Instruction*      | *Opcode*                                                                                               | *Machine code*      |
+|---------------------------------------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+---------------------|
+| /# Define:/ _~':'~_                                                                   | ---                | ---                                                                                                    | {{{define(01,3A)}}} |
+| /# In/Out:/ ~( "<SPCs>ccc<SPC>" -​- )~                                                 |                    |                                                                                                        | {{{padding(00)}}}   |
+| /#/                                                                                   |                    |                                                                                                        |                     |
+| /# Start a word definition and enter/                                                 |                    |                                                                                                        |                     |
+| /# compiling mode. Temporarily hide/                                                  |                    |                                                                                                        |                     |
+| /# the word being defined until its/                                                  |                    |                                                                                                        |                     |
+| /# definition is completed by ~';'~./                                                 |                    |                                                                                                        |                     |
+| /#/                                                                                   |                    |                                                                                                        |                     |
+| /# RISC-V only: Because calls do not/                                                 |                    |                                                                                                        |                     |
+| /# implicitly push the return address/                                                |                    |                                                                                                        |                     |
+| /# on the stack, we have to generate/                                                 |                    |                                                                                                        |                     |
+| /# a prologue to the word that does it./                                              |                    |                                                                                                        |                     |
+|                                                                                       |                    |                                                                                                        |                     |
+| ~push ra;~                                                                            | addi sp, sp, -8    | {{{imm(0xFF8)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 FF~       |
+|                                                                                       | sd ra, 0(sp)       | {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 30 11 00~       |
+| /# Parse word name and create/                                                        |                    |                                                                                                        |                     |
+| /# its dictionary entry./                                                             |                    |                                                                                                        |                     |
+| ~call pname;~  /# Compiled./                                                          | ---                | ---                                                                                                    | {{{compile(70,p)}}} |
+| ~INPUT@s0 ← addr@a0;~                                                                 | addi s0, a0, 0     | {{{imm(0x000)}}}                    {{{rs1(01010)}}} {{{fn3(000)}}} {{{rd(01000)}}}  {{{op(0010011)}}} | ~13 04 05 00~       |
+| ~latest@a0 ← LATEST;~                                                                 | addi a0, s2, 40    | {{{imm(0x028)}}}                    {{{rs1(10010)}}} {{{fn3(000)}}} {{{rd(01010)}}}  {{{op(0010011)}}} | ~13 05 89 02~       |
+| /# *TODO*: What about ~flag@a1~???                                                    | ???                |                                                                                                        |                     |
+| ~call Head;~  /# Compiled./                                                           | ---                | ---                                                                                                    | {{{compile(48,H)}}} |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# Set the ~HIDDEN~ bit (~0x40~) on/                                                  |                    |                                                                                                        |                     |
+| /# the dictionary entry's flag./                                                      |                    |                                                                                                        |                     |
+| ~xt@t0 ← [LATEST];~                                                                   | ld t0, 40(s2)      | {{{off(0x028)}}}                    {{{rs1(10010)}}} {{{fn3(011)}}} {{{rd(00101)}}}  {{{op(0000011)}}} | ~83 32 89 02~       |
+| ~flag@t1 ← [xt@t0 + 16];~                                                             | lbu t1, 16(t0)     | {{{off(0x010)}}}                    {{{rs1(00101)}}} {{{fn3(100)}}} {{{rd(00110)}}}  {{{op(0000011)}}} | ~03 C3 02 01~       |
+| ~flag@t1~ \vert{}​~=~ ~0x40;~                                                                | ori t1, t1, 0x040  | {{{imm(0x040)}}}                    {{{rs1(00110)}}} {{{fn3(110)}}} {{{rd(00110)}}}  {{{op(0010011)}}} | ~13 63 03 04~       |
+| ~[xt@t0 + 16] ← flag@t1;~                                                             | sb t1, 16(t0)      | {{{off(0000000)}}} {{{rs2(00110)}}} {{{rs1(00101)}}} {{{fn3(000)}}} {{{off(10000)}}} {{{op(0100011)}}} | ~23 88 62 00~       |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# Generate a prologue that pushes/                                                   |                    |                                                                                                        |                     |
+| /# register ~ra~ on the stack:/                                                       |                    |                                                                                                        |                     |
+| /# 1. Allocate stack space:/                                                          |                    |                                                                                                        |                     |
+| /# – instruction:/ ~addi sp, sp, -8~                                                  |                    |                                                                                                        |                     |
+| /# – encoded:/ {{{imm(0xFF8)}}} {{{rs1(00010)}}}                                      |                    |                                                                                                        |                     |
+| /#/{{{i(5.1)}}} \(\hookrightarrow\) {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                    |                                                                                                        |                     |
+| /# 2. Save ~ra~ on the stack:/                                                        |                    |                                                                                                        |                     |
+| /# – instruction:/ ~sd ra, 0(sp)~                                                     |                    |                                                                                                        |                     |
+| /# – enc.:/ {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}}                      |                    |                                                                                                        |                     |
+| /#/{{{i(3.5)}}} \(\hookrightarrow\) {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                    |                                                                                                        |                     |
+| /# Thus we generate code as follows:/                                                 |                    |                                                                                                        |                     |
+| /#/{{{c(2)}}}​~0xFF·81·01·13~                                                          |                    |                                                                                                        |                     |
+| /#/{{{c(2)}}}​~0x00·11·30·23~                                                          |                    |                                                                                                        |                     |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# 1. Assemble and write ~addi~./                                                     |                    |                                                                                                        |                     |
+| ~t0 ← 0xFF810113;~                                                                    | lui t0, 0xFF810    | {{{imm(0xFF810)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} | ~B7 02 81 FF~       |
+|                                                                                       | addi t0, t0, 0x113 | {{{imm(0x113)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | ~93 82 32 11~       |
+| ~[OUTPUT@s1] ← t0;~                                                                   | sd t0, 0(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 B0 54 00~       |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# 2. Assemble and write ~sd~./                                                       |                    |                                                                                                        |                     |
+| ~t0 ← 0x00113023;~                                                                    | lui t0, 0x00113    | {{{imm(0x00113)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} | ~B7 32 11 00~       |
+|                                                                                       | addi t0, t0, 0x023 | {{{imm(0x023)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | ~93 82 32 02~       |
+| ~[OUTPUT@s1 + 4] ← t0;~                                                               | sd t0, 4(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(011)}}} {{{off(00100)}}} {{{op(0100011)}}} | ~23 B2 54 00~       |
+| ~OUTPUT@s1 += 8;~                                                                     | addi s1, s1, 8     | {{{imm(0x008)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | ~93 84 84 00~       |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# Switch to compiling state./                                                        |                    |                                                                                                        |                     |
+| ~call rbracket;~  /# Compiled./                                                       | ---                | ---                                                                                                    | {{{compile(5D,])}}} |
+| ~pop ra;~                                                                             | ld ra, 0(sp)       | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} | ~83 30 01 00~       |
+|                                                                                       | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 00~       |
+| ~return.~                                                                             | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
 
 *** Subroutine ~;~                                                 :noexport:
 
