@@ -1320,7 +1320,7 @@ Explain:
 #+CAPTION: Subroutine ~'['~ changes Forth's ~STATE~ to interpreting (RISC-V).
 #+LABEL: tbl:forth:lbracket:rv
 #+ATTR_LATEX: :align l|ll|l
-| *Pseudocode*                      | *Instruction*    | *Opcode*                                                                                               | *Machine code*      |
+| *Pseudocode*                      | *Instruction*    | *Encoding*                                                                                             | *Machine code*      |
 |-----------------------------------+------------------+--------------------------------------------------------------------------------------------------------+---------------------|
 | /# Define immediate:/ _~[~_       | ---              | ---                                                                                                    | {{{define(81,5B)}}} |
 | /# In/Out:/ ~( -​- )~              |                  |                                                                                                        | {{{padding(00)}}}   |
@@ -1328,13 +1328,13 @@ Explain:
 | /# Switch to interpreting state./ |                  |                                                                                                        |                     |
 |                                   |                  |                                                                                                        |                     |
 | /# Set ~STATE~ to 0./             |                  |                                                                                                        |                     |
-| ~[STATE] ← 0;~                    | ld zero, 32(s2)  | {{{off(0x020)}}}                    {{{rs1(10010)}}} {{{fn3(011)}}} {{{rd(00000)}}}  {{{op(0000011)}}} | 03 30 09 02         |
-| ~return.~                         | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | 67 80 00 00         |
+| ~[STATE] ← 0;~                    | sd zero, 32(s2)  | {{{off(0000001)}}} {{{rs2(00000)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 30 09 02~       |
+| ~return.~                         | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
 
 *** Subroutine ~]~                                                 :noexport:
 
-#+CAPTION: Subroutine ~']'~ changes Forth's ~STATE~ to compiling.
-#+LABEL: tbl:forth:rbracket
+#+CAPTION: Subroutine ~']'~ changes Forth's ~STATE~ to compiling (x86-64).
+#+LABEL: tbl:forth:rbracket:x
 #+ATTR_LATEX: :align l|ll|lH
 | *Pseudocode*                   | *Instruction* | *Opcode* | *Machine code*                                                                    | *Intention*       |
 |--------------------------------+---------------+----------+-----------------------------------------------------------------------------------+-------------------|
@@ -1343,10 +1343,25 @@ Explain:
 | /#/                            |               |          |                                                                                   |                   |
 | /# Switch to compiling state./ |               |          |                                                                                   |                   |
 |                                |               |          |                                                                                   |                   |
-| /# Set STATE to 1./            |               |          |                                                                                   |                   |
+| /# Set ~STATE~ to 1./          |               |          |                                                                                   |                   |
 | ~push 1;~                      | PUSH /imm8/   | 6A /ib/  | ~6A~ /~01~/                                                                       | push 1(Compiling) |
 | ~[STATE] ← pop;~               | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]       |
 | ~return.~                      | RET           | C3       | ~C3~                                                                              | return            |
+
+#+CAPTION: Subroutine ~']'~ changes Forth's ~STATE~ to compiling (RISC-V).
+#+LABEL: tbl:forth:rbracket:rv
+#+ATTR_LATEX: :align l|ll|l
+| *Pseudocode*                   | *Instruction*    | *Encoding*                                                                                             | *Machine code*      |
+|--------------------------------+------------------+--------------------------------------------------------------------------------------------------------+---------------------|
+| /# Define:/ _~]~_              | ---              | ---                                                                                                    | {{{define(01,5D)}}} |
+| /# In/Out:/ ~( -​- )~           |                  |                                                                                                        | {{{padding(00)}}}   |
+| /#/                            |                  |                                                                                                        |                     |
+| /# Switch to compiling state./ |                  |                                                                                                        |                     |
+|                                |                  |                                                                                                        |                     |
+| /# Set ~STATE~ to 1./          |                  |                                                                                                        |                     |
+| ~[STATE] ← 1;~                 | addi t0, zero, 1 | {{{imm(0x001)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | ~93 02 10 00~       |
+|                                | sd t0, 32(s2)    | {{{off(0000001)}}} {{{rs2(00101)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 30 59 02~       |
+| ~return.~                      | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
 
 *** Subroutine ~\~                                                 :noexport:
 
@@ -1823,7 +1838,7 @@ Explain:
 |                                                   |                |             |                | \hookrightarrow {{{i(0)}}} {{{displ(00 00 00 10)}}}         |                 |
 | {{{c(2)}}} ~return.~                              | RET            | C3          |                | ~C3~                                                        | return          |
 
-*** Subroutine ~ti~
+*** Subroutine ~ti~                                                :noexport:
 
 #+CAPTION: Subroutine ~ti~ brings everything together, reading and evaluating Forth in a loop (x86-64).
 #+LABEL: tbl:forth:ti:x
