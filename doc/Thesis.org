@@ -1625,8 +1625,8 @@ Explain:
 
 *** Subroutine ~.~                                                 :noexport:
 
-#+CAPTION: Subroutine ~'.'~ TODO.
-#+LABEL: tbl:forth:dot
+#+CAPTION: Subroutine ~'.'~ compiles a byte from the stack to ~OUTPUT~ (x86-64).
+#+LABEL: tbl:forth:.:x
 #+ATTR_LATEX: :align l|ll|lH
 | *Pseudocode*                     | *Instruction*     | *Opcode*         | *Machine code*                          | *Intention*  |
 | /# Define:/ _~.~_                | ---               | ---              | {{{define(01,2E)}}}                     | define .     |
@@ -1637,10 +1637,28 @@ Explain:
 | /# Pop a byte off the stack and/ |                   |                  |                                         |              |
 | /# write it to ~OUTPUT~./        |                   |                  |                                         |              |
 |                                  |                   |                  |                                         |              |
-| ~AL ← [R15]~                     | MOV r8, r/m8      | REX 8A /r        | ~41 8A~ {{{modrm(07,00,000,111)}}}      | al = [r15]   |
-| ~R15 += 8;~                      | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~49 83~ {{{modrm(C7,11,000,111)}}} /08/ | r15 += 8     |
-| ~[RDI++] ← AL;~                  | STOS m8           | AA               | ~AA~                                    | [rdi++] = al |
+| ~byte@AL ← [STACK@R15]~          | MOV r8, r/m8      | REX 8A /r        | ~41 8A~ {{{modrm(07,00,000,111)}}}      | al = [r15]   |
+| ~STACK@R15 += 8;~                | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~49 83~ {{{modrm(C7,11,000,111)}}} /08/ | r15 += 8     |
+| ~[OUTPUT@RDI++] ← byte@AL;~      | STOS m8           | AA               | ~AA~                                    | [rdi++] = al |
 | ~return.~                        | RET               | C3               | ~C3~                                    | return       |
+
+#+CAPTION: Subroutine ~'.'~ compiles a byte from the stack to ~OUTPUT~ (RISC-V).
+#+LABEL: tbl:forth:.:rv
+#+ATTR_LATEX: :align l|ll|l
+| *Pseudocode*                     | *Instruction*    | *Encoding*                                                                                             | *Machine code*      |
+| /# Define:/ _~.~_                | ---              | ---                                                                                                    | {{{define(01,2E)}}} |
+| /# In/Out:/ ~( chr -​- )~         |                  |                                                                                                        | {{{padding(00)}}}   |
+| /#/                              |                  |                                                                                                        |                     |
+| /# Non-standard name for ~C,~./  |                  |                                                                                                        |                     |
+| /#/                              |                  |                                                                                                        |                     |
+| /# Pop a byte off the stack and/ |                  |                                                                                                        |                     |
+| /# write it to ~OUTPUT~./        |                  |                                                                                                        |                     |
+|                                  |                  |                                                                                                        |                     |
+| ~byte@t0 ← [STACK@s4]~           | lbu t0, 0(s4)    | {{{off(0x000)}}}                    {{{rs1(10100)}}} {{{fn3(100)}}} {{{rd(00101)}}}  {{{op(0000011)}}} | ~83 42 0A 00~       |
+| ~STACK@s4 += 8;~                 | addi s4, s4, 8   | {{{imm(0x008)}}}                    {{{rs1(10100)}}} {{{fn3(000)}}} {{{rd(10100)}}}  {{{op(0010011)}}} | ~13 0A 8A 00~       |
+| ~[OUTPUT@s1++] ← byte@t0;~       | sb t0, 0(s1)     | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(000)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 80 54 00~       |
+|                                  | addi s1, s1, 1   | {{{imm(0x001)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | ~93 84 14 00~       |
+| ~return.~                        | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
 
 *** Subroutine ~LIT~                                               :noexport:
 
@@ -1865,14 +1883,14 @@ Explain:
 | {{{c(4)}}}   ~goto _nonempty.~         | JNE _rel8_        | 75 _cb_     |                | ~75~ {{{offset(01,01-00)}}}                              | +jump _nonempty if != |
 | {{{c(2)}}} ~return.~                   | RET               | C3          | {{{addr(00)}}} | ~C3~                                                     | return                |
 | ~_nonempty:~                           |                   |             | {{{addr(01)}}} |                                                          | # _nonempty:          |
-| {{{c(2)}}} ~call Num;~  /# Compiled./  |                   |             |                | {{{compile(4E,N)}}}                                      | Call Num              |
+| {{{c(2)}}} ~call Num;~  /# Compiled./  | ---               | ---         |                | {{{compile(4E,N)}}}                                      | Call Num              |
 | {{{c(2)}}} ~if [STATE] & 1 != 0:~      | TEST r/m8, /imm8/ | F6 /​0 /ib/  |                | ~F6~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,000,100)}}} | [STATE] ?             |
 | {{{c(4)}}}   /# Compile top of stack/  |                   |             |                | \hookrightarrow {{{displ(20 00 00 10)}}} /~01~/          |                       |
 | {{{c(4)}}}   /# number as literal./    |                   |             |                |                                                          |                       |
 | {{{c(4)}}}   ~goto _lit.~              | JNZ _rel8_        | 75 _cb_     |                | ~75~ {{{offset(01,01-00)}}}                              | +jump _lit if != 0    |
 | {{{c(2)}}} ~return.~                   | RET               | C3          | {{{addr(00)}}} | ~C3~                                                     | return                |
 | ~_lit:~                                |                   |             | {{{addr(01)}}} |                                                          | # _lit:               |
-| {{{c(2)}}} ~call LIT;~  /# Compiled./  |                   |             |                | {{{compile(4C,L)}}}                                      | Call LIT              |
+| {{{c(2)}}} ~call LIT;~  /# Compiled./  | ---               | ---         |                | {{{compile(4C,L)}}}                                      | Call LIT              |
 | {{{c(2)}}} ~return.~                   | RET               | C3          |                | ~C3~                                                     | return                |
 
 *** Subroutine ~EXEC~                                              :noexport:
@@ -1893,7 +1911,7 @@ Explain:
 | ~RDI ← RCX;~                    | MOV r/m32, r32   | 89 /r      | ~89~ {{{modrm(CF,11,001,111)}}} | rdi = rcx    |
 |                                 |                  |            |                                 |              |
 | /# Compile a CALL to ~xt~./     |                  |            |                                 |              |
-| ~call COMPL;~  /# Compiled./    |                  |            | {{{compile(43,C)}}}             | Call COMPL   |
+| ~call COMPL;~  /# Compiled./    | ---              | ---        | {{{compile(43,C)}}}             | Call COMPL   |
 |                                 |                  |            |                                 |              |
 | /# Compile a RET instruction./  |                  |            |                                 |              |
 | ~AL ← 0xC3;~                    | MOV r8, /imm8/   | B0+rb /ib/ | ~B0~ /~C3~/                     | al = C3      |
@@ -1925,7 +1943,7 @@ Explain:
 | {{{c(4)}}}   ~goto exec().~                     | JNE _rel8_     | 75 _cb_  |                | ~75~ {{{offset(01,01-00)}}}  | +jump (exec) if != |
 | {{{c(2)}}} ~return.~                            | RET            | C3       | {{{addr(00)}}} | ~C3~                         | return             |
 | ~exec():~                                       |                |          | {{{addr(01)}}} |                              | (exec)             |
-| {{{c(2)}}} ~call EXEC;~  /# Compiled./          |                |          |                | {{{compile(45,E)}}}          | Call EXEC          |
+| {{{c(2)}}} ~call EXEC;~  /# Compiled./          | ---            | ---      |                | {{{compile(45,E)}}}          | Call EXEC          |
 | {{{c(2)}}} ~return.~                            | RET            | C3       |                | ~C3~                         | return             |
 
 *** Subroutine ~compl~                                             :noexport:
@@ -1947,7 +1965,7 @@ Explain:
 | {{{c(4)}}}   ~goto compl().~                | JE _rel8_      | 74 _cb_    |                | ~74~ {{{offset(01,01-00)}}}     | +jump (compl) if == |
 | {{{c(2)}}} ~return.~                        | RET            | C3         | {{{addr(00)}}} | ~C3~                            | return              |
 | ~compl():~                                  |                |            | {{{addr(01)}}} |                                 | (compl)             |
-| {{{c(2)}}} ~call COMPL;~  /# Compiled./     |                |            |                | {{{compile(43)}}}               | Call COMPL          |
+| {{{c(2)}}} ~call COMPL;~  /# Compiled./     | ---            | ---        |                | {{{compile(43)}}}               | Call COMPL          |
 | {{{c(2)}}} /# Restore AL after ~COMPL~./    |                |            |                |                                 |                     |
 | {{{c(2)}}} ~imm+state@AL ← 1;~              | MOV r8, /imm8/ | B0+rb /ib/ |                | ~B0~ /~01~/                     | al = 1              |
 | {{{c(2)}}} ~return.~                        | RET            | C3         |                | ~C3~                            | return              |
@@ -1975,8 +1993,8 @@ Explain:
 | {{{c(2)}}} ~imm@AL &= 0x80;~                      | AND AL, /imm8/  | 24 /ib/     |                | ~24~ /~80~/                                              | al &= 80(IMMEDIATE) |
 | {{{c(2)}}} ~imm+state@AL~ \vert​~=~ ~[STATE];~         | OR r8, r/m8     | 0A /r       |                | ~0A~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | al \vert= [STATE]       |
 |                                                   |                 |             |                | \hookrightarrow {{{i(0)}}} {{{displ(20 00 00 10)}}}      |                     |
-| {{{c(2)}}} ~call compl;~  {{{c(0)}}}​/# Compiled./ |                 |             |                | {{{compile(63,c)}}}                                      | Call compl          |
-| {{{c(2)}}} ~call exec;~   {{{c(1)}}}​/# Compiled./ |                 |             |                | {{{compile(65,e)}}}                                      | Call exec           |
+| {{{c(2)}}} ~call compl;~  {{{c(0)}}}​/# Compiled./ | ---             | ---         |                | {{{compile(63,c)}}}                                      | Call compl          |
+| {{{c(2)}}} ~call exec;~   {{{c(1)}}}​/# Compiled./ | ---             | ---         |                | {{{compile(65,e)}}}                                      | Call exec           |
 | {{{c(2)}}} ~return.~                              | RET             | C3          |                | ~C3~                                                     | return              |
 
 *** Subroutine ~SVAL~                                              :noexport:
@@ -1998,10 +2016,10 @@ Explain:
 | {{{c(4)}}}   ~goto _begin.~                       | JL _rel8_      | 7C _cb_     |                | ~7C~ {{{offset(F9,00-07)}}}                                 | -jump SVAL if < |
 | {{{c(2)}}} ~return.~                              | RET            | C3          | {{{addr(07)}}} | ~C3~                                                        | return          |
 | ~SVAL():~                                         |                |             | {{{addr(08)}}} |                                                             | (SVAL)          |
-| {{{c(2)}}} ~call pname;~  {{{c(0)}}}​/# Compiled./ |                |             |                | {{{compile(70,p)}}}                                         | Call pname      |
-| {{{c(2)}}} ~call FIND;~   {{{c(1)}}}​/# Compiled./ |                |             |                | {{{compile(46,F)}}}                                         | Call FIND       |
-| {{{c(2)}}} ~call miss;~   {{{c(1)}}}​/# Compiled./ |                |             |                | {{{compile(6D,m)}}}                                         | Call miss       |
-| {{{c(2)}}} ~call hit;~    {{{c(2)}}}​/# Compiled./ |                |             |                | {{{compile(68,h)}}}                                         | Call hit        |
+| {{{c(2)}}} ~call pname;~  {{{c(0)}}}​/# Compiled./ | ---            | ---         |                | {{{compile(70,p)}}}                                         | Call pname      |
+| {{{c(2)}}} ~call FIND;~   {{{c(1)}}}​/# Compiled./ | ---            | ---         |                | {{{compile(46,F)}}}                                         | Call FIND       |
+| {{{c(2)}}} ~call miss;~   {{{c(1)}}}​/# Compiled./ | ---            | ---         |                | {{{compile(6D,m)}}}                                         | Call miss       |
+| {{{c(2)}}} ~call hit;~    {{{c(2)}}}​/# Compiled./ | ---            | ---         |                | {{{compile(68,h)}}}                                         | Call hit        |
 | {{{c(2)}}} ~RAX ← [>IN];~                         | MOV r64, r/m64 | REX.W 8B /r |                | ~48 8B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | rax = [>IN]     |
 |                                                   |                |             |                | \hookrightarrow {{{i(0)}}} {{{displ(10 00 00 10)}}}         |                 |
 | {{{c(2)}}} ~???~                                  | CMP r64, r/m64 | REX.W 3B /r |                | ~48 3B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | cmp rax, [#IN]  |
