@@ -1951,6 +1951,7 @@ Explain:
 | {{{c(2)}}}                                 | addi sp, sp, 24    | {{{imm(0x018)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 01~                |
 | {{{c(2)}}} ~return.~                       | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 
+
 *** Subroutine ~Num~                                               :noexport:
 
 #+CAPTION: Subroutine ~Num~ parses a character string as a number and pushes it on the stack (x86-64).
@@ -2033,6 +2034,7 @@ Explain:
 | ~_lit:~                                |                   |             | {{{addr(01)}}} |                                                          | # _lit:               |
 | {{{c(2)}}} ~call LIT;~  /# Compiled./  | ---               | ---         |                | {{{compile(4C,L)}}}                                      | Call LIT              |
 | {{{c(2)}}} ~return.~                   | RET               | C3          |                | ~C3~                                                     | return                |
+
 
 *** Subroutine ~EXEC~                                              :noexport:
 
@@ -2138,22 +2140,28 @@ Explain:
 | {{{c(2)}}} ~call exec;~   {{{c(1)}}}​/# Compiled./ | ---             | ---         |                | {{{compile(65,e)}}}                                      | Call exec           |
 | {{{c(2)}}} ~return.~                              | RET             | C3          |                | ~C3~                                                     | return              |
 
-*** Subroutine ~SVAL~                                              :noexport:
 
-#+CAPTION: Subroutine ~SVAL~ ???.
-#+LABEL: tbl:forth:SVAL
+*** Subroutine ~SVAL~
+
+#+CAPTION: Subroutine ~SVAL~ evaluates a line of Forth code (x86-64).
+#+LABEL: tbl:forth:SVAL:x
 #+ATTR_LATEX: :align l|ll|l|lH
 | *Pseudocode*                                      | *Instruction*  | *Opcode*    | *&*            | *Machine code*                                              | *Intention*     |
 |---------------------------------------------------+----------------+-------------+----------------+-------------------------------------------------------------+-----------------|
 | /# Define:/ _~SVAL~_                              | ---            | ---         |                | {{{define(04,53 56 41 4C)}}}                                | define SVAL     |
-| /# In/Out:/ ~( i*x -- j*x )~                      |                |             |                |                                                             |                 |
+| /# In/Out:/ ~( ··· -- ··· )~                      |                |             |                |                                                             |                 |
 | /#/                                               |                |             |                |                                                             |                 |
-| /# ???/                                           |                |             |                |                                                             |                 |
-| /# ???/                                           |                |             |                |                                                             |                 |
+| /# Evaluate a Forth line: repeatedly/             |                |             |                |                                                             |                 |
+| /# parse a token, attempt finding it/             |                |             |                |                                                             |                 |
+| /# in the dictionary, then allow ~miss~/          |                |             |                |                                                             |                 |
+| /# and ~hit~ to choose the appropriate/           |                |             |                |                                                             |                 |
+| /# action in context./                            |                |             |                |                                                             |                 |
 |                                                   |                |             |                |                                                             |                 |
 | ~_begin:~                                         |                |             | {{{addr(00)}}} |                                                             |                 |
 | {{{c(2)}}} ~call SVAL();~                         | CALL _rel32_   | E8 _cd_     |                | ~E8~ {{{offset(03 00 00 00,08-05)}}}                        | +call (SVAL)    |
-| {{{c(2)}}} ~if ???:~                              |                |             | {{{addr(05)}}} |                                                             |                 |
+| {{{c(2)}}} /# Characters left in current line?/   |                |             |                |                                                             |                 |
+| {{{c(2)}}} ~if [>in] < [#IN]:~                    |                |             | {{{addr(05)}}} |                                                             |                 |
+| {{{c(4)}}}   /# See comparison in ~SVAL()~!/      |                |             |                |                                                             |                 |
 | {{{c(4)}}}   ~goto _begin.~                       | JL _rel8_      | 7C _cb_     |                | ~7C~ {{{offset(F9,00-07)}}}                                 | -jump SVAL if < |
 | {{{c(2)}}} ~return.~                              | RET            | C3          | {{{addr(07)}}} | ~C3~                                                        | return          |
 | ~SVAL():~                                         |                |             | {{{addr(08)}}} |                                                             | (SVAL)          |
@@ -2161,11 +2169,41 @@ Explain:
 | {{{c(2)}}} ~call FIND;~   {{{c(1)}}}​/# Compiled./ | ---            | ---         |                | {{{compile(46,F)}}}                                         | Call FIND       |
 | {{{c(2)}}} ~call miss;~   {{{c(1)}}}​/# Compiled./ | ---            | ---         |                | {{{compile(6D,m)}}}                                         | Call miss       |
 | {{{c(2)}}} ~call hit;~    {{{c(2)}}}​/# Compiled./ | ---            | ---         |                | {{{compile(68,h)}}}                                         | Call hit        |
-| {{{c(2)}}} ~RAX ← [>IN];~                         | MOV r64, r/m64 | REX.W 8B /r |                | ~48 8B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | rax = [>IN]     |
+| {{{c(2)}}} ~>in@RAX ← [>IN];~                     | MOV r64, r/m64 | REX.W 8B /r |                | ~48 8B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | rax = [>IN]     |
 |                                                   |                |             |                | \hookrightarrow {{{i(0)}}} {{{displ(10 00 00 10)}}}         |                 |
-| {{{c(2)}}} ~???~                                  | CMP r64, r/m64 | REX.W 3B /r |                | ~48 3B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | cmp rax, [#IN]  |
+| {{{c(2)}}} ~compare >in@RAX and [#IN];~           | CMP r64, r/m64 | REX.W 3B /r |                | ~48 3B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | cmp rax, [#IN]  |
 |                                                   |                |             |                | \hookrightarrow {{{i(0)}}} {{{displ(00 00 00 10)}}}         |                 |
 | {{{c(2)}}} ~return.~                              | RET            | C3          |                | ~C3~                                                        | return          |
+
+#+CAPTION: Subroutine ~SVAL~ evaluates a line of Forth code (RISC-V).
+#+LABEL: tbl:forth:SVAL:rv
+#+ATTR_LATEX: :align l|ll|l|l
+| *Pseudocode*                                      | *Instruction*      | *Encoding*                                                                                             | *&*            | *Machine code*               |
+|---------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+----------------+------------------------------|
+| /# Define:/ _~SVAL~_                              | ---                | ---                                                                                                    |                | {{{define(04,53 56 41 4C)}}} |
+| /# In/Out:/ ~( ··· -- ··· )~                      |                    |                                                                                                        |                |                              |
+| /#/                                               |                    |                                                                                                        |                |                              |
+| /# Evaluate a Forth line: repeatedly/             |                    |                                                                                                        |                |                              |
+| /# parse a token, attempt finding it/             |                    |                                                                                                        |                |                              |
+| /# in the dictionary, then allow ~miss~/          |                    |                                                                                                        |                |                              |
+| /# and ~hit~ to choose the appropriate/           |                    |                                                                                                        |                |                              |
+| /# action in context./                            |                    |                                                                                                        |                |                              |
+|                                                   |                    |                                                                                                        |                |                              |
+| {{{c(2)}}} ~push ra;~                             | addi sp, sp, -8    | {{{imm(0xFF8)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 FF~                |
+|                                                   | sd ra, 0(sp)       | {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                | ~23 30 11 00~                |
+| ~_begin:~                                         |                    |                                                                                                        | {{{addr(00)}}} |                              |
+| {{{c(2)}}} ~call pname;~  {{{c(0)}}}​/# Compiled./ | ---                | ---                                                                                                    |                | {{{compile(70,p)}}}          |
+| {{{c(2)}}} ~call FIND;~   {{{c(1)}}}​/# Compiled./ | ---                | ---                                                                                                    |                | {{{compile(46,F)}}}          |
+| {{{c(2)}}} ~call miss;~   {{{c(1)}}}​/# Compiled./ | ---                | ---                                                                                                    |                | {{{compile(6D,m)}}}          |
+| {{{c(2)}}} ~call hit;~    {{{c(2)}}}​/# Compiled./ | ---                | ---                                                                                                    |                | {{{compile(68,h)}}}          |
+| {{{c(2)}}} /# Characters left in current line?/   |                    |                                                                                                        |                |                              |
+| {{{c(2)}}} ~>in@t0 ← [>IN];~                      | sd t0, 16(s2)      | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(10000)}}} {{{op(0100011)}}} |                | ~23 38 59 00~                |
+| {{{c(2)}}} ~#in@t1 ← [#IN];~                      | sd t1, 0(s2)       | {{{off(0000000)}}} {{{rs2(00110)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                | ~23 30 69 00~                |
+| {{{c(2)}}} ~if >in@t0 < #in@t1:~                  |                    |                                                                                                        |                |                              |
+| {{{c(4)}}}   ~goto _begin.~                       | bltu t0, t1, -0x28 | {{{off(1111110)}}} {{{rs2(00101)}}} {{{rs1(00110)}}} {{{fn3(110)}}} {{{off(11001)}}} {{{op(1100011)}}} | {{{addr(28)}}} | ~E3 6C 53 FC~                |
+| {{{c(2)}}} ~pop ra;~                              | ld ra, 0(sp)       | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |                | ~83 30 01 00~                |
+| {{{c(2)}}}                                        | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 00~                |
+| {{{c(2)}}} ~return.~                              | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 
 *** Subroutine ~ti~                                                :noexport:
 
