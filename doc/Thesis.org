@@ -1868,7 +1868,7 @@ Explain:
 | {{{c(2)}}} ~equal@a0 ← 1;~                       | addi a0, zero, 1   | {{{imm(0x001)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(01010)}}}  {{{op(0010011)}}} |                | ~13 05 10 00~             |
 | {{{c(2)}}} ~return.~                             | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~             |
 
-*** Subroutine ~FIND~
+*** Subroutine ~FIND~                                              :noexport:
 
 #+CAPTION: Subroutine ~FIND~ searches the dictionary for a word matching a given name (x86-64).
 #+LABEL: tbl:forth:find:x
@@ -1953,8 +1953,8 @@ Explain:
 
 *** Subroutine ~Num~                                               :noexport:
 
-#+CAPTION: Subroutine ~Num~ parses a character string as a number and returns it on the stack.
-#+LABEL: tbl:forth:num
+#+CAPTION: Subroutine ~Num~ parses a character string as a number and pushes it on the stack (x86-64).
+#+LABEL: tbl:forth:num:x
 #+ATTR_LATEX: :align l|ll|l|lH
 | *Pseudocode*                             | *Instruction*     | *Opcode*         | *&*            | *Machine code*                            | *Intention*        |
 |------------------------------------------+-------------------+------------------+----------------+-------------------------------------------+--------------------|
@@ -1963,22 +1963,22 @@ Explain:
 | /#/{{{io--}}} ~-​- n )~                   |                   |                  |                |                                           |                    |
 | /#/                                      |                   |                  |                |                                           |                    |
 | /# Parse string given by ~addr~​/​~u~/     |                   |                  |                |                                           |                    |
-| /# as a number and return it on/         |                   |                  |                |                                           |                    |
+| /# as a number and push it on/           |                   |                  |                |                                           |                    |
 | /# the data stack./                      |                   |                  |                |                                           |                    |
 |                                          |                   |                  |                |                                           |                    |
 | {{{c(2)}}} /# Allocate stack space for/  |                   |                  |                |                                           |                    |
 | {{{c(2)}}} /# the parsed number./        |                   |                  |                |                                           |                    |
-| {{{c(2)}}} ~stack@R15 -= 8;~             | SUB r/m64, /imm8/ | REX.W 83 /​5 /ib/ |                | ~49 83~ {{{modrm(EF,11,101,111)}}} /~08~/ | r15 -= 8           |
-| {{{c(2)}}} ~[stack@R15] ← 0;~            | AND r/m64, /imm8/ | REX.W 83 /​4 /ib/ |                | ~49 83~ {{{modrm(27,00,100,111)}}} /~00~/ | [r15] = 0          |
+| {{{c(2)}}} ~STACK@R15 -= 8;~             | SUB r/m64, /imm8/ | REX.W 83 /​5 /ib/ |                | ~49 83~ {{{modrm(EF,11,101,111)}}} /~08~/ | r15 -= 8           |
+| {{{c(2)}}} ~[STACK@R15] ← 0;~            | AND r/m64, /imm8/ | REX.W 83 /​4 /ib/ |                | ~49 83~ {{{modrm(27,00,100,111)}}} /~00~/ | [r15] = 0          |
 | {{{c(2)}}} ~u@RCX ← u@RAX;~              | MOV r/m64, r64    | REX.W 89 /r      |                | ~48 89~ {{{modrm(C1,11,000,001)}}}        | rcx = rax          |
 | {{{c(2)}}} ~addr@RSI ← addr@RBP;~        | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(F5,11,110,101)}}}        | rsi = rbp          |
-| ~_beg:~                                  |                   |                  | {{{addr(00)}}} |                                           | # _beg:            |
+| ~_begin:~                                |                   |                  | {{{addr(00)}}} |                                           | # _beg:            |
 | {{{c(2)}}} /# Parse one digit./          |                   |                  |                |                                           |                    |
 | {{{c(2)}}} ~call Num();~                 | CALL _rel32_      | E8 _cd_          |                | ~E8~ {{{offset(03 00 00 00,08-05)}}}      | +call (Num)        |
 | {{{c(2)}}} /# Repeat while there are/    |                   |                  |                |                                           |                    |
 | {{{c(2)}}} /# unparsed characters left./ |                   |                  |                |                                           |                    |
 | {{{c(2)}}} ~if --u@RCX != 0:~            |                   |                  | {{{addr(05)}}} |                                           |                    |
-| {{{c(4)}}}   ~goto _beg.~                | LOOP _rel8_       | E2 _cb_          |                | ~E2~ {{{offset(F9,00-07)}}}               | -jump beg if --rcx |
+| {{{c(4)}}}   ~goto _begin.~              | LOOP _rel8_       | E2 _cb_          |                | ~E2~ {{{offset(F9,00-07)}}}               | -jump beg if --rcx |
 | {{{c(2)}}} ~return.~                     | RET               | C3               | {{{addr(07)}}} | ~C3~                                      | return             |
 | ~Num():~                                 |                   |                  | {{{addr(08)}}} |                                           | (Num)              |
 | {{{c(2)}}} ~chr@AL ← [addr@RSI++];~      | LODS m8           | AC               |                | ~AC~                                      | al = [rsi++]       |
@@ -1991,8 +1991,8 @@ Explain:
 | {{{c(2)}}} ~digit@AL = chr@AL - '0';~    | SUB AL, /imm8/    | 2C /ib/          |                | ~2C~ /~30~/                               | al -= 30           |
 | {{{c(2)}}} /# Multiply by base and add/  |                   |                  |                |                                           |                    |
 | {{{c(2)}}} /# the new digit./            |                   |                  |                |                                           |                    |
-| {{{c(2)}}} ~[stack@R15] <<= 4~;          | SAL r/m64, /imm8/ | REX.W C1 /​4 /ib/ |                | ~49 C1~ {{{modrm(27,00,100,111)}}} /~04~/ | [r15] <<= 4        |
-| {{{c(2)}}} ~[stack@R15]~ \vert​~= digit@RAX;~ | OR r/m64, r64     | REX.W 09 /r      |                | ~49 09~ {{{modrm(07,00,000,111)}}}        | [r15] \vert= rax       |
+| {{{c(2)}}} ~[STACK@R15] <<= 4~;          | SAL r/m64, /imm8/ | REX.W C1 /​4 /ib/ |                | ~49 C1~ {{{modrm(27,00,100,111)}}} /~04~/ | [r15] <<= 4        |
+| {{{c(2)}}} ~[STACK@R15]~ \vert​~= digit@RAX;~ | OR r/m64, r64     | REX.W 09 /r      |                | ~49 09~ {{{modrm(07,00,000,111)}}}        | [r15] \vert= rax       |
 | {{{c(2)}}} ~return.~                     | RET               | C3               |                | ~C3~                                      | return             |
 
 *** Subroutine ~miss~                                              :noexport:
