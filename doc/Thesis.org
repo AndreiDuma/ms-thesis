@@ -1516,12 +1516,12 @@ Explain:
 | /# 1. Assemble and write ~addi~./                                                     |                    |                                                                                                        |                     |
 | ~t0 ← 0xFF810113;~                                                                    | lui t0, 0xFF810    | {{{imm(0xFF810)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} | ~B7 02 81 FF~       |
 |                                                                                       | addi t0, t0, 0x113 | {{{imm(0x113)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | ~93 82 32 11~       |
-| ~[OUTPUT@s1] ← t0;~                                                                   | sd t0, 0(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 B0 54 00~       |
+| ~[OUTPUT@s1] ← t0;~                                                                   | sw t0, 0(s1)       | TODO                                                                                                   |                     |
 |                                                                                       |                    |                                                                                                        |                     |
 | /# 2. Assemble and write ~sd~./                                                       |                    |                                                                                                        |                     |
 | ~t0 ← 0x00113023;~                                                                    | lui t0, 0x00113    | {{{imm(0x00113)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} | ~B7 32 11 00~       |
 |                                                                                       | addi t0, t0, 0x023 | {{{imm(0x023)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | ~93 82 32 02~       |
-| ~[OUTPUT@s1 + 4] ← t0;~                                                               | sd t0, 4(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(011)}}} {{{off(00100)}}} {{{op(0100011)}}} | ~23 B2 54 00~       |
+| ~[OUTPUT@s1 + 4] ← t0;~                                                               | sw t0, 4(s1)       | TODO                                                                                                   |                     |
 | ~OUTPUT@s1 += 8;~                                                                     | addi s1, s1, 8     | {{{imm(0x008)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | ~93 84 84 00~       |
 |                                                                                       |                    |                                                                                                        |                     |
 | /# Switch to compiling state./                                                        |                    |                                                                                                        |                     |
@@ -1530,7 +1530,7 @@ Explain:
 |                                                                                       | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 00~       |
 | ~return.~                                                                             | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
 
-*** Subroutine ~;~
+*** Subroutine ~;~                                                 :noexport:
 
 #+CAPTION: Subroutine ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting (x86-64).
 #+LABEL: tbl:forth:semicolon:x
@@ -1581,11 +1581,11 @@ Explain:
 | /#/{{{i(3.5)}}} \(\hookrightarrow\) {{{fn3(000)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |                    |                                                                                                        |                     |
 | /# 2. Deallocate stack space:/                                                        |                    |                                                                                                        |                     |
 | /# – instruction:/ ~addi sp, sp, 8~                                                   |                    |                                                                                                        |                     |
-| /# – enc.:/ {{{imm(0x008)}}} {{{rs1(00010)}}}                                     |                    |                                                                                                        |                     |
+| /# – enc.:/ {{{imm(0x008)}}} {{{rs1(00010)}}}                                         |                    |                                                                                                        |                     |
 | /#/{{{i(3.5)}}} \(\hookrightarrow\) {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                    |                                                                                                        |                     |
 | /# 3. Return to calling word:/                                                        |                    |                                                                                                        |                     |
 | /# – instruction:/ ~jalr zero, 0(ra)~                                                 |                    |                                                                                                        |                     |
-| /# – enc.:/ {{{off(0x000)}}} {{{rs1(00001)}}}                                     |                    |                                                                                                        |                     |
+| /# – enc.:/ {{{off(0x000)}}} {{{rs1(00001)}}}                                         |                    |                                                                                                        |                     |
 | /#/{{{i(3.5)}}} \(\hookrightarrow\) {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                    |                                                                                                        |                     |
 | /#/                                                                                   |                    |                                                                                                        |                     |
 | /# Thus we generate code as follows:/                                                 |                    |                                                                                                        |                     |
@@ -1598,16 +1598,16 @@ Explain:
 | /# 1. Assemble and write ~lb~./                                                       |                    |                                                                                                        |                     |
 | ~t0 ← 0x83000100;~                                                                    | lui t0, 0x83000    | {{{imm(0x83000)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} | ~B7 02 00 83~       |
 |                                                                                       | addi t0, t0, 0x100 | {{{imm(0x100)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | ~93 82 02 10~       |
-| ~[OUTPUT@s1] ← t0;~                                                                   | sd t0, 0(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 B0 54 00~       |
+| ~[OUTPUT@s1] ← t0;~                                                                   | sw t0, 0(s1)       | TODO                                                                                                   |                     |
 |                                                                                       |                    |                                                                                                        |                     |
 | /# 2. Assemble and write ~addi~./                                                     |                    |                                                                                                        |                     |
 | ~t0 ← 0x13018100;~                                                                    | lui t0, 0x13018    | {{{imm(0x13018)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} | ~B7 82 01 13~       |
 |                                                                                       | addi t0, t0, 0x100 | {{{imm(0x100)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | ~93 82 02 10~       |
-| ~[OUTPUT@s1 + 4] ← t0;~                                                               | sd t0, 0(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 B0 54 00~       |
+| ~[OUTPUT@s1 + 4] ← t0;~                                                               | sw t0, 0(s1)       | TODO                                                                                                   |                     |
 |                                                                                       |                    |                                                                                                        |                     |
 | /# 3. Assemble and write ~jalr~./                                                     |                    |                                                                                                        |                     |
 | ~t0 ← 0x67800000;~                                                                    | lui t0, 0x67800    | {{{imm(0x67800)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} | ~B7 02 80 67~       |
-| ~[OUTPUT@s1 + 8] ← t0;~                                                               | sd t0, 0(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 B0 54 00~       |
+| ~[OUTPUT@s1 + 8] ← t0;~                                                               | sw t0, 0(s1)       | TODO                                                                                                   |                     |
 | ~OUTPUT@s1 += 12;~                                                                    | addi s1, s1, 12    | {{{imm(0x00C)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | ~93 84 C4 00~       |
 |                                                                                       |                    |                                                                                                        |                     |
 | /# Clear the ~HIDDEN~ bit (~0x40~) on/                                                |                    |                                                                                                        |                     |
@@ -1660,17 +1660,17 @@ Explain:
 |                                  | addi s1, s1, 1   | {{{imm(0x001)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | ~93 84 14 00~       |
 | ~return.~                        | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
 
-*** Subroutine ~LIT~                                               :noexport:
+*** Subroutine ~LIT~
 
-#+CAPTION: Subroutine ~LIT~ compiles a literal byte into a word definition.
-#+LABEL: tbl:forth:lit
+#+CAPTION: Subroutine ~LIT~ compiles a literal byte into a word definition (x86-64).
+#+LABEL: tbl:forth:lit:x
 #+ATTR_LATEX: :align l|ll|lH
 | *Pseudocode*                                                | *Instruction*     | *Opcode*         | *Machine code*                          | *Intention*             |
 |-------------------------------------------------------------+-------------------+------------------+-----------------------------------------+-------------------------|
 | /# Define immediate:/ _~LIT~_                               | ---               | ---              | {{{define(83,4C 49 54)}}}               | define LIT              |
 | /# In/Out:/ ~( C: x -​- ) ( -- x )~                          |                   |                  |                                         |                         |
 | /#/                                                         |                   |                  |                                         |                         |
-| /# Pop a byte off the data stack at compile time/           |                   |                  |                                         |                         |
+| /# Pop a byte off the data stack at compile time./          |                   |                  |                                         |                         |
 | /# Compile it as the immediate byte of a PUSH/              |                   |                  |                                         |                         |
 | /# instruction that inserts it on the data stack/           |                   |                  |                                         |                         |
 | /# when the word being defined is executed./                |                   |                  |                                         |                         |
@@ -1681,8 +1681,8 @@ Explain:
 | /# execution time:/                                         |                   |                  |                                         |                         |
 | /# – a SUB instruction that allocates a slot on/            |                   |                  |                                         |                         |
 | /# the data stack;/                                         |                   |                  |                                         |                         |
-| /# – a pair of PUSH & POP instructions that copy/           |                   |                  |                                         |                         |
-| /# ~lit~ to the newly allocated slot./                      |                   |                  |                                         |                         |
+| /# – a pair of PUSH & POP instructions that/                |                   |                  |                                         |                         |
+| /# copy ~lit~ to the newly allocated slot./                 |                   |                  |                                         |                         |
 |                                                             |                   |                  |                                         |                         |
 | /# 1. SUB instruction:/                                     |                   |                  |                                         |                         |
 | /# – effect: ~R15 -= 8;~/                                   |                   |                  |                                         |                         |
@@ -1701,7 +1701,7 @@ Explain:
 | /# the three bytes of the next instruction are also/        |                   |                  |                                         |                         |
 | /# loaded in EAX at this step, but not yet written./        |                   |                  |                                         |                         |
 | ~EAX ← 0x078F416A;~                                         | MOV r32, /imm32/  | B8+rd /id/       | ~B8~ /6A 41 8F 07/                      | eax = push x; pop [r15] |
-| ~[OUTPUT@RDI++] ← AL;~  /# Writes only 0x6A./               | STOS m8           | AA               | ~AA~                                    | [rdi++] = al            |
+| ~[OUTPUT@RDI++] ← AL;~  /# Writes only ~0x6A~./             | STOS m8           | AA               | ~AA~                                    | [rdi++] = al            |
 |                                                             |                   |                  |                                         |                         |
 | /# 3. POP instruction:/                                     |                   |                  |                                         |                         |
 | /# – effect: ~[R15] ← pop;~/                                |                   |                  |                                         |                         |
@@ -1711,12 +1711,63 @@ Explain:
 | /# Here we write the immediate byte of the PUSH/            |                   |                  |                                         |                         |
 | /# instruction (in AL) and the POP instruction/             |                   |                  |                                         |                         |
 | /# (in the rest of EAX)./                                   |                   |                  |                                         |                         |
-| ~AL ← [stack@R15];~                                         | MOV r8, r/m8      | REX 8A /r        | ~41 8A~ {{{modrm(07,00,000,111)}}}      | al = [r15]              |
+| ~AL ← [STACK@R15];~                                         | MOV r8, r/m8      | REX 8A /r        | ~41 8A~ {{{modrm(07,00,000,111)}}}      | al = [r15]              |
 | ~[OUTPUT@RDI++4] ← EAX;~                                    |                   |                  | ~AB~                                    | [rdi(++4)] = eax        |
 |                                                             |                   |                  |                                         |                         |
 | /# Pop ~lit~ off the data stack./                           |                   |                  |                                         |                         |
-| ~stack@R15 += 8;~                                           | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~49 83~ {{{modrm(C7,11,000,111)}}} /08/ | r15 += 8                |
+| ~STACK@R15 += 8;~                                           | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~49 83~ {{{modrm(C7,11,000,111)}}} /08/ | r15 += 8                |
 | ~return.~                                                   | RET               | C3               | ~C3~                                    | return                  |
+
+#+CAPTION: Subroutine ~LIT~ compiles a literal byte into a word definition (RISC-V).
+#+LABEL: tbl:forth:lit:rv
+#+ATTR_LATEX: :align l|ll|l
+| *Pseudocode*                                                                                                          | *Instruction*      | *Encoding*                                                                                             | *Machine code*            |
+|-----------------------------------------------------------------------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+---------------------------|
+| /# Define immediate:/ _~LIT~_                                                                                         | ---                | ---                                                                                                    | {{{define(83,4C 49 54)}}} |
+| /# In/Out:/ ~( C: x -​- ) ( -- x )~                                                                                    |                    |                                                                                                        | {{{padding(00)}}}         |
+| /#/                                                                                                                   |                    |                                                                                                        |                           |
+| /# Pop a byte off the data stack at compile time./                                                                    |                    |                                                                                                        |                           |
+| /# Compile it as the immediate byte of a PUSH/                                                                        |                    |                                                                                                        |                           |
+| /# instruction that inserts it on the data stack/                                                                     |                    |                                                                                                        |                           |
+| /# when the word being defined is executed./                                                                          |                    |                                                                                                        |                           |
+|                                                                                                                       |                    |                                                                                                        |                           |
+| /# Let ~lit~ be the top byte on the data stack./                                                                      |                    |                                                                                                        |                           |
+| /# We will generate three instructions that will/                                                                     |                    |                                                                                                        |                           |
+| /# effectively push ~lit~ on the data stack at/                                                                       |                    |                                                                                                        |                           |
+| /# execution time:/                                                                                                   |                    |                                                                                                        |                           |
+| /# – an ~addi~ instruction that loads ~lit~ into/                                                                     |                    |                                                                                                        |                           |
+| /# register ~t0~;/                                                                                                    |                    |                                                                                                        |                           |
+| /# – a pair of `addi` & `sd` instructions that/                                                                       |                    |                                                                                                        |                           |
+| /# push ~t0~ on the data stack./                                                                                      |                    |                                                                                                        |                           |
+|                                                                                                                       |                    |                                                                                                        |                           |
+| /# 1. Load ~lit~ in register ~t0~:/                                                                                   |                    |                                                                                                        |                           |
+| /# – effect:/ ~t0 ← 0x0XY;~  /# ~XY~ stands for ~lit~./                                                               |                    |                                                                                                        |                           |
+| /# – instruction:/ ~addi t0, zero, 0x0XY~                                                                             |                    |                                                                                                        |                           |
+| /# – encoded:/ {{{imm(0x0XY)}}} {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00101)}}} {{{op(0010011)}}}                     |                    |                                                                                                        |                           |
+| /# – bits:/ ~0000xxxx·yyyy0000·00000010·10010011~                                                                     |                    |                                                                                                        |                           |
+| ~pop lit@t0;~                                                                                                         | lbu t0, 0(s4)      | {{{off(0x000)}}}                    {{{rs1(10100)}}} {{{fn3(100)}}} {{{rd(00101)}}}  {{{op(0000011)}}} | 83 42 0A 00               |
+|                                                                                                                       | addi s4, s4, 8     | {{{imm(0x008)}}}                    {{{rs1(10100)}}} {{{fn3(000)}}} {{{rd(10100)}}}  {{{op(0010011)}}} | 13 0A 8A 00               |
+| ~t0 <<= 12;~                                                                                                          | slli t0, t0, 12    | ~000000~​{{{shamt(001100)}}}         {{{rs1(00101)}}} {{{fn3(001)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | 93 92 C2 00               |
+| ~t0~ \vert= ~0x293;~                                                                                                      | ori t0, t0, 0x293  | {{{imm(0x293)}}}                    {{{rs1(00101)}}} {{{fn3(110)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | 93 E2 32 29               |
+| ~[OUTPUT@s1] ← t0;~                                                                                                   | sw t0, 0(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(00000)}}} {{{op(0100011)}}} | 23 A0 54 00               |
+|                                                                                                                       |                    |                                                                                                        |                           |
+| /# 2. Allocate stack space:/                                                                                          |                    |                                                                                                        |                           |
+| /# – effect: ~STACK@s4 -= 8;~/                                                                                        |                    |                                                                                                        |                           |
+| /# – instruction:/ ~addi s4, s4, -8~                                                                                  |                    |                                                                                                        |                           |
+| /# – encoded:/ {{{imm(0xFF8)}}} {{{rs1(10100)}}} {{{fn3(000)}}} {{{rd(10100)}}} {{{op(0010011)}}}                     |                    |                                                                                                        |                           |
+| ~t0 ← 0xFF8A0A13;~                                                                                                    | lui t0, 0xFF8A0    | {{{imm(0xFF8A0)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} | B7 02 8A FF               |
+|                                                                                                                       | addi t0, t0, 0xA13 | {{{imm(0xA13)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | 93 82 32 A1               |
+| ~[OUTPUT@s1 + 4] ← t0;~                                                                                               | sw t0, 4(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(00100)}}} {{{op(0100011)}}} | 23 A2 54 00               |
+|                                                                                                                       |                    |                                                                                                        |                           |
+| /# 3. Write register ~t0~ to stack:/                                                                                  |                    |                                                                                                        |                           |
+| /# – effect:/ ~[STACK@s4] ← t0;~                                                                                      |                    |                                                                                                        |                           |
+| /# – instruction:/ ~sd t0, 0(s4)~                                                                                     |                    |                                                                                                        |                           |
+| /# – encoded:/ {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(10100)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                    |                                                                                                        |                           |
+| ~t0 ← 0x005A3023;~                                                                                                    | lui t0, 0x005A3    | {{{imm(0x005A3)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} | B7 32 5A 00               |
+|                                                                                                                       | addi t0, t0, 0x023 | {{{imm(0x023)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | 93 82 32 02               |
+| ~[OUTPUT@s1 + 8] ← t0;~                                                                                               | sw t0, 8(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(01000)}}} {{{op(0100011)}}} | 23 A4 54 00               |
+| ~OUTPUT@s1 += 12;~                                                                                                    | addi s1, s1, 12    | {{{imm(0x00C)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | 93 84 C4 00               |
+| ~return.~                                                                                                             | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | 67 80 00 00               |
 
 *** Subroutine ~xt=~                                               :noexport:
 
@@ -2133,8 +2184,11 @@ References:
 - [ ] If supported, make all subroutine table labels case-sensitive.
 - [ ] Macrofy ~\hookrightarrow~.
 - [ ] Convert all bytes to uppercase.
+- [ ] RISC-V:
+  - [ ] Macrofy all remaining bits in encodings.
 - [ ] x86-64:
   - [ ] Convert *Instruction* column to actual *Assembly*.
+    - [ ] Including compiled instructions in ~COMPL~, ~LIT~ etc.!!!
   - [ ] Move *&* column after *Machine code*? It'd allow matching
     addresses with their corresponding ~goto~​s.
   - [ ] Add a ~rex~ macro to annotate the REX byte?
