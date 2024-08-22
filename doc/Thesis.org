@@ -1660,7 +1660,7 @@ Explain:
 |                                  | addi s1, s1, 1   | {{{imm(0x001)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | ~93 84 14 00~       |
 | ~return.~                        | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
 
-*** Subroutine ~LIT~
+*** Subroutine ~LIT~                                               :noexport:
 
 #+CAPTION: Subroutine ~LIT~ compiles a literal byte into a word definition (x86-64).
 #+LABEL: tbl:forth:lit:x
@@ -1770,55 +1770,103 @@ Explain:
 | ~OUTPUT@s1 += 12;~                                                                                | addi s1, s1, 12    | {{{imm(0x00C)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | 93 84 C4 00               |
 | ~return.~                                                                                         | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | 67 80 00 00               |
 
-*** Subroutine ~xt=~                                               :noexport:
+*** Subroutine ~xt=~
 
-#+CAPTION: Subroutine ~xt=~ compares an execution token's name with a given string.
-#+LABEL: tbl:forth:xt=
+#+CAPTION: Subroutine ~xt=~ compares an execution token's name with a given string (x86-64).
+#+LABEL: tbl:forth:xt=:x
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                                       | *Instruction*     | *Opcode*         | *&*            | *Machine code*                                     | *Intention*             |
-|----------------------------------------------------+-------------------+------------------+----------------+----------------------------------------------------+-------------------------|
-| /# Define:/ _~xt=~_                                | ---               | ---              |                | {{{define(03,78 74 3D)}}}                          | define xt=              |
-| /# In/Out:/    ~( addr@RBP u@RAX xt@RBX~           |                   |                  |                |                                                    |                         |
-| /#/{{{io--}}} ~-​- xt@RBX FLAGS~/                   |                   |                  |                |                                                    |                         |
-| /#/{{{io}}}      ~?@RAX ?@RDI )~                   |                   |                  |                |                                                    |                         |
-| /#/                                                |                   |                  |                |                                                    |                         |
-| /# Checks if execution token ~xt~ is/              |                   |                  |                |                                                    |                         |
-| /# either zero or is not hidden and/               |                   |                  |                |                                                    |                         |
-| /# its name matches the string given/              |                   |                  |                |                                                    |                         |
-| /# by address ~addr~ and length ~u~./              |                   |                  |                |                                                    |                         |
-|                                                    |                   |                  |                |                                                    |                         |
-| {{{c(2)}}} /# Return if ~xt~ is zero (~ZF~ set)./  |                   |                  |                |                                                    |                         |
-| {{{c(2)}}} ~if xt@RBX & xt@RBX != 0:~              | TEST r/m64, r64   | REX.W 85 /r      |                | ~48 85~ {{{modrm(DB,11,011,011)}}}                 | rbx(xt) ?               |
-| {{{c(4)}}}   ~goto _nonzero.~                      | JNZ _rel8_        | 75 _cb_          |                | ~75~ {{{offset(01,01-00)}}}                        | +jump _nonzero if != 0  |
-| {{{c(2)}}} ~return.~                               | RET               | C3               | {{{addr(00)}}} | ~C3~                                               | return                  |
-| ~_nonzero:~                                        |                   |                  | {{{addr(01)}}} |                                                    | _nonzero:               |
-| {{{c(2)}}} /# Save ~u~ in RCX; to be used later./  |                   |                  |                |                                                    |                         |
-| {{{c(2)}}} ~u@RCX ← u@RAX;~                        | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(C8,11,001,000)}}}                 | rcx = rax(u)            |
-| {{{c(2)}}} /# Point RSI to the flag field./        |                   |                  |                |                                                    |                         |
-| {{{c(2)}}} ~RSI ← xt@RBX + 0x10;~                  | LEA r64,m         | REX.W 8D /r      |                | ~48 8D~ {{{modrm(73,01,110,011)}}} {{{displ(10)}}} | rsi = rbx(xt) + 10      |
-| {{{c(2)}}} /# Extract flag and advance RSI/        |                   |                  |                |                                                    |                         |
-| {{{c(2)}}} /# to the name field (used later)./     |                   |                  |                |                                                    |                         |
-| {{{c(2)}}} ~flag@AL ← [RSI++];~                    | LODS m8           | AC               |                | ~AC~                                               | al = [rsi++]            |
-| {{{c(2)}}} /# Return if hidden word (~ZF~ unset)./ |                   |                  |                |                                                    |                         |
-| {{{c(2)}}} ~if flag@AL & 0x40 = 0:~                | TEST AL, /imm8/   | A8 /ib/          |                | ~A8~ /~40~/                                        | al & 40(HIDDEN) ?       |
-| {{{c(4)}}}   ~goto _unhidden.~                     | JZ _rel8_         | 74 _cb_          |                | ~74~ {{{offset(01,01-00)}}}                        | +jump _unhidden if == 0 |
-| {{{c(2)}}} ~return.~                               | RET               | C3               | {{{addr(00)}}} | ~C3~                                               | return                  |
-| ~_unhidden:~                                       |                   |                  | {{{addr(01)}}} |                                                    | _unhidden:              |
-| {{{c(2)}}} /# Keep only name length in RAX./       |                   |                  |                |                                                    |                         |
-| {{{c(2)}}} ~length@RAX ← flag@RAX & 0x1F;~         | AND r/m64, /imm8/ | REX.W 83 /​4 /ib/ |                | ~48 83~ {{{modrm(E0,11,100,000)}}} /~1F~/          | rax &= 1F(Length)       |
-| {{{c(2)}}} /# Return if length doesn't match/      |                   |                  |                |                                                    |                         |
-| {{{c(2)}}} /# (~ZF~ unset)./                       |                   |                  |                |                                                    |                         |
-| {{{c(2)}}} ~if length@RAX = u@RCX:~                | CMP r/m64, r64    | REX.W 39 /r      |                | ~48 39~ {{{modrm(C8,11,001,000)}}}                 | cmp rax, rcx            |
-| {{{c(4)}}}   ~goto _lengthEq.~                     | JE _rel8_         | 74 _cb_          |                | ~74~ {{{offset(01,01-00)}}}                        | +jump _lengthEq if ==   |
-| {{{c(2)}}} ~return.~                               | RET               | C3               | {{{addr(00)}}} | ~C3~                                               | return                  |
-| ~_lengthEq:~                                       |                   |                  | {{{addr(01)}}} |                                                    | _lengthEq:              |
-| {{{c(2)}}} /# Compare ~addr~ and ~name@RSI~/       |                   |                  |                |                                                    |                         |
-| {{{c(2)}}} /# upto length ~u~./                    |                   |                  |                |                                                    |                         |
-| {{{c(2)}}} ~addr@RDI ← addr@RBP;~                  | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(FD,11,111,101)}}}                 | rdi = rbp               |
-| {{{c(2)}}} ~strncmp(name@RSI,~                     |                   |                  |                |                                                    |                         |
-| {{{c(10)}}}        ~addr@RDI,~                     |                   |                  |                |                                                    |                         |
-| {{{c(10)}}}        ~u@RCX);~  /# (Un)sets ~ZF~./   | REPE CMPS m8, m8  | F3 A6            |                | ~F3 A6~                                            | strings equal ?         |
-| {{{c(2)}}} ~return.~                               | RET               | C3               |                | ~C3~                                               | return                  |
+| *Pseudocode*                                           | *Instruction*     | *Opcode*         | *&*            | *Machine code*                                     | *Intention*             |
+|--------------------------------------------------------+-------------------+------------------+----------------+----------------------------------------------------+-------------------------|
+| /# Define:/ _~xt=~_                                    | ---               | ---              |                | {{{define(03,78 74 3D)}}}                          | define xt=              |
+| /# In/Out:/    ~( addr@RBP u@RAX xt@RBX~               |                   |                  |                |                                                    |                         |
+| /#/{{{io--}}} ~-​- xt@RBX FLAGS~                        |                   |                  |                |                                                    |                         |
+| /#/{{{io}}}      ~?@RAX ?@RDI )~                       |                   |                  |                |                                                    |                         |
+| /#/                                                    |                   |                  |                |                                                    |                         |
+| /# Return with ~ZF~ set if execution token/            |                   |                  |                |                                                    |                         |
+| /# ~xt~ is either zero or is not hidden and/           |                   |                  |                |                                                    |                         |
+| /# its name matches the string given by/               |                   |                  |                |                                                    |                         |
+| /# address ~addr~ and length ~u~./                     |                   |                  |                |                                                    |                         |
+|                                                        |                   |                  |                |                                                    |                         |
+| {{{c(2)}}} /# Return (with ~ZF~ set) if ~xt~ is zero./ |                   |                  |                |                                                    |                         |
+| {{{c(2)}}} ~if xt@RBX & xt@RBX != 0:~                  | TEST r/m64, r64   | REX.W 85 /r      |                | ~48 85~ {{{modrm(DB,11,011,011)}}}                 | rbx(xt) ?               |
+| {{{c(4)}}}   ~goto _nonzero.~                          | JNZ _rel8_        | 75 _cb_          |                | ~75~ {{{offset(01,01-00)}}}                        | +jump _nonzero if != 0  |
+| {{{c(2)}}} ~return.~                                   | RET               | C3               | {{{addr(00)}}} | ~C3~                                               | return                  |
+| ~_nonzero:~                                            |                   |                  | {{{addr(01)}}} |                                                    | _nonzero:               |
+| {{{c(2)}}} /# Save ~u~ in RCX; to be used later./      |                   |                  |                |                                                    |                         |
+| {{{c(2)}}} ~u@RCX ← u@RAX;~                            | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(C8,11,001,000)}}}                 | rcx = rax(u)            |
+| {{{c(2)}}} /# Point RSI to the flag field./            |                   |                  |                |                                                    |                         |
+| {{{c(2)}}} ~RSI ← xt@RBX + 0x10;~                      | LEA r64,m         | REX.W 8D /r      |                | ~48 8D~ {{{modrm(73,01,110,011)}}} {{{displ(10)}}} | rsi = rbx(xt) + 10      |
+| {{{c(2)}}} /# Extract flag and advance RSI/            |                   |                  |                |                                                    |                         |
+| {{{c(2)}}} /# to the name field (used later)./         |                   |                  |                |                                                    |                         |
+| {{{c(2)}}} ~flag@AL ← [RSI++];~                        | LODS m8           | AC               |                | ~AC~                                               | al = [rsi++]            |
+| {{{c(2)}}} /# Return (~ZF~ unset) if hidden word./     |                   |                  |                |                                                    |                         |
+| {{{c(2)}}} ~if flag@AL & 0x40 = 0:~                    | TEST AL, /imm8/   | A8 /ib/          |                | ~A8~ /~40~/                                        | al & 40(HIDDEN) ?       |
+| {{{c(4)}}}   ~goto _unhidden.~                         | JZ _rel8_         | 74 _cb_          |                | ~74~ {{{offset(01,01-00)}}}                        | +jump _unhidden if == 0 |
+| {{{c(2)}}} ~return.~                                   | RET               | C3               | {{{addr(00)}}} | ~C3~                                               | return                  |
+| ~_unhidden:~                                           |                   |                  | {{{addr(01)}}} |                                                    | _unhidden:              |
+| {{{c(2)}}} /# Keep only name length in RAX./           |                   |                  |                |                                                    |                         |
+| {{{c(2)}}} ~length@RAX ← flag@RAX & 0x1F;~             | AND r/m64, /imm8/ | REX.W 83 /​4 /ib/ |                | ~48 83~ {{{modrm(E0,11,100,000)}}} /~1F~/          | rax &= 1F(Length)       |
+| {{{c(2)}}} /# Return (~ZF~ unset) if wrong length./    |                   |                  |                |                                                    |                         |
+| {{{c(2)}}} ~if length@RAX = u@RCX:~                    | CMP r/m64, r64    | REX.W 39 /r      |                | ~48 39~ {{{modrm(C8,11,001,000)}}}                 | cmp rax, rcx            |
+| {{{c(4)}}}   ~goto _length_equal.~                     | JE _rel8_         | 74 _cb_          |                | ~74~ {{{offset(01,01-00)}}}                        | +jump _lengthEq if ==   |
+| {{{c(2)}}} ~return.~                                   | RET               | C3               | {{{addr(00)}}} | ~C3~                                               | return                  |
+| ~_length_equal:~                                       |                   |                  | {{{addr(01)}}} |                                                    | _lengthEq:              |
+| {{{c(2)}}} /# Compare ~addr@RBP~ and ~name@RSI~/       |                   |                  |                |                                                    |                         |
+| {{{c(2)}}} /# upto length ~u@RCX~./                    |                   |                  |                |                                                    |                         |
+| {{{c(2)}}} ~addr@RDI ← addr@RBP;~                      | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(FD,11,111,101)}}}                 | rdi = rbp               |
+| {{{c(2)}}} ~strncmp(name@RSI,~                         |                   |                  |                |                                                    |                         |
+| {{{c(10)}}}        ~addr@RDI,~                         |                   |                  |                |                                                    |                         |
+| {{{c(10)}}}        ~u@RCX);~  /# (Un)sets ~ZF~./       | REPE CMPS m8, m8  | F3 A6            |                | ~F3 A6~                                            | strings equal ?         |
+| {{{c(2)}}} ~return.~                                   | RET               | C3               |                | ~C3~                                               | return                  |
+
+#+CAPTION: Subroutine ~xt=~ compares an execution token's name with a given string (RISC-V).
+#+LABEL: tbl:forth:xt=:rv
+#+ATTR_LATEX: :align l|ll|l|l
+| *Pseudocode*                                     | *Instruction*      | *Encoding*                                                                                             | *&*            | *Machine code*            |
+|--------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+----------------+---------------------------|
+| /# Define:/ _~xt=~_                              | ---                | ---                                                                                                    |                | {{{define(03,78 74 3D)}}} |
+| /# In/Out:/    ~( xt@a0 addr@a1 u@a2~            |                    |                                                                                                        |                | {{{padding(00)}}}         |
+| /#/{{{io--}}} ~-- xt@a0 equal@a1)~               |                    |                                                                                                        |                |                           |
+| /#/                                              |                    |                                                                                                        |                |                           |
+| /# Returns with ~equal~ set if ~xt~ is/          |                    |                                                                                                        |                |                           |
+| /# either zero or is not hidden and its/         |                    |                                                                                                        |                |                           |
+| /# name matches the string given by/             |                    |                                                                                                        |                |                           |
+| /# address ~addr~ and length ~u~./               |                    |                                                                                                        |                |                           |
+|                                                  |                    |                                                                                                        |                |                           |
+| {{{c(2)}}} /# "Equal" if ~xt~ zero./             |                    |                                                                                                        |                |                           |
+| {{{c(2)}}} ~if xt@a0 = 0:~                       |                    |                                                                                                        |                |                           |
+| {{{c(4)}}}   ~goto _equal.~                      | beq a0, zero, 0x44 | {{{off(0000010)}}} {{{rs2(01010)}}} {{{rs1(00000)}}} {{{fn3(000)}}} {{{off(00100)}}} {{{op(1100011)}}} | {{{addr(00)}}} | ~63 02 A0 04~             |
+| {{{c(2)}}} /# Not equal if hidden word./         |                    |                                                                                                        |                |                           |
+| {{{c(2)}}} ~flag@t0 ← [xt@a0 + 16];~             | lbu t0, 16(a0)     | {{{off(0x010)}}}                    {{{rs1(01010)}}} {{{fn3(100)}}} {{{rd(00101)}}}  {{{op(0000011)}}} |                | ~83 42 05 01~             |
+| {{{c(2)}}} ~if flag@t0 & 0x40 = 0:~              | andi t1, t0, 0x40  | {{{imm(0x040)}}}                    {{{rs1(00101)}}} {{{fn3(111)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                | ~13 F3 02 04~             |
+| {{{c(4)}}}   ~goto _not_equal.~                  | beq t1, zero, 0x30 | {{{off(0000001)}}} {{{rs2(00110)}}} {{{rs1(00000)}}} {{{fn3(000)}}} {{{off(10000)}}} {{{op(1100011)}}} | {{{addr(0C)}}} | ~63 08 60 02~             |
+| {{{c(2)}}} /# Not equal if lengths don't match./ |                    |                                                                                                        |                |                           |
+| {{{c(2)}}} ~length@t0 ← flag@t0 & 0x1F;~         | andi t0, t0, 0x1F  | {{{imm(0x01F)}}}                    {{{rs1(00101)}}} {{{fn3(111)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |                | ~93 F2 F2 01~             |
+| {{{c(2)}}} ~if length@t0 != u@a2:~               |                    |                                                                                                        |                |                           |
+| {{{c(4)}}}   ~goto _not_equal.~                  | bne t0, a2, 0x28   | {{{off(0000001)}}} {{{rs2(00101)}}} {{{rs1(01100)}}} {{{fn3(001)}}} {{{off(01000)}}} {{{op(1100011)}}} | {{{addr(14)}}} | ~63 14 56 02~             |
+| {{{c(2)}}} /# Compare word name (~xt@a0+17~)/    |                    |                                                                                                        |                |                           |
+| {{{c(2)}}} /# and ~addr@a1~ upto length ~u@a2~./ |                    |                                                                                                        |                |                           |
+| {{{c(2)}}} ~addr'@t0 ← xt@a0 + 17;~              | addi t0, a0, 17    | {{{imm(0x011)}}}                    {{{rs1(01010)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |                | ~93 02 15 01~             |
+| ~_begin:~                                        |                    |                                                                                                        | {{{addr(1C)}}} |                           |
+| {{{c(2)}}} /# No more characters?/               |                    |                                                                                                        |                |                           |
+| {{{c(2)}}} ~if u@a2 = 0;~                        |                    |                                                                                                        |                |                           |
+| {{{c(4)}}}   ~goto _equal.~                      | beq a2, zero, 0x28 | {{{off(0000001)}}} {{{rs2(01100)}}} {{{rs1(00000)}}} {{{fn3(000)}}} {{{off(01000)}}} {{{op(1100011)}}} | {{{addr(1C)}}} | ~63 04 C0 02~             |
+| {{{c(2)}}} /# First characters different?/       |                    |                                                                                                        |                |                           |
+| {{{c(2)}}} ~chr@t1 ← [addr@a1];~                 | lbu t1, 0(a1)      | {{{off(0x000)}}}                    {{{rs1(01011)}}} {{{fn3(100)}}} {{{rd(00110)}}}  {{{op(0000011)}}} |                | ~03 C3 05 00~             |
+| {{{c(2)}}} ~chr'@t2 ← [addr'@t0];~               | lbu t2, 0(t0)      | {{{off(0x000)}}}                    {{{rs1(00101)}}} {{{fn3(100)}}} {{{rd(00111)}}}  {{{op(0000011)}}} |                | ~83 C3 02 00~             |
+| {{{c(2)}}} ~if chr@t1 != chr'@t2:~               |                    |                                                                                                        |                |                           |
+| {{{c(4)}}}   ~goto _not_equal.~                  | bne t1, t2, 0x14   | {{{off(0000000)}}} {{{rs2(00110)}}} {{{rs1(00111)}}} {{{fn3(001)}}} {{{off(10100)}}} {{{op(1100011)}}} | {{{addr(28)}}} | ~63 9A 63 00~             |
+| {{{c(2)}}} /# Proceed to next characters./       |                    |                                                                                                        |                |                           |
+| {{{c(2)}}} ~addr@a1++;~                          | addi a1, a1, 1     | {{{imm(0x001)}}}                    {{{rs1(01011)}}} {{{fn3(000)}}} {{{rd(01011)}}}  {{{op(0010011)}}} |                | ~93 85 15 00~             |
+| {{{c(2)}}} ~addr'@t0++;~                         | addi t0, t0, 1     | {{{imm(0x001)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |                | ~93 82 12 00~             |
+| {{{c(2)}}} ~u@a2--;~                             | addi a2, a2, -1    | {{{imm(0xFFF)}}}                    {{{rs1(01100)}}} {{{fn3(000)}}} {{{rd(01100)}}}  {{{op(0010011)}}} |                | ~13 06 F6 FF~             |
+| {{{c(2)}}} ~goto _begin.~                        | jal zero, -0x1C    | {{{off(11111110010111111111)}}}                                     {{{rd(00000)}}}  {{{op(1101111)}}} | {{{addr(38)}}} | ~6F F0 5F FE~             |
+| ~_not_equal:~                                    |                    |                                                                                                        | {{{addr(3C)}}} |                           |
+| {{{c(2)}}} ~equal@t1 ← 0;~                       | addi t1, zero, 0   | {{{imm(0x000)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                | ~13 03 00 00~             |
+| {{{c(2)}}} ~return.~                             | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~             |
+| ~_equal:~                                        |                    |                                                                                                        | {{{addr(44)}}} |                           |
+| {{{c(2)}}} ~equal@t1 ← 1;~                       | addi t1, zero, 1   | {{{imm(0x001)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                | ~13 03 10 00~             |
+| {{{c(2)}}} ~return.~                             | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~             |
 
 *** Subroutine ~FIND~                                              :noexport:
 
@@ -1829,8 +1877,8 @@ Explain:
 |--------------------------------------------+----------------+-------------+----------------+-------------------------------------------------------------+------------------|
 | /# Define:/ _~FIND~_                       | ---            | ---         |                | {{{define(04,46 49 4E 44)}}}                                | define FIND      |
 | /# In/Out:/    ~( addr@RBP u@RAX~          |                |             |                |                                                             |                  |
-| /#/{{{c(6)}}} ~-​- addr@RBP u@RAX~          |                |             |                |                                                             |                  |
-| /#/{{{c(8)}}}    ~xt@RBX )~                |                |             |                |                                                             |                  |
+| /#/{{{io--}}} ~-- addr@RBP u@RAX~          |                |             |                |                                                             |                  |
+| /#/{{{io}}}      ~xt@RBX )~                |                |             |                |                                                             |                  |
 | /#/                                        |                |             |                |                                                             |                  |
 | /# Search the dictionary for a/            |                |             |                |                                                             |                  |
 | /# word with name matching/                |                |             |                |                                                             |                  |
@@ -1858,7 +1906,7 @@ Explain:
 | {{{c(2)}}} /# link pointer./               |                |             |                |                                                             |                  |
 | {{{c(2)}}} ~if ZF:~  /# Set by ~xt=()~./   | JE _rel8_      | 74 _cb_     |                | ~74~ {{{offset(04,04-00)}}}                                 | +jump _end if == |
 | {{{c(4)}}}   ~goto _end.~                  |                |             | {{{addr(00)}}} |                                                             |                  |
-| {{{c(2)}}} ~RBX ← [RBX+8];~                | MOV r64, r/m64 | REX.W 8B /r |                | ~48 8B~ {{{modrm(5B,01,011,011)}}} {{{displ(08)}}}          | rbx = [rbx+8]    |
+| {{{c(2)}}} ~xt@RBX ← [xt@RBX + 8];~        | MOV r64, r/m64 | REX.W 8B /r |                | ~48 8B~ {{{modrm(5B,01,011,011)}}} {{{displ(08)}}}          | rbx = [rbx+8]    |
 | ~_end:~                                    |                |             | {{{addr(04)}}} |                                                             | # _end:          |
 | {{{c(2)}}} ~return.~                       | RET            | C3          |                | ~C3~                                                        | return           |
 
