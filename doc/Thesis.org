@@ -513,7 +513,7 @@ Discuss:
 | *Pseudocode*                                                                                | *Instruction*  | *Opcode*   | *&*            | *Machine code*                  | *Intention*                                        |
 |---------------------------------------------------------------------------------------------+----------------+------------+----------------+---------------------------------+----------------------------------------------------|
 | /# Define:/ _~COMPL~_                                                                       | ---            | ---        | {{{addr(B2)}}} | {{{define(05,43 4F 4D 50 4C)}}} | define COMPL                                       |
-| /# In/Out:/ ~( xt@EBX -- )~                                                                 |                |            |                |                                 |                                                    |
+| /# In/Out:/ ~( xt@RBX -- xt@RBX )~                                                          |                |            |                |                                 |                                                    |
 |                                                                                             |                |            |                |                                 |                                                    |
 | /# Generate a CALL instr. to ~OUTPUT~:/                                                     |                |            |                |                                 |                                                    |
 | /# – instruction: CALL r/m64/                                                               |                |            |                |                                 |                                                    |
@@ -544,7 +544,7 @@ Discuss:
 | *Pseudocode*                                                                                   | *Instruction*        | *Encoding*                                                                                             | *&*             | *Machine code*                  |
 |------------------------------------------------------------------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------+-----------------+---------------------------------|
 | /# Define:/ _~COMPL~_                                                                          | ---                  | ---                                                                                                    | {{{addr(EC)}}}  | {{{define(05,43 4F 4D 50 4C)}}} |
-| /# In/Out:/ ~( xt@a0 -- )~                                                                     |                      |                                                                                                        |                 | {{{padding(00)}}}               |
+| /# In/Out:/ ~( xt@a0 -- xt@a0 )~                                                               |                      |                                                                                                        |                 | {{{padding(00)}}}               |
 |                                                                                                |                      |                                                                                                        |                 |                                 |
 | /# Generate two instructions which,/                                                           |                      |                                                                                                        |                 |                                 |
 | /# combined, set the PC to ~[xt]~:/                                                            |                      |                                                                                                        |                 |                                 |
@@ -2185,7 +2185,7 @@ Explain:
 | /# mode or if it's an immediate word./    |                |          |                |                              |                    |
 | /# In other words, don't execute if we/   |                |          |                |                              |                    |
 | /# are compiling and the word is not/     |                |          |                |                              |                    |
-| /# immediate./                            |                |          |                |                              |                    |
+| /# immediate (if ~imm+state~ is ~1~)./    |                |          |                |                              |                    |
 |                                           |                |          |                |                              |                    |
 | {{{c(2)}}} ~if imm+state@AL != 1:~        | CMP AL, /imm8/ | 3C /ib/  |                | ~3C~ /~01~/                  | cmp al, 1          |
 | {{{c(4)}}}   ~goto exec().~               | JNE _rel8_     | 75 _cb_  |                | ~75~ {{{offset(01,01-00)}}}  | +jump (exec) if != |
@@ -2207,7 +2207,7 @@ Explain:
 | /# mode or if it's an immediate word./    |                  |                                                                                                        |                |                              |
 | /# In other words, don't execute if we/   |                  |                                                                                                        |                |                              |
 | /# are compiling and the word is not/     |                  |                                                                                                        |                |                              |
-| /# immediate./                            |                  |                                                                                                        |                |                              |
+| /# immediate (if ~imm+state~ is ~1~)./    |                  |                                                                                                        |                |                              |
 |                                           |                  |                                                                                                        |                |                              |
 | {{{c(2)}}} ~if imm+state@a1 = 1:~         | addi t0, zero, 1 | {{{imm(0x001)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |                | ~93 02 10 00~                |
 | {{{c(4)}}}   ~goto _end.~                 | beq a1, t0, 0x1C | {{{off(0000000)}}} {{{rs2(01011)}}} {{{rs1(00101)}}} {{{fn3(000)}}} {{{off(11100)}}} {{{op(1100011)}}} | {{{addr(00)}}} | ~63 8E B2 00~                |
@@ -2220,20 +2220,20 @@ Explain:
 | ~_end:~                                   |                  |                                                                                                        | {{{addr(1C)}}} |                              |
 | {{{c(2)}}} ~return.~                      | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 
-*** Subroutine ~compl~                                             :noexport:
+*** Subroutine ~compl~
 
-#+CAPTION: Subroutine ~compl~ compiles a word in compiling state if it's not immediate.
-#+LABEL: tbl:forth:compl
+#+CAPTION: Subroutine ~compl~ compiles a word in compiling state if it's not immediate (x86-64).
+#+LABEL: tbl:forth:compl:x
 #+ATTR_LATEX: :align l|ll|l|lH
 | *Pseudocode*                                | *Instruction*  | *Opcode*   | *&*            | *Machine code*                  | *Intention*         |
 |---------------------------------------------+----------------+------------+----------------+---------------------------------+---------------------|
 | /# Define:/ _~compl~_                       | ---            | ---        |                | {{{define(05,63 6F 6D 70 6C)}}} | define compl        |
-| /# In/Out:/    ~( imm+state@AL xt@RBX~      |                |            |                |                                 |                     |
-| /#/{{{io--}}} ~-- imm+state@AL xt@RBX )~    |                |            |                |                                 |                     |
+| /# In/Out:/    ~( xt@RBX imm+state@AL~      |                |            |                |                                 |                     |
+| /#/{{{io--}}} ~-- xt@RBX imm+state@AL )~    |                |            |                |                                 |                     |
 | /#/                                         |                |            |                |                                 |                     |
 | /# Compile ~xt~ in the current definition/  |                |            |                |                                 |                     |
 | /# if we're in compiling state and ~xt~ is/ |                |            |                |                                 |                     |
-| /# not immediate./                          |                |            |                |                                 |                     |
+| /# not immediate (if ~imm+state~ is ~1~)./  |                |            |                |                                 |                     |
 |                                             |                |            |                |                                 |                     |
 | {{{c(2)}}} ~if imm+state@AL = 1:~           | CMP AL, /imm8/ | 3C /ib/    |                | ~3C~ /~01~/                     | cmp al, 1           |
 | {{{c(4)}}}   ~goto compl().~                | JE _rel8_      | 74 _cb_    |                | ~74~ {{{offset(01,01-00)}}}     | +jump (compl) if == |
@@ -2243,6 +2243,32 @@ Explain:
 | {{{c(2)}}} /# Restore AL after ~COMPL~./    |                |            |                |                                 |                     |
 | {{{c(2)}}} ~imm+state@AL ← 1;~              | MOV r8, /imm8/ | B0+rb /ib/ |                | ~B0~ /~01~/                     | al = 1              |
 | {{{c(2)}}} ~return.~                        | RET            | C3         |                | ~C3~                            | return              |
+
+#+CAPTION: Subroutine ~compl~ compiles a word in compiling state if it's not immediate (RISC-V).
+#+LABEL: tbl:forth:compl:rv
+#+ATTR_LATEX: :align l|ll|l|l
+| *Pseudocode*                                | *Instruction*    | *Encoding*                                                                                             | *&*            | *Machine code*                  |
+|---------------------------------------------+------------------+--------------------------------------------------------------------------------------------------------+----------------+---------------------------------|
+| /# Define:/ _~compl~_                       | ---              | ---                                                                                                    |                | {{{define(05,63 6F 6D 70 6C)}}} |
+| /# In/Out:/    ~( xt@a0 imm+state@a1~       |                  |                                                                                                        |                | {{{padding(00)}}}               |
+| /#/{{{io--}}} ~-- xt@a0 imm+state@a1 )~     |                  |                                                                                                        |                |                                 |
+| /#/                                         |                  |                                                                                                        |                |                                 |
+| /# Compile ~xt~ in the current definition/  |                  |                                                                                                        |                |                                 |
+| /# if we're in compiling state and ~xt~ is/ |                  |                                                                                                        |                |                                 |
+| /# not immediate (if ~imm+state~ is ~1~)./  |                  |                                                                                                        |                |                                 |
+|                                             |                  |                                                                                                        |                |                                 |
+| {{{c(2)}}} ~if imm+state@a1 != 1:~          | addi t0, zero, 1 | {{{imm(0x001)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |                | ~93 02 10 00~                   |
+| {{{c(4)}}}   ~goto _end.~                   | bne a1, t0, 0x20 | {{{off(0000001)}}} {{{rs2(01011)}}} {{{rs1(00101)}}} {{{fn3(001)}}} {{{off(00000)}}} {{{op(1100011)}}} | {{{addr(00)}}} | ~63 90 B2 02~                   |
+| {{{c(2)}}} /# Compile word using ~COMPL~./  |                  |                                                                                                        |                |                                 |
+| {{{c(2)}}} ~push ra;~                       | addi sp, sp, -8  | {{{imm(0xFF8)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 FF~                   |
+| {{{c(2)}}}                                  | sd ra, 0(sp)     | {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                | ~23 30 11 00~                   |
+| {{{c(2)}}} ~call COMPL;~  /# Compiled./     | ---              | ---                                                                                                    |                | {{{compile(43)}}}               |
+| {{{c(2)}}} ~pop ra;~                        | ld ra, 0(sp)     | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |                | ~83 30 01 00~                   |
+| {{{c(2)}}}                                  | addi sp, sp, 8   | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 00~                   |
+| {{{c(2)}}} /# Restore ~a1~ after ~COMPL~./  |                  |                                                                                                        |                |                                 |
+| {{{c(2)}}} ~imm+state@a1 ← 1;~              | addi a1, zero, 1 | {{{imm(0x001)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(01011)}}}  {{{op(0010011)}}} |                | ~93 05 10 00~                   |
+| ~_end:~                                     |                  |                                                                                                        | {{{addr(20)}}} |                                 |
+| {{{c(2)}}} ~return.~                        | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                   |
 
 *** Subroutine ~hit~                                               :noexport:
 
