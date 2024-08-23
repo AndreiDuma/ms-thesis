@@ -1952,7 +1952,7 @@ Explain:
 | {{{c(2)}}} ~return.~                       | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 
 
-*** Subroutine ~Num~                                               :noexport:
+*** Subroutine ~Num~
 
 #+CAPTION: Subroutine ~Num~ parses a character string as a number and pushes it on the stack (x86-64).
 #+LABEL: tbl:forth:num:x
@@ -1974,7 +1974,7 @@ Explain:
 | {{{c(2)}}} ~u@RCX ← u@RAX;~              | MOV r/m64, r64    | REX.W 89 /r      |                | ~48 89~ {{{modrm(C1,11,000,001)}}}        | rcx = rax          |
 | {{{c(2)}}} ~addr@RSI ← addr@RBP;~        | MOV r64, r/m64    | REX.W 8B /r      |                | ~48 8B~ {{{modrm(F5,11,110,101)}}}        | rsi = rbp          |
 | ~_begin:~                                |                   |                  | {{{addr(00)}}} |                                           | # _beg:            |
-| {{{c(2)}}} /# Parse one digit./          |                   |                  |                |                                           |                    |
+| {{{c(2)}}} /# Parse one character./      |                   |                  |                |                                           |                    |
 | {{{c(2)}}} ~call Num();~                 | CALL _rel32_      | E8 _cd_          |                | ~E8~ {{{offset(03 00 00 00,08-05)}}}      | +call (Num)        |
 | {{{c(2)}}} /# Repeat while there are/    |                   |                  |                |                                           |                    |
 | {{{c(2)}}} /# unparsed characters left./ |                   |                  |                |                                           |                    |
@@ -1983,8 +1983,8 @@ Explain:
 | {{{c(2)}}} ~return.~                     | RET               | C3               | {{{addr(07)}}} | ~C3~                                      | return             |
 | ~Num():~                                 |                   |                  | {{{addr(08)}}} |                                           | (Num)              |
 | {{{c(2)}}} ~chr@AL ← [addr@RSI++];~      | LODS m8           | AC               |                | ~AC~                                      | al = [rsi++]       |
+| {{{c(2)}}} /# Is it a digit?/            |                   |                  |                |                                           |                    |
 | {{{c(2)}}} ~if chr@AL < 'A':~            | CMP AL, /imm8/    | 3C /ib/          |                | ~3C~ /~41~/                               | cmp al, 'A'        |
-| {{{c(4)}}}   /# It's a digit./           |                   |                  |                |                                           |                    |
 | {{{c(4)}}}   ~goto _digit.~              | JL _rel8_         | 7C _cb_          |                | ~7C~ {{{offset(02,02-00)}}}               | +jump _digit if <  |
 | {{{c(2)}}} /# It's a letter./            |                   |                  | {{{addr(00)}}} |                                           | # _letter:         |
 | {{{c(2)}}} ~chr@AL -= 7;~                | SUB AL, /imm8/    | 2C /ib/          |                | ~2C~ /~07~/                               | al -= 7            |
@@ -1995,6 +1995,45 @@ Explain:
 | {{{c(2)}}} ~[STACK@R15] <<= 4~;          | SAL r/m64, /imm8/ | REX.W C1 /​4 /ib/ |                | ~49 C1~ {{{modrm(27,00,100,111)}}} /~04~/ | [r15] <<= 4        |
 | {{{c(2)}}} ~[STACK@R15]~ \vert​~= digit@RAX;~ | OR r/m64, r64     | REX.W 09 /r      |                | ~49 09~ {{{modrm(07,00,000,111)}}}        | [r15] \vert= rax       |
 | {{{c(2)}}} ~return.~                     | RET               | C3               |                | ~C3~                                      | return             |
+
+#+CAPTION: Subroutine ~Num~ parses a character string as a number and pushes it on the stack (RISC-V).
+#+LABEL: tbl:forth:num:rv
+#+ATTR_LATEX: :align l|ll|l|l
+| *Pseudocode*                             | *Instruction*       | *Encoding*                                                                                             | *&*            | *Machine code*            |
+|------------------------------------------+---------------------+--------------------------------------------------------------------------------------------------------+----------------+---------------------------|
+| /# Define:/ _~Num~_                      | ---                 | ---                                                                                                    |                | {{{define(03,4E 75 6D)}}} |
+| /# In/Out:/    ~( addr@a0 u@a1~          |                     |                                                                                                        |                | {{{padding(00)}}}         |
+| /#/{{{io--}}} ~-​- n )~                   |                     |                                                                                                        |                |                           |
+| /#/                                      |                     |                                                                                                        |                |                           |
+| /# Parse string given by ~addr~​/​~u~/     |                     |                                                                                                        |                |                           |
+| /# as a number and push it on/           |                     |                                                                                                        |                |                           |
+| /# the data stack./                      |                     |                                                                                                        |                |                           |
+|                                          |                     |                                                                                                        |                |                           |
+| {{{c(2)}}} ~num@t0 ← 0;~                 | addi t0, zero, 0    | {{{imm(0x000)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |                | ~93 02 00 00~             |
+| ~_begin:~                                |                     |                                                                                                        | {{{addr(00)}}} |                           |
+| {{{c(2)}}} /# Parse one character./      |                     |                                                                                                        |                |                           |
+| {{{c(2)}}} ~chr@t1 ← [addr@a0++];~       | lbu t1, 0(a0)       | {{{off(0x000)}}}                    {{{rs1(01010)}}} {{{fn3(100)}}} {{{rd(00110)}}}  {{{op(0000011)}}} |                | ~03 43 05 00~             |
+| {{{c(2)}}}                               | addi a0, a0, 1      | {{{imm(0x001)}}}                    {{{rs1(01010)}}} {{{fn3(000)}}} {{{rd(01010)}}}  {{{op(0010011)}}} |                | ~13 05 15 00~             |
+| {{{c(2)}}} /# Is it a ~[0-9]~ digit?/    |                     |                                                                                                        |                |                           |
+| {{{c(2)}}} ~if chr@t1 < 'A':~            | addi t2, zero, 65   | {{{imm(0x041)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00111)}}}  {{{op(0010011)}}} |                | ~93 03 10 04~             |
+| {{{c(4)}}}   ~goto _digit.~              | bltu t1, t2, 0x08   | {{{off(0000000)}}} {{{rs2(00110)}}} {{{rs1(00111)}}} {{{fn3(110)}}} {{{off(01000)}}} {{{op(1100011)}}} | {{{addr(0C)}}} | ~63 E4 63 00~             |
+| {{{c(2)}}} /# It's an ~[A-F]~ digit./    |                     |                                                                                                        |                |                           |
+| {{{c(2)}}} ~chr@t1 -= 7;~                | addi t1, t1, -7     | {{{imm(0xFF9)}}}                    {{{rs1(00110)}}} {{{fn3(000)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                | ~13 03 93 FF~             |
+| ~_digit:~                                |                     |                                                                                                        | {{{addr(14)}}} |                           |
+| {{{c(2)}}} ~digit@t1 = chr@t1 - '0';~    | addi t1, t1, -48    | {{{imm(0xFD0)}}}                    {{{rs1(00110)}}} {{{fn3(000)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                | ~13 03 03 FD~             |
+| {{{c(2)}}} /# Multiply by base and add/  |                     |                                                                                                        |                |                           |
+| {{{c(2)}}} /# the new digit./            |                     |                                                                                                        |                |                           |
+| {{{c(2)}}} ~num@t0 <<= 4~;               | slli t0, t0, 4      | ~000000~​{{{shamt(000100)}}}         {{{rs1(00101)}}} {{{fn3(001)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |                | ~93 92 42 00~             |
+| {{{c(2)}}} ~num@t0~ \vert​~= digit@t1;~       | or t0, t0, t1       | {{{fn7(0000000)}}} {{{rs2(00110)}}} {{{rs1(00101)}}} {{{fn3(110)}}} {{{rd(00101)}}}  {{{op(0110011)}}} |                | ~B3 E2 62 00~             |
+| {{{c(2)}}} /# Repeat while there are/    |                     |                                                                                                        |                |                           |
+| {{{c(2)}}} /# unparsed characters left./ |                     |                                                                                                        |                |                           |
+| {{{c(2)}}} ~if --u@a1 != 0:~             | addi a1, a1, -1     | {{{imm(0xFFF)}}}                    {{{rs1(01011)}}} {{{fn3(000)}}} {{{rd(01011)}}}  {{{op(0010011)}}} |                | ~93 85 F5 FF~             |
+| {{{c(4)}}}   ~goto _begin.~              | bne a1, zero, -0x24 | {{{off(1111110)}}} {{{rs2(01011)}}} {{{rs1(00000)}}} {{{fn3(001)}}} {{{off(11101)}}} {{{op(1100011)}}} | {{{addr(24)}}} | ~E3 1E B0 FC~             |
+| {{{c(2)}}} /# Push the parsed number/    |                     |                                                                                                        |                |                           |
+| {{{c(2)}}} /# on the data stack./        |                     |                                                                                                        |                |                           |
+| {{{c(2)}}} ~STACK@s3 -= 8;~              | addi s3, s3, -8     | {{{imm(0xFF8)}}}                    {{{rs1(10011)}}} {{{fn3(000)}}} {{{rd(10011)}}}  {{{op(0010011)}}} |                | ~93 89 89 FF~             |
+| {{{c(2)}}} ~[STACK@s3] ← num@t0;~        | sd t0, 0(s3)        | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(10011)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                | ~23 B0 59 00~             |
+| {{{c(2)}}} ~return.~                     | jalr zero, 0(ra)    | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~             |
 
 *** Subroutine ~miss~                                              :noexport:
 
@@ -2141,7 +2180,7 @@ Explain:
 | {{{c(2)}}} ~return.~                              | RET             | C3          |                | ~C3~                                                     | return              |
 
 
-*** Subroutine ~SVAL~
+*** Subroutine ~SVAL~                                              :noexport:
 
 #+CAPTION: Subroutine ~SVAL~ evaluates a line of Forth code (x86-64).
 #+LABEL: tbl:forth:SVAL:x
