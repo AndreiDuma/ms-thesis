@@ -2220,7 +2220,7 @@ Explain:
 | ~_end:~                                   |                  |                                                                                                        | {{{addr(1C)}}} |                              |
 | {{{c(2)}}} ~return.~                      | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 
-*** Subroutine ~compl~
+*** Subroutine ~compl~                                             :noexport:
 
 #+CAPTION: Subroutine ~compl~ compiles a word in compiling state if it's not immediate (x86-64).
 #+LABEL: tbl:forth:compl:x
@@ -2270,18 +2270,21 @@ Explain:
 | ~_end:~                                     |                  |                                                                                                        | {{{addr(20)}}} |                                 |
 | {{{c(2)}}} ~return.~                        | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                   |
 
-*** Subroutine ~hit~                                               :noexport:
+*** Subroutine ~hit~
 
-#+CAPTION: Subroutine ~hit~ ???.
-#+LABEL: tbl:forth:hit
+#+CAPTION: Subroutine ~hit~ either compiles or executes a word found in the dictionary (x86-64).
+#+LABEL: tbl:forth:hit:x
 #+ATTR_LATEX: :align l|ll|l|lH
 | *Pseudocode*                                      | *Instruction*   | *Opcode*    | *&*            | *Machine code*                                           | *Intention*         |
 |---------------------------------------------------+-----------------+-------------+----------------+----------------------------------------------------------+---------------------|
 | /# Define:/ _~hit~_                               | ---             | ---         |                | {{{define(03,68 69 74)}}}                                | define hit          |
 | /# In/Out:/ ~( xt@RBX -- )~                       |                 |             |                |                                                          |                     |
 | /#/                                               |                 |             |                |                                                          |                     |
-| /# ???/                                           |                 |             |                |                                                          |                     |
-| /# ???/                                           |                 |             |                |                                                          |                     |
+| /# Either compile or execute a/                   |                 |             |                |                                                          |                     |
+| /# word that has been found in/                   |                 |             |                |                                                          |                     |
+| /# the dictionary, depending on/                  |                 |             |                |                                                          |                     |
+| /# current state and whether it's/                |                 |             |                |                                                          |                     |
+| /# an immediate word./                            |                 |             |                |                                                          |                     |
 |                                                   |                 |             |                |                                                          |                     |
 | {{{c(2)}}} ~if xt@RBX != 0:~                      | TEST r/m64, r64 | REX.W 85 /r |                | ~48 85~ {{{modrm(DB,11,011,011)}}}                       | rbx(xt) ?           |
 | {{{c(4)}}}   ~goto hit().~                        | JNZ _rel8_      | 75 _cb_     |                | ~75~ {{{offset(01,01-00)}}}                              | +jump (hit) if != 0 |
@@ -2289,13 +2292,48 @@ Explain:
 | ~hit():~                                          |                 |             | {{{addr(01)}}} |                                                          | (hit)               |
 | {{{c(2)}}} /# Combine word's immediate/           |                 |             |                |                                                          |                     |
 | {{{c(2)}}} /# flag with current state./           |                 |             |                |                                                          |                     |
-| {{{c(2)}}} ~flag@AL ← [xt@RBX+10];~               | MOV r8, r/m8    | REX 8A /r   |                | ~40 8A~ {{{modrm(43,01,000,011)}}} {{{displ(10)}}}       | al = [rbx+10]       |
-| {{{c(2)}}} ~imm@AL &= 0x80;~                      | AND AL, /imm8/  | 24 /ib/     |                | ~24~ /~80~/                                              | al &= 80(IMMEDIATE) |
-| {{{c(2)}}} ~imm+state@AL~ \vert​~=~ ~[STATE];~         | OR r8, r/m8     | 0A /r       |                | ~0A~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | al \vert= [STATE]       |
-|                                                   |                 |             |                | \hookrightarrow {{{i(0)}}} {{{displ(20 00 00 10)}}}      |                     |
+| {{{c(2)}}} ~flag@AL ← [xt@RBX + 16];~             | MOV r8, r/m8    | REX 8A /r   |                | ~40 8A~ {{{modrm(43,01,000,011)}}} {{{displ(10)}}}       | al = [rbx+10]       |
+| {{{c(2)}}} ~imm@AL ← flag@AL & 0x80;~             | AND AL, /imm8/  | 24 /ib/     |                | ~24~ /~80~/                                              | al &= 80(IMMEDIATE) |
+| {{{c(2)}}} ~imm+state@AL ← imm@AL~                |                 |             |                |                                                          |                     |
+| {{{c(15)}}}              \vert ~[STATE];~             | OR r8, r/m8     | 0A /r       |                | ~0A~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | al \vert= [STATE]       |
+| {{{c(2)}}} /# Let ~compl~ and ~exec~ decide/      |                 |             |                | \hookrightarrow {{{i(0)}}} {{{displ(20 00 00 10)}}}      |                     |
+| {{{c(2)}}} /# what to do./                        |                 |             |                |                                                          |                     |
 | {{{c(2)}}} ~call compl;~  {{{c(0)}}}​/# Compiled./ | ---             | ---         |                | {{{compile(63,c)}}}                                      | Call compl          |
 | {{{c(2)}}} ~call exec;~   {{{c(1)}}}​/# Compiled./ | ---             | ---         |                | {{{compile(65,e)}}}                                      | Call exec           |
 | {{{c(2)}}} ~return.~                              | RET             | C3          |                | ~C3~                                                     | return              |
+
+#+CAPTION: Subroutine ~hit~ either compiles or executes a word found in the dictionary (RISC-V).
+#+LABEL: tbl:forth:hit:rv
+#+ATTR_LATEX: :align l|ll|l|l
+| *Pseudocode*                                      | *Instruction*      | *Opcode*                                                                                               | *&*            | *Machine code*            |
+|---------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+----------------+---------------------------|
+| /# Define:/ _~hit~_                               | ---                | ---                                                                                                    |                | {{{define(03,68 69 74)}}} |
+| /# In/Out:/ ~( xt@a0 -- )~                        |                    |                                                                                                        |                | {{{padding(00)}}}         |
+| /#/                                               |                    |                                                                                                        |                |                           |
+| /# Either compile or execute a/                   |                    |                                                                                                        |                |                           |
+| /# word that has been found in/                   |                    |                                                                                                        |                |                           |
+| /# the dictionary, depending on/                  |                    |                                                                                                        |                |                           |
+| /# current state and whether it's/                |                    |                                                                                                        |                |                           |
+| /# an immediate word./                            |                    |                                                                                                        |                |                           |
+|                                                   |                    |                                                                                                        |                |                           |
+| {{{c(2)}}} ~if xt@a0 = 0:~                        | beq a0, zero, 0x30 | {{{off(0000001)}}} {{{rs2(01010)}}} {{{rs1(00000)}}} {{{fn3(000)}}} {{{off(10000)}}} {{{op(1100011)}}} |                | ~63 08 A0 02~             |
+| {{{c(4)}}}   ~goto _end.~                         |                    |                                                                                                        | {{{addr(00)}}} |                           |
+| {{{c(2)}}} /# Combine word's immediate/           |                    |                                                                                                        |                |                           |
+| {{{c(2)}}} /# flag with current state./           |                    |                                                                                                        |                |                           |
+| {{{c(2)}}} ~flag@t0 ← [xt@a0 + 16];~              | lbu t0, 16(a0)     | {{{off(0x010)}}}                    {{{rs1(01010)}}} {{{fn3(100)}}} {{{rd(00101)}}}  {{{op(0000011)}}} |                | ~83 42 05 01~             |
+| {{{c(2)}}} ~imm@t0 ← flag@t0 & 0x80;~             | andi t0, t0, 0x80  | {{{imm(0x080)}}}                    {{{rs1(00101)}}} {{{fn3(111)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |                | ~93 F2 02 08~             |
+| {{{c(2)}}} ~imm+state@t0 ← imm@t0~                | lbu t1, 32(s2)     | {{{off(0x020)}}}                    {{{rs1(10010)}}} {{{fn3(100)}}} {{{rd(00110)}}}  {{{op(0000011)}}} |                | ~03 43 09 02~             |
+| {{{c(15)}}}              \vert ~[STATE];~             | or t0, t0, t1      | {{{fn7(0000000)}}} {{{rs2(00110)}}} {{{rs1(00101)}}} {{{fn3(110)}}} {{{rd(00101)}}}  {{{op(0110011)}}} |                | ~B3 E2 62 00~             |
+| {{{c(2)}}} /# Let ~compl~ and ~exec~ decide/      |                    |                                                                                                        |                |                           |
+| {{{c(2)}}} /# what to do./                        |                    |                                                                                                        |                |                           |
+| {{{c(2)}}} ~push ra;~                             | addi sp, sp, -8    | {{{imm(0xFF8)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 FF~             |
+| {{{c(2)}}}                                        | sd ra, 0(sp)       | {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                | ~23 30 11 00~             |
+| {{{c(2)}}} ~call compl;~  {{{c(0)}}}​/# Compiled./ | ---                | ---                                                                                                    |                | {{{compile(63,c)}}}       |
+| {{{c(2)}}} ~call exec;~   {{{c(1)}}}​/# Compiled./ | ---                | ---                                                                                                    |                | {{{compile(65,e)}}}       |
+| {{{c(2)}}} ~pop ra;~                              | ld ra, 0(sp)       | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |                | ~83 30 01 00~             |
+| {{{c(2)}}}                                        | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 00~             |
+| ~_end:~                                           |                    |                                                                                                        | {{{addr(30)}}} |                           |
+| {{{c(2)}}} ~return.~                              | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~             |
 
 
 *** Subroutine ~SVAL~                                              :noexport:
@@ -2471,6 +2509,8 @@ References:
 - [ ] Convert all bytes to uppercase.
 - [ ] RISC-V:
   - [ ] Macrofy all remaining bits in encodings.
+  - [ ] Convert all numbers in the instr. column to a standardized
+    format.
 - [ ] x86-64:
   - [ ] Convert *Instruction* column to actual *Assembly*.
     - [ ] Including compiled instructions in ~COMPL~, ~LIT~ etc.!!!
