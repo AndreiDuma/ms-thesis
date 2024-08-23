@@ -1952,7 +1952,7 @@ Explain:
 | {{{c(2)}}} ~return.~                       | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 
 
-*** Subroutine ~Num~
+*** Subroutine ~Num~                                               :noexport:
 
 #+CAPTION: Subroutine ~Num~ parses a character string as a number and pushes it on the stack (x86-64).
 #+LABEL: tbl:forth:num:x
@@ -2035,7 +2035,7 @@ Explain:
 | {{{c(2)}}} ~[STACK@s3] ← num@t0;~        | sd t0, 0(s3)        | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(10011)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                | ~23 B0 59 00~             |
 | {{{c(2)}}} ~return.~                     | jalr zero, 0(ra)    | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~             |
 
-*** Subroutine ~miss~
+*** Subroutine ~miss~                                              :noexport:
 
 #+CAPTION: Subroutine ~miss~ attempts parsing a word as a number, optionally compiling it as a literal (x86-64).
 #+LABEL: tbl:forth:miss:x
@@ -2114,36 +2114,60 @@ Explain:
 | {{{c(2)}}} ~return.~                   | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 
 
-*** Subroutine ~EXEC~                                              :noexport:
+*** Subroutine ~EXEC~
 
-#+CAPTION: Subroutine ~EXEC~ ???.
-#+LABEL: tbl:forth:EXEC
+#+CAPTION: Subroutine ~EXEC~ executes a Forth word (x86-64).
+#+LABEL: tbl:forth:EXEC:x
 #+ATTR_LATEX: :align l|ll|lH
-| *Pseudocode*                    | *Instruction*    | *Opcode*   | *Machine code*                  | *Intention*  |
-|---------------------------------+------------------+------------+---------------------------------+--------------|
-| /# Define:/ _~EXEC~_            | ---              | ---        | {{{define(04,45 58 45 43)}}}    | define EXEC  |
-| /# In/Out:/ ~( xt@RXB -- )~     |                  |            |                                 |              |
-| /#/                             |                  |            |                                 |              |
-| /# ???/                         |                  |            |                                 |              |
-| /# ???/                         |                  |            |                                 |              |
-|                                 |                  |            |                                 |              |
-| ~RCX ← 0x7FFFFFF8~  /# ???/     | MOV r32, /imm32/ | B8+rd /id/ | ~B9~ /~F8 FF FF 7F~/            | rcx = _      |
-| ~push RDI;~  /# Save./          | PUSH r64         | 50+rd      | ~57~                            | push rdi     |
-| ~RDI ← RCX;~                    | MOV r/m32, r32   | 89 /r      | ~89~ {{{modrm(CF,11,001,111)}}} | rdi = rcx    |
-|                                 |                  |            |                                 |              |
-| /# Compile a CALL to ~xt~./     |                  |            |                                 |              |
-| ~call COMPL;~  /# Compiled./    | ---              | ---        | {{{compile(43,C)}}}             | Call COMPL   |
-|                                 |                  |            |                                 |              |
-| /# Compile a RET instruction./  |                  |            |                                 |              |
-| ~AL ← 0xC3;~                    | MOV r8, /imm8/   | B0+rb /ib/ | ~B0~ /~C3~/                     | al = C3      |
-| ~[RDI++] ← AL;~                 | STOS m8          | AA         | ~AA~                            | [rdi++] = al |
-|                                 |                  |            |                                 |              |
-| ~pop RDI;~  /# Restore./        | POP r64          | 58+rd      | ~5F~                            | pop rdi      |
-|                                 |                  |            |                                 |              |
-| /# Transfer control to the/     |                  |            |                                 |              |
-| /# newly created instructions./ |                  |            |                                 |              |
-| ~call [RCX];~                   | CALL r/m64       | FF /2      | ~FF~ {{{modrm(D1,11,010,001)}}} | call rcx     |
-| ~return.~                       | RET              | C3         | ~C3~                            | return       |
+| *Pseudocode*                       | *Instruction*    | *Opcode*   | *Machine code*                  | *Intention*  |
+|------------------------------------+------------------+------------+---------------------------------+--------------|
+| /# Define:/ _~EXEC~_               | ---              | ---        | {{{define(04,45 58 45 43)}}}    | define EXEC  |
+| /# In/Out:/ ~( xt@RBX -- )~        |                  |            |                                 |              |
+| /#/                                |                  |            |                                 |              |
+| /# Execute word given by ~xt~./    |                  |            |                                 |              |
+|                                    |                  |            |                                 |              |
+| /# Pick an address in a galaxy/    |                  |            |                                 |              |
+| /# far away.../                    |                  |            |                                 |              |
+| ~RCX ← 0x7FFFFFF8~                 | MOV r32, /imm32/ | B8+rd /id/ | ~B9~ /~F8 FF FF 7F~/            | rcx = _      |
+| /# Temporarily set ~OUTPUT~ to/    |                  |            |                                 |              |
+| /# this address, first saving it./ |                  |            |                                 |              |
+| ~push OUTPUT@RDI;~                 | PUSH r64         | 50+rd      | ~57~                            | push rdi     |
+| ~OUTPUT@RDI ← RCX;~                | MOV r/m32, r32   | 89 /r      | ~89~ {{{modrm(CF,11,001,111)}}} | rdi = rcx    |
+|                                    |                  |            |                                 |              |
+| /# Compile a call to ~xt~'s code./ |                  |            |                                 |              |
+| ~call COMPL;~  /# Compiled./       | ---              | ---        | {{{compile(43,C)}}}             | Call COMPL   |
+| /# Compile a RET instruction./     |                  |            |                                 |              |
+| ~op@AL ← 0xC3;~                    | MOV r8, /imm8/   | B0+rb /ib/ | ~B0~ /~C3~/                     | al = C3      |
+| ~[OUTPUT@RDI++] ← op@AL;~          | STOS m8          | AA         | ~AA~                            | [rdi++] = al |
+|                                    |                  |            |                                 |              |
+| /# Restore ~OUTPUT~ and transfer/  |                  |            |                                 |              |
+| /# control to the newly created/   |                  |            |                                 |              |
+| /# instruction sequence./          |                  |            |                                 |              |
+| ~pop OUTPUT@RDI;~                  | POP r64          | 58+rd      | ~5F~                            | pop rdi      |
+| ~call [RCX];~                      | CALL r/m64       | FF /2      | ~FF~ {{{modrm(D1,11,010,001)}}} | call rcx     |
+| ~return.~                          | RET              | C3         | ~C3~                            | return       |
+
+#+CAPTION: Subroutine ~EXEC~ executes a Forth word (RISC-V).
+#+LABEL: tbl:forth:EXEC:rv
+#+ATTR_LATEX: :align l|ll|l
+| *Pseudocode*                                  | *Instruction*    | *Encoding*                                                                                             | *Machine code*               |
+|-----------------------------------------------+------------------+--------------------------------------------------------------------------------------------------------+------------------------------|
+| /# Define:/ _~EXEC~_                          | ---              | ---                                                                                                    | {{{define(04,45 58 45 43)}}} |
+| /# In/Out:/ ~( xt@a0 -- )~                    |                  |                                                                                                        |                              |
+| /#/                                           |                  |                                                                                                        |                              |
+| /# Execute word given by ~xt~./               |                  |                                                                                                        |                              |
+|                                               |                  |                                                                                                        |                              |
+| /# Retrieve word's code address./             |                  |                                                                                                        |                              |
+| ~code@t0 ← [xt@a0];~                          | ld t0, 0(a0)     | {{{off(0x000)}}}                    {{{rs1(01010)}}} {{{fn3(011)}}} {{{rd(00101)}}}  {{{op(0000011)}}} | ~83 32 05 00~                |
+|                                               |                  |                                                                                                        |                              |
+| /# Call that code, making sure/               |                  |                                                                                                        |                              |
+| /# the return address is saved and restored./ |                  |                                                                                                        |                              |
+| ~push ra;~                                    | addi sp, sp, -8  | {{{imm(0xFF8)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 FF~                |
+|                                               | sd ra, 0(sp)     | {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 30 11 00~                |
+| ~call [code@t0];~                             | jalr ra, 0(t0)   | {{{off(0x000)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00001)}}}  {{{op(1100111)}}} | ~E7 80 02 00~                |
+| ~pop ra;~                                     | ld ra, 0(sp)     | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} | ~83 30 01 00~                |
+|                                               | addi sp, sp, 8   | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 00~                |
+| ~return.~                                     | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~                |
 
 *** Subroutine ~exec~                                              :noexport:
 
