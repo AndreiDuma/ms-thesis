@@ -1983,10 +1983,10 @@ Explain:
 | {{{c(2)}}} ~return.~                     | RET               | C3               | {{{addr(07)}}} | ~C3~                                      | return             |
 | ~Num():~                                 |                   |                  | {{{addr(08)}}} |                                           | (Num)              |
 | {{{c(2)}}} ~chr@AL ← [addr@RSI++];~      | LODS m8           | AC               |                | ~AC~                                      | al = [rsi++]       |
-| {{{c(2)}}} /# Is it a digit?/            |                   |                  |                |                                           |                    |
+| {{{c(2)}}} /# Is it a ~[0-9]~ digit?/    |                   |                  |                |                                           |                    |
 | {{{c(2)}}} ~if chr@AL < 'A':~            | CMP AL, /imm8/    | 3C /ib/          |                | ~3C~ /~41~/                               | cmp al, 'A'        |
 | {{{c(4)}}}   ~goto _digit.~              | JL _rel8_         | 7C _cb_          |                | ~7C~ {{{offset(02,02-00)}}}               | +jump _digit if <  |
-| {{{c(2)}}} /# It's a letter./            |                   |                  | {{{addr(00)}}} |                                           | # _letter:         |
+| {{{c(2)}}} /# It's an ~[A-F]~ digit./    |                   |                  | {{{addr(00)}}} |                                           | # _letter:         |
 | {{{c(2)}}} ~chr@AL -= 7;~                | SUB AL, /imm8/    | 2C /ib/          |                | ~2C~ /~07~/                               | al -= 7            |
 | ~_digit:~                                |                   |                  | {{{addr(02)}}} |                                           | # _digit:          |
 | {{{c(2)}}} ~digit@AL = chr@AL - '0';~    | SUB AL, /imm8/    | 2C /ib/          |                | ~2C~ /~30~/                               | al -= 30           |
@@ -2035,17 +2035,17 @@ Explain:
 | {{{c(2)}}} ~[STACK@s3] ← num@t0;~        | sd t0, 0(s3)        | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(10011)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                | ~23 B0 59 00~             |
 | {{{c(2)}}} ~return.~                     | jalr zero, 0(ra)    | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~             |
 
-*** Subroutine ~miss~                                              :noexport:
+*** Subroutine ~miss~
 
-#+CAPTION: Subroutine ~miss~ attempts parsing a word as a number, optionally compiling it as a literal.
-#+LABEL: tbl:forth:miss
+#+CAPTION: Subroutine ~miss~ attempts parsing a word as a number, optionally compiling it as a literal (x86-64).
+#+LABEL: tbl:forth:miss:x
 #+ATTR_LATEX: :align l|ll|l|lH
 | *Pseudocode*                           | *Instruction*     | *Opcode*    | *&*            | *Machine code*                                           | *Intention*           |
 |----------------------------------------+-------------------+-------------+----------------+----------------------------------------------------------+-----------------------|
 | /# Define:/ _~miss~_                   | ---               | ---         |                | {{{define(04,6D 69 73 73)}}}                             | define miss           |
 | /# In/Out:/     ~( addr@RBP u@RAX~     |                   |             |                |                                                          |                       |
 | /#/{{{io}}}       ~xt@RXB~             |                   |             |                |                                                          |                       |
-| /#/{{{io--}}} ~-​- [n] xt@RXB )~        |                   |             |                |                                                          |                       |
+| /#/{{{io--}}} ~-​- [num] xt@RXB )~      |                   |             |                |                                                          |                       |
 | /#/                                    |                   |             |                |                                                          |                       |
 | /# If ~xt~ is zero, try parsing/       |                   |             |                |                                                          |                       |
 | /# the string given by ~addr~​/​~u~/     |                   |             |                |                                                          |                       |
@@ -2059,12 +2059,13 @@ Explain:
 | {{{c(2)}}} ~return.~                   | RET               | C3          | {{{addr(00)}}} | ~C3~                                                     | return                |
 | ~miss():~                              |                   |             | {{{addr(01)}}} |                                                          | (miss)                |
 | {{{c(2)}}} /# We shouldn't call ~Num~/ |                   |             |                |                                                          |                       |
-| {{{c(2)}}} /# with ~u~ equal to zero./ |                   |             |                |                                                          |                       |
+| {{{c(2)}}} /# with an empty string./   |                   |             |                |                                                          |                       |
 | {{{c(2)}}} ~if u@RAX != 0:~            | TEST r/m64, r64   | REX.W 85 /r |                | ~48 85~ {{{modrm(C0,11,000,000)}}}                       | rax(u) ?              |
 | {{{c(4)}}}   ~goto _nonempty.~         | JNE _rel8_        | 75 _cb_     |                | ~75~ {{{offset(01,01-00)}}}                              | +jump _nonempty if != |
 | {{{c(2)}}} ~return.~                   | RET               | C3          | {{{addr(00)}}} | ~C3~                                                     | return                |
 | ~_nonempty:~                           |                   |             | {{{addr(01)}}} |                                                          | # _nonempty:          |
 | {{{c(2)}}} ~call Num;~  /# Compiled./  | ---               | ---         |                | {{{compile(4E,N)}}}                                      | Call Num              |
+| {{{c(2)}}} /# Are we compiling?/       |                   |             |                |                                                          |                       |
 | {{{c(2)}}} ~if [STATE] & 1 != 0:~      | TEST r/m8, /imm8/ | F6 /​0 /ib/  |                | ~F6~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,000,100)}}} | [STATE] ?             |
 | {{{c(4)}}}   /# Compile top of stack/  |                   |             |                | \hookrightarrow {{{displ(20 00 00 10)}}} /~01~/          |                       |
 | {{{c(4)}}}   /# number as literal./    |                   |             |                |                                                          |                       |
@@ -2073,6 +2074,44 @@ Explain:
 | ~_lit:~                                |                   |             | {{{addr(01)}}} |                                                          | # _lit:               |
 | {{{c(2)}}} ~call LIT;~  /# Compiled./  | ---               | ---         |                | {{{compile(4C,L)}}}                                      | Call LIT              |
 | {{{c(2)}}} ~return.~                   | RET               | C3          |                | ~C3~                                                     | return                |
+
+#+CAPTION: Subroutine ~miss~ attempts parsing a word as a number, optionally compiling it as a literal (RISC-V).
+#+LABEL: tbl:forth:miss:rv
+#+ATTR_LATEX: :align l|ll|l|l
+| *Pseudocode*                           | *Instruction*      | *Encoding*                                                                                             | *&*            | *Machine code*               |
+|----------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+----------------+------------------------------|
+| /# Define:/ _~miss~_                   | ---                | ---                                                                                                    |                | {{{define(04,6D 69 73 73)}}} |
+| /# In/Out:/     ~( addr@a0 u@a1~       |                    |                                                                                                        |                |                              |
+| /#/{{{io}}}       ~xt@a2~              |                    |                                                                                                        |                |                              |
+| /#/{{{io--}}} ~-​- [num] xt@a0 )~       |                    |                                                                                                        |                |                              |
+| /#/                                    |                    |                                                                                                        |                |                              |
+| /# If ~xt~ is zero, try parsing/       |                    |                                                                                                        |                |                              |
+| /# the string given by ~addr~​/​~u~/     |                    |                                                                                                        |                |                              |
+| /# as a number. If successful/         |                    |                                                                                                        |                |                              |
+| /# and if we're in compiling/          |                    |                                                                                                        |                |                              |
+| /# state, compile the number/          |                    |                                                                                                        |                |                              |
+| /# as a literal./                      |                    |                                                                                                        |                |                              |
+|                                        |                    |                                                                                                        |                |                              |
+| {{{c(2)}}} ~push ra;~                  | addi sp, sp, -8    | {{{imm(0xFF8)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 FF~                |
+| {{{c(2)}}}                             | sd ra, 0(sp)       | {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                | ~23 30 11 00~                |
+| {{{c(2)}}} ~if xt@a2 != 0:~            |                    |                                                                                                        |                |                              |
+| {{{c(4)}}}   ~goto _end.~              | bne a2, zero, 0x20 | {{{off(0000001)}}} {{{rs2(01100)}}} {{{rs1(00000)}}} {{{fn3(001)}}} {{{off(00000)}}} {{{op(1100011)}}} | {{{addr(00)}}} | ~63 10 C0 02~                |
+| {{{c(2)}}} /# We shouldn't call ~Num~/ |                    |                                                                                                        |                |                              |
+| {{{c(2)}}} /# with an empty string./   |                    |                                                                                                        |                |                              |
+| {{{c(2)}}} ~if u@a1 = 0:~              |                    |                                                                                                        |                |                              |
+| {{{c(4)}}}   ~goto _end.~              | beq a1, zero, 0x1C | {{{off(0000000)}}} {{{rs2(01011)}}} {{{rs1(00000)}}} {{{fn3(000)}}} {{{off(11100)}}} {{{op(1100011)}}} | {{{addr(04)}}} | ~63 0E B0 00~                |
+| {{{c(2)}}} ~call Num;~  /# Compiled./  | ---                | ---                                                                                                    |                | {{{compile(4E,N)}}}          |
+| {{{c(2)}}} /# Are we compiling?/       |                    |                                                                                                        |                |                              |
+| {{{c(2)}}} ~if [STATE] != 1:~          | ld t0, 32(s2)      | {{{off(0x020)}}}                    {{{rs1(10010)}}} {{{fn3(011)}}} {{{rd(00101)}}}  {{{op(0000011)}}} |                | ~83 32 09 02~                |
+| {{{c(4)}}}   ~goto _end.~              | beq t0, zero, 0x0C | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(00000)}}} {{{fn3(000)}}} {{{off(01100)}}} {{{op(1100011)}}} | {{{addr(14)}}} | ~63 06 50 00~                |
+| {{{c(2)}}} /# Compile top of stack/    |                    |                                                                                                        |                |                              |
+| {{{c(2)}}} /# number as literal./      |                    |                                                                                                        |                |                              |
+| {{{c(2)}}} ~call LIT;~  /# Compiled./  | ---                | ---                                                                                                    |                | {{{compile(4C,L)}}}          |
+| ~_end:~                                |                    |                                                                                                        | {{{addr(20)}}} |                              |
+| {{{c(2)}}} ~xt@a0 ← xt@a2;~            | addi a0, a2, 0     | {{{imm(0x000)}}}                    {{{rs1(01100)}}} {{{fn3(000)}}} {{{rd(01010)}}}  {{{op(0010011)}}} |                | ~13 05 06 00~                |
+| {{{c(2)}}} ~pop ra;~                   | ld ra, 0(sp)       | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |                | ~83 30 01 00~                |
+| {{{c(2)}}}                             | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 00~                |
+| {{{c(2)}}} ~return.~                   | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 
 
 *** Subroutine ~EXEC~                                              :noexport:
