@@ -2114,7 +2114,7 @@ Explain:
 | {{{c(2)}}} ~return.~                   | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 
 
-*** Subroutine ~EXEC~
+*** Subroutine ~EXEC~                                              :noexport:
 
 #+CAPTION: Subroutine ~EXEC~ executes a Forth word (x86-64).
 #+LABEL: tbl:forth:EXEC:x
@@ -2150,46 +2150,75 @@ Explain:
 #+CAPTION: Subroutine ~EXEC~ executes a Forth word (RISC-V).
 #+LABEL: tbl:forth:EXEC:rv
 #+ATTR_LATEX: :align l|ll|l
-| *Pseudocode*                                  | *Instruction*    | *Encoding*                                                                                             | *Machine code*               |
-|-----------------------------------------------+------------------+--------------------------------------------------------------------------------------------------------+------------------------------|
-| /# Define:/ _~EXEC~_                          | ---              | ---                                                                                                    | {{{define(04,45 58 45 43)}}} |
-| /# In/Out:/ ~( xt@a0 -- )~                    |                  |                                                                                                        |                              |
-| /#/                                           |                  |                                                                                                        |                              |
-| /# Execute word given by ~xt~./               |                  |                                                                                                        |                              |
-|                                               |                  |                                                                                                        |                              |
-| /# Retrieve word's code address./             |                  |                                                                                                        |                              |
-| ~code@t0 ← [xt@a0];~                          | ld t0, 0(a0)     | {{{off(0x000)}}}                    {{{rs1(01010)}}} {{{fn3(011)}}} {{{rd(00101)}}}  {{{op(0000011)}}} | ~83 32 05 00~                |
-|                                               |                  |                                                                                                        |                              |
-| /# Call that code, making sure/               |                  |                                                                                                        |                              |
-| /# the return address is saved and restored./ |                  |                                                                                                        |                              |
-| ~push ra;~                                    | addi sp, sp, -8  | {{{imm(0xFF8)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 FF~                |
-|                                               | sd ra, 0(sp)     | {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 30 11 00~                |
-| ~call [code@t0];~                             | jalr ra, 0(t0)   | {{{off(0x000)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00001)}}}  {{{op(1100111)}}} | ~E7 80 02 00~                |
-| ~pop ra;~                                     | ld ra, 0(sp)     | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} | ~83 30 01 00~                |
-|                                               | addi sp, sp, 8   | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 00~                |
-| ~return.~                                     | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~                |
+| *Pseudocode*                    | *Instruction*    | *Encoding*                                                                                             | *Machine code*               |
+|---------------------------------+------------------+--------------------------------------------------------------------------------------------------------+------------------------------|
+| /# Define:/ _~EXEC~_            | ---              | ---                                                                                                    | {{{define(04,45 58 45 43)}}} |
+| /# In/Out:/ ~( xt@a0 -- )~      |                  |                                                                                                        |                              |
+| /#/                             |                  |                                                                                                        |                              |
+| /# Execute word given by ~xt~./ |                  |                                                                                                        |                              |
+|                                 |                  |                                                                                                        |                              |
+| /# Retrieve code address./      |                  |                                                                                                        |                              |
+| ~code@t0 ← [xt@a0];~            | ld t0, 0(a0)     | {{{off(0x000)}}}                    {{{rs1(01010)}}} {{{fn3(011)}}} {{{rd(00101)}}}  {{{op(0000011)}}} | ~83 32 05 00~                |
+|                                 |                  |                                                                                                        |                              |
+| /# Call that code, making/      |                  |                                                                                                        |                              |
+| /# sure the return address/     |                  |                                                                                                        |                              |
+| /# is saved and restored./      |                  |                                                                                                        |                              |
+| ~push ra;~                      | addi sp, sp, -8  | {{{imm(0xFF8)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 FF~                |
+|                                 | sd ra, 0(sp)     | {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 30 11 00~                |
+| ~call [code@t0];~               | jalr ra, 0(t0)   | {{{off(0x000)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00001)}}}  {{{op(1100111)}}} | ~E7 80 02 00~                |
+| ~pop ra;~                       | ld ra, 0(sp)     | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} | ~83 30 01 00~                |
+|                                 | addi sp, sp, 8   | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 00~                |
+| ~return.~                       | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~                |
 
 *** Subroutine ~exec~                                              :noexport:
 
-#+CAPTION: Subroutine ~exec~ executes a word if interpreting or if it's immediate.
-#+LABEL: tbl:forth:exec
+#+CAPTION: Subroutine ~exec~ executes a word if it's immediate or if  (x86-64).
+#+LABEL: tbl:forth:exec:x
 #+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                                    | *Instruction*  | *Opcode* | *&*            | *Machine code*               | *Intention*        |
-|-------------------------------------------------+----------------+----------+----------------+------------------------------+--------------------|
-| /# Define:/ _~exec~_                            | ---            | ---      |                | {{{define(04,65 78 65 63)}}} | define exec        |
-| /# In/Out:/ ~( imm+state@AL xt@RBX -- )~        |                |          |                |                              |                    |
-| /#/                                             |                |          |                |                              |                    |
-| /# Execute ~xt~ if we're in interpreting state/ |                |          |                |                              |                    |
-| /# or if it's immediate. In other words,/       |                |          |                |                              |                    |
-| /# don't execute if we're both compiling/       |                |          |                |                              |                    |
-| /# and the word is not immediate./              |                |          |                |                              |                    |
-|                                                 |                |          |                |                              |                    |
-| {{{c(2)}}} ~if imm+state@AL != 1:~              | CMP AL, /imm8/ | 3C /ib/  |                | ~3C~ /~01~/                  | cmp al, 1          |
-| {{{c(4)}}}   ~goto exec().~                     | JNE _rel8_     | 75 _cb_  |                | ~75~ {{{offset(01,01-00)}}}  | +jump (exec) if != |
-| {{{c(2)}}} ~return.~                            | RET            | C3       | {{{addr(00)}}} | ~C3~                         | return             |
-| ~exec():~                                       |                |          | {{{addr(01)}}} |                              | (exec)             |
-| {{{c(2)}}} ~call EXEC;~  /# Compiled./          | ---            | ---      |                | {{{compile(45,E)}}}          | Call EXEC          |
-| {{{c(2)}}} ~return.~                            | RET            | C3       |                | ~C3~                         | return             |
+| *Pseudocode*                              | *Instruction*  | *Opcode* | *&*            | *Machine code*               | *Intention*        |
+|-------------------------------------------+----------------+----------+----------------+------------------------------+--------------------|
+| /# Define:/ _~exec~_                      | ---            | ---      |                | {{{define(04,65 78 65 63)}}} | define exec        |
+| /# In/Out:/ ~( xt@RBX~                    |                |          |                |                              |                    |
+| /#/{{{io}}}   ~imm+state@AL -- )~         |                |          |                |                              |                    |
+| /#/                                       |                |          |                |                              |                    |
+| /# Execute ~xt~ if we're in interpreting/ |                |          |                |                              |                    |
+| /# mode or if it's an immediate word./    |                |          |                |                              |                    |
+| /# In other words, don't execute if we/   |                |          |                |                              |                    |
+| /# are compiling and the word is not/     |                |          |                |                              |                    |
+| /# immediate./                            |                |          |                |                              |                    |
+|                                           |                |          |                |                              |                    |
+| {{{c(2)}}} ~if imm+state@AL != 1:~        | CMP AL, /imm8/ | 3C /ib/  |                | ~3C~ /~01~/                  | cmp al, 1          |
+| {{{c(4)}}}   ~goto exec().~               | JNE _rel8_     | 75 _cb_  |                | ~75~ {{{offset(01,01-00)}}}  | +jump (exec) if != |
+| {{{c(2)}}} ~return.~                      | RET            | C3       | {{{addr(00)}}} | ~C3~                         | return             |
+| ~exec():~                                 |                |          | {{{addr(01)}}} |                              | (exec)             |
+| {{{c(2)}}} ~call EXEC;~  /# Compiled./    | ---            | ---      |                | {{{compile(45,E)}}}          | Call EXEC          |
+| {{{c(2)}}} ~return.~                      | RET            | C3       |                | ~C3~                         | return             |
+
+#+CAPTION: Subroutine ~exec~ executes a word if interpreting or if it's immediate (RISC-V).
+#+LABEL: tbl:forth:exec:rv
+#+ATTR_LATEX: :align l|ll|l|l
+| *Pseudocode*                              | *Instruction*    | *Encoding*                                                                                             | *&*            | *Machine code*               |
+|-------------------------------------------+------------------+--------------------------------------------------------------------------------------------------------+----------------+------------------------------|
+| /# Define:/ _~exec~_                      | ---              | ---                                                                                                    |                | {{{define(04,65 78 65 63)}}} |
+| /# In/Out:/ ~( xt@a0~                     |                  |                                                                                                        |                |                              |
+| /#/{{{io}}}   ~imm+state@a1 -- )~         |                  |                                                                                                        |                |                              |
+| /#/                                       |                  |                                                                                                        |                |                              |
+| /# Execute ~xt~ if we're in interpreting/ |                  |                                                                                                        |                |                              |
+| /# mode or if it's an immediate word./    |                  |                                                                                                        |                |                              |
+| /# In other words, don't execute if we/   |                  |                                                                                                        |                |                              |
+| /# are compiling and the word is not/     |                  |                                                                                                        |                |                              |
+| /# immediate./                            |                  |                                                                                                        |                |                              |
+|                                           |                  |                                                                                                        |                |                              |
+| {{{c(2)}}} ~if imm+state@a1 = 1:~         | addi t0, zero, 1 | {{{imm(0x001)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |                | ~93 02 10 00~                |
+| {{{c(4)}}}   ~goto _end.~                 | beq a1, t0, 0x1C | {{{off(0000000)}}} {{{rs2(01011)}}} {{{rs1(00101)}}} {{{fn3(000)}}} {{{off(11100)}}} {{{op(1100011)}}} | {{{addr(00)}}} | ~63 8E B2 00~                |
+| {{{c(2)}}} /# Execute word using ~EXEC~./ |                  |                                                                                                        |                |                              |
+| {{{c(2)}}} ~push ra;~                     | addi sp, sp, -8  | {{{imm(0xFF8)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 FF~                |
+|                                           | sd ra, 0(sp)     | {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                | ~23 30 11 00~                |
+| {{{c(2)}}} ~call EXEC;~  /# Compiled./    | ---              | ---                                                                                                    |                | {{{compile(45,E)}}}          |
+| {{{c(2)}}} ~pop ra;~                      | ld ra, 0(sp)     | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |                | ~83 30 01 00~                |
+| {{{c(2)}}}                                | addi sp, sp, 8   | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 00~                |
+| ~_end:~                                   |                  |                                                                                                        | {{{addr(1C)}}} |                              |
+| {{{c(2)}}} ~return.~                      | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 
 *** Subroutine ~compl~                                             :noexport:
 
