@@ -1445,7 +1445,7 @@ Explain:
 | ~[flag@RCX]~ \vert{}​~=~ ~0x40;~             | OR r/m8, /imm8/   | 80 /​1 /ib/        | ~80~ {{{modrm(09,00,001,001)}}} /~40~/    | [rcx] ¦= 40 HIDDEN                     |
 |                                       |                   |                   |                                           |                                        |
 | /# Switch to compiling state./        |                   |                   |                                           |                                        |
-| ~call rbracket;~  /# Compiled./       | ---               | ---               | {{{compile(5D,])}}}                       | Call ]                                 |
+| ~call ];~  /# Compiled./              | ---               | ---               | {{{compile(5D,])}}}                       | Call ]                                 |
 | ~return.~                             | RET               | C3                | ~C3~                                      | return                                 |
 
 #+CAPTION: Subroutine ~':'~ (colon) begins compiling a word after setting up its dictionary entry (RISC-V).
@@ -1509,7 +1509,7 @@ Explain:
 | ~OUTPUT@s1 += 8;~                                                                     | addi s1, s1, 8     | {{{imm(0x008)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | ~93 84 84 00~       |
 |                                                                                       |                    |                                                                                                        |                     |
 | /# Switch to compiling state./                                                        |                    |                                                                                                        |                     |
-| ~call rbracket;~  /# Compiled./                                                       | ---                | ---                                                                                                    | {{{compile(5D,])}}} |
+| ~call ];~  /# Compiled./                                                              | ---                | ---                                                                                                    | {{{compile(5D,])}}} |
 | ~pop ra;~                                                                             | ld ra, 0(sp)       | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} | ~83 30 01 00~       |
 |                                                                                       | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 00~       |
 | ~return.~                                                                             | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
@@ -1756,8 +1756,6 @@ Explain:
 | ~OUTPUT@s1 += 12;~                                                                                | addi s1, s1, 12    | {{{imm(0x00C)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | ~93 84 C4 00~             |
 | ~return.~                                                                                         | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~             |
 
-
-TODO: move to .dmp!
 
 *** Subroutine ~xt=~                                               :noexport:
 

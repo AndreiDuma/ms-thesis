@@ -755,43 +755,223 @@ B7 B2 59 00~         # ~t0 ← 0x0059B023;~
 67 80 00 00~         # ~return.~                                                                                             
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-99 03 61 62 63 ############# abc ( -- ) testing function ============================================= TEMPORARY ============= 0x00000000100003f4
+99 03 78 74 3D ############### xt= ( addr@a0 u@a1 xt@a2 -​- equal@a0 xt@a2 ) ===========================================
 00                   #
-b7 09 00 10          # {{{c(2)}}} ~STACK@s3 ← 0x10000000;~     
-93 89 09 00          # {{{c(2)}}}                              
-23 34 89 00          # {{{c(2)}}} ~[TIB] ← INPUT@s0;~          
-99 52                # {{{c(2)}}} ~call REFILL;~  /# Compiled./
-                     # ~_begin:~                               
-99 70                # {{{c(2)}}} ~call pname;~   /# Compiled./
-6f f0 9f ff          # {{{c(2)}}} ~goto _begin.~               
+                     # {{{c(2)}}} /# "Equal" if ~xt~ zero./             
+                     # {{{c(2)}}} ~if xt@a2 = 0:~                       
+63 02 C0 04~         # {{{c(4)}}}   ~goto _equal.~                      
+                     # {{{c(2)}}} /# Not equal if hidden word./         
+83 42 06 01~         # {{{c(2)}}} ~flag@t0 ← [xt@a2 + 16];~             
+13 F3 02 04~         # {{{c(2)}}} ~if flag@t0 & 0x40 = 0:~              
+63 08 60 02~         # {{{c(4)}}}   ~goto _not_equal.~                  
+                     # {{{c(2)}}} /# Not equal if lengths don't match./ 
+93 F2 F2 01~         # {{{c(2)}}} ~length@t0 ← flag@t0 & 0x1F;~         
+                     # {{{c(2)}}} ~if length@t0 != u@a1:~               
+63 94 55 02~         # {{{c(4)}}}   ~goto _not_equal.~                  
+                     # {{{c(2)}}} /# Compare word name (~xt@a0+17~)/    
+                     # {{{c(2)}}} /# and ~addr@a1~ upto length ~u@a2~./ 
+93 02 16 01~         # {{{c(2)}}} ~addr'@t0 ← xt@a2 + 17;~              
+                     # ~_begin:~                                        
+                     # {{{c(2)}}} /# No more characters?/               
+                     # {{{c(2)}}} ~if u@a1 = 0;~                        
+63 04 B0 02~         # {{{c(4)}}}   ~goto _equal.~                      
+                     # {{{c(2)}}} /# First characters different?/       
+03 43 05 00~         # {{{c(2)}}} ~chr@t1 ← [addr@a0];~                 
+83 C3 02 00~         # {{{c(2)}}} ~chr'@t2 ← [addr'@t0];~               
+                     # {{{c(2)}}} ~if chr@t1 != chr'@t2:~               
+63 9A 63 00~         # {{{c(4)}}}   ~goto _not_equal.~                  
+                     # {{{c(2)}}} /# Proceed to next characters./       
+13 05 15 00~         # {{{c(2)}}} ~addr@a0++;~                          
+93 82 12 00~         # {{{c(2)}}} ~addr'@t0++;~                         
+93 85 F5 FF~         # {{{c(2)}}} ~u@a1--;~                             
+6F F0 5F FE~         # {{{c(2)}}} ~goto _begin.~                        
+                     # ~_not_equal:~                                    
+13 05 00 00~         # {{{c(2)}}} ~equal@a0 ← 0;~                       
+67 80 00 00~         # {{{c(2)}}} ~return.~                             
+                     # ~_equal:~                                        
+13 05 10 00~         # {{{c(2)}}} ~equal@a0 ← 1;~                       
+67 80 00 00~         # {{{c(2)}}} ~return.~                             
 
-99 e1                # abc
+
+99 04 46 49 4E 44 ############### FIND ( addr@a0 u@a1 -​- addr@a0 u@a1 xt@a2 ) ===========================================
+                     #
+13 01 81 FE~         # {{{c(2)}}} ~push ra;~                      
+23 38 11 00~         # {{{c(2)}}}                                 
+                     # {{{c(2)}}} /# Begin search at ~LATEST~./   
+03 36 89 02~         # {{{c(2)}}} ~xt@a2 ← [LATEST];~             
+                     # ~_begin:~                                  
+                     # {{{c(2)}}} /# Save registers that are/     
+                     # {{{c(2)}}} /# not preserved by ~xt=~./     
+23 34 A1 00~         # {{{c(2)}}} ~push addr@a0;~                 
+23 30 B1 00~         # {{{c(2)}}} ~push u@a1;~                    
+                     # {{{c(2)}}} /# Does ~xt~ match ~addr~​/​~u~?/ 
+99 78		     # {{{c(2)}}} ~call xt=;~  /# Compiled./      
+93 02 05 00~         # {{{c(2)}}} ~equal@t0 ← equal@a0;~          
+83 35 01 00~         # {{{c(2)}}} ~pop u@a1;~                     
+03 35 81 00~         # {{{c(2)}}} ~pop addr@a0;~                  
+                     # {{{c(2)}}} /# If matched, we're done!/     
+                     # {{{c(2)}}} ~if equal@t0:~                  
+63 16 50 00~         # {{{c(4)}}}   ~goto _end.~                  
+                     # {{{c(2)}}} /# Otherwise, follow ~xt~'s/    
+                     # {{{c(2)}}} /# link pointer and repeat./    
+03 36 86 00~         # {{{c(2)}}} ~xt@a2 ← [xt@a2 + 8];~          
+6F F0 5F FE~         # {{{c(2)}}} ~goto _begin.~                  
+                     # ~_end:~                                    
+83 30 01 01~         # {{{c(2)}}} ~pop ra;~                       
+13 01 81 01~         # {{{c(2)}}}                                 
+67 80 00 00~         # {{{c(2)}}} ~return.~                       
+
+
+99 03 4E 75 6D ############### Num ( addr@a0 u@a1 -​- n ) ===========================================
+00                   #
+93 02 00 00~         # {{{c(2)}}} ~num@t0 ← 0;~                 
+                     # ~_begin:~                                
+                     # {{{c(2)}}} /# Parse one character./      
+03 43 05 00~         # {{{c(2)}}} ~chr@t1 ← [addr@a0++];~       
+13 05 15 00~         # {{{c(2)}}}                               
+                     # {{{c(2)}}} /# Is it a ~[0-9]~ digit?/    
+93 03 10 04~         # {{{c(2)}}} ~if chr@t1 < 'A':~            
+63 E4 63 00~         # {{{c(4)}}}   ~goto _digit.~              
+                     # {{{c(2)}}} /# It's an ~[A-F]~ digit./    
+13 03 93 FF~         # {{{c(2)}}} ~chr@t1 -= 7;~                
+                     # ~_digit:~                                
+13 03 03 FD~         # {{{c(2)}}} ~digit@t1 = chr@t1 - '0';~    
+                     # {{{c(2)}}} /# Multiply by base and add/  
+                     # {{{c(2)}}} /# the new digit./            
+93 92 42 00~         # {{{c(2)}}} ~num@t0 <<= 4~;               
+B3 E2 62 00~         # {{{c(2)}}} ~num@t0~ \vert​~= digit@t1;~       
+                     # {{{c(2)}}} /# Repeat while there are/    
+                     # {{{c(2)}}} /# unparsed characters left./ 
+93 85 F5 FF~         # {{{c(2)}}} ~if --u@a1 != 0:~             
+E3 1E B0 FC~         # {{{c(4)}}}   ~goto _begin.~              
+                     # {{{c(2)}}} /# Push the parsed number/    
+                     # {{{c(2)}}} /# on the data stack./        
+93 89 89 FF~         # {{{c(2)}}} ~STACK@s3 -= 8;~              
+23 B0 59 00~         # {{{c(2)}}} ~[STACK@s3] ← num@t0;~        
+67 80 00 00~         # {{{c(2)}}} ~return.~                     
+
+
+99 04 6D 69 73 73 ############### miss ( addr@a0 u@a1 xt@a2 -​- [num] xt@a0 ) ===========================================
+                     #
+13 01 81 FF          # {{{c(2)}}} ~push ra;~                  
+23 30 11 00          # {{{c(2)}}}                             
+                     # {{{c(2)}}} ~if xt@a2 != 0:~            
+63 10 C0 02          # {{{c(4)}}}   ~goto _end.~              
+                     # {{{c(2)}}} /# We shouldn't call ~Num~/ 
+                     # {{{c(2)}}} /# with an empty string./   
+                     # {{{c(2)}}} ~if u@a1 = 0:~              
+63 0E B0 00          # {{{c(4)}}}   ~goto _end.~              
+99 4E                # {{{c(2)}}} ~call Num;~  /# Compiled./  
+                     # {{{c(2)}}} /# Are we compiling?/       
+83 32 09 02          # {{{c(2)}}} ~if [STATE] != 1:~          
+63 06 50 00          # {{{c(4)}}}   ~goto _end.~              
+                     # {{{c(2)}}} /# Compile top of stack/    
+                     # {{{c(2)}}} /# number as literal./      
+99 4C                # {{{c(2)}}} ~call LIT;~  /# Compiled./  
+                     # ~_end:~                                
+13 05 06 00          # {{{c(2)}}} ~xt@a0 ← xt@a2;~            
+83 30 01 00          # {{{c(2)}}} ~pop ra;~                   
+13 01 81 00          # {{{c(2)}}}                             
+67 80 00 00          # {{{c(2)}}} ~return.~                   
+
+
+99 04 45 58 45 43 ############### EXEC ( xt@a0 -- ) ===========================================
+                     #
+                     # /# Retrieve code address./      
+83 32 05 00          # ~code@t0 ← [xt@a0];~            
+                     #                                 
+                     # /# Call that code, making/      
+                     # /# sure the return address/     
+                     # /# is saved and restored./      
+13 01 81 FF          # ~push ra;~                      
+23 30 11 00          #                                 
+E7 80 02 00          # ~call [code@t0];~               
+83 30 01 00          # ~pop ra;~                       
+13 01 81 00          #                                 
+67 80 00 00          # ~return.~                       
+
+
+99 04 65 78 65 63 ############### exec ( xt@a0 imm+state@a1 -- ) ===========================================
+                     #
+93 02 10 00          # {{{c(2)}}} ~if imm+state@a1 = 1:~         
+63 8E B2 00          # {{{c(4)}}}   ~goto _end.~                 
+                     # {{{c(2)}}} /# Execute word using ~EXEC~./ 
+13 01 81 FF          # {{{c(2)}}} ~push ra;~                     
+23 30 11 00          #                                           
+99 45                # {{{c(2)}}} ~call EXEC;~  /# Compiled./    
+83 30 01 00          # {{{c(2)}}} ~pop ra;~                      
+13 01 81 00          # {{{c(2)}}}                                
+                     # ~_end:~                                   
+67 80 00 00          # {{{c(2)}}} ~return.~                      
+
+
+99 05 63 6F 6D 70 6C ############### compl ( xt@a0 imm+state@a1 -- xt@a0 imm+state@a1 ) ===========================================
+00                   #
+93 02 10 00          # {{{c(2)}}} ~if imm+state@a1 != 1:~          
+63 90 B2 02          # {{{c(4)}}}   ~goto _end.~                   
+                     # {{{c(2)}}} /# Compile word using ~COMPL~./  
+13 01 81 FF          # {{{c(2)}}} ~push ra;~                       
+23 30 11 00          # {{{c(2)}}}                                  
+99 43                # {{{c(2)}}} ~call COMPL;~  /# Compiled./     
+83 30 01 00          # {{{c(2)}}} ~pop ra;~                        
+13 01 81 00          # {{{c(2)}}}                                  
+                     # {{{c(2)}}} /# Restore ~a1~ after ~COMPL~./  
+93 05 10 00          # {{{c(2)}}} ~imm+state@a1 ← 1;~              
+                     # ~_end:~                                     
+67 80 00 00          # {{{c(2)}}} ~return.~                        
+
+
+99 05 68 69 74 ############### hit ( xt@a0 -- ) ===========================================
+00                   #
+63 08 A0 02          # {{{c(2)}}} ~if xt@a0 = 0:~                        
+                     # {{{c(4)}}}   ~goto _end.~                         
+                     # {{{c(2)}}} /# Combine word's immediate/           
+                     # {{{c(2)}}} /# flag with current state./           
+83 42 05 01          # {{{c(2)}}} ~flag@t0 ← [xt@a0 + 16];~              
+93 F2 02 08          # {{{c(2)}}} ~imm@t0 ← flag@t0 & 0x80;~             
+03 43 09 02          # {{{c(2)}}} ~imm+state@t0 ← imm@t0~                
+B3 E2 62 00          # {{{c(15)}}}              \vert ~[STATE];~             
+                     # {{{c(2)}}} /# Let ~compl~ and ~exec~ decide/      
+                     # {{{c(2)}}} /# what to do./                        
+13 01 81 FF          # {{{c(2)}}} ~push ra;~                             
+23 30 11 00          # {{{c(2)}}}                                        
+99 63                # {{{c(2)}}} ~call compl;~  {{{c(0)}}}​/# Compiled./ 
+99 65                # {{{c(2)}}} ~call exec;~   {{{c(1)}}}​/# Compiled./ 
+83 30 01 00          # {{{c(2)}}} ~pop ra;~                              
+13 01 81 00          # {{{c(2)}}}                                        
+                     # ~_end:~                                           
+67 80 00 00          # {{{c(2)}}} ~return.~                              
+
+
+99 04 53 56 41 4C ############### SVAL ( ··· -- ··· ) ===========================================
+                     #
+13 01 81 FF~         # {{{c(2)}}} ~push ra;~                             
+23 30 11 00~         #                                                   
+                     # ~_begin:~                                         
+99 70                # {{{c(2)}}} ~call pname;~  {{{c(0)}}}​/# Compiled./ 
+99 46                # {{{c(2)}}} ~call FIND;~   {{{c(1)}}}​/# Compiled./ 
+99 6D                # {{{c(2)}}} ~call miss;~   {{{c(1)}}}​/# Compiled./ 
+99 68                # {{{c(2)}}} ~call hit;~    {{{c(2)}}}​/# Compiled./ 
+                     # {{{c(2)}}} /# Characters left in current line?/   
+23 38 59 00~         # {{{c(2)}}} ~>in@t0 ← [>IN];~                      
+23 30 69 00~         # {{{c(2)}}} ~#in@t1 ← [#IN];~                      
+                     # {{{c(2)}}} ~if >in@t0 < #in@t1:~                  
+E3 6C 53 FC~         # {{{c(4)}}}   ~goto _begin.~                       
+83 30 01 00~         # {{{c(2)}}} ~pop ra;~                              
+13 01 81 00~         # {{{c(2)}}}                                        
+67 80 00 00~         # {{{c(2)}}} ~return.~                              
+
+
+99 02 74 69 ############### ti ( -- ) ===========================================
+                     #
+B7 09 00 10~         # {{{c(2)}}} ~STACK@s3 ← 0x10000000;~                
+93 89 09 00~         # {{{c(2)}}}                                         
+93 89 09 00~         # {{{c(2)}}} ~[TIB] ← INPUT@s0;~                     
+99 5B                # {{{c(2)}}} ~call [;~  /# Compiled./                
+99                   # ~_begin:~                                          
+99 52                # {{{c(2)}}} ~call REFILL;~  {{{c(0)}}}​/# Compiled./ 
+99 53                # {{{c(2)}}} ~call SVAL;~    {{{c(2)}}}​/# Compiled./ 
+6F F0 DF FF~         # {{{c(2)}}} ~goto _begin.~                          
+
+
+99 F4                # execute ti();
