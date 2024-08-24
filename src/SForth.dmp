@@ -165,91 +165,101 @@
 # in the argument.
 #
 ################################################################### MACHINE CODE ############ INTENTION ############ 78 INSTRUCTION ####### OPCODE ######## ModR/M #### SIB ######
-                  
-         	  # /# Global variable ~INPUT~./                  # BE B2 00 40 00          #:rsi(input)  = 004000__    mov r32, imm32      B8+rd id				
-37 04 00 00	  # ~INPUT@s0 ← 0x000000EC;~                                                                                                              
-13 04 C4 0E	  #                                               
-           	  # /# Global variable ~OUTPUT~./                 # BF 30 00 00 10          # rdi(output) = 10000030    mov r32, imm32      B8+rd id				
-B7 04 00 10	  # ~OUTPUT@s1 ← 0x10000030;~                     											
-93 84 04 03	  #                                               
-	   	  # /# Global variable ~VARS~./                   
-37 09 00 10	  # ~VARS@s2 ← 0x10000000;~                       
-13 09 09 00       #
+                     #
+         	     # /# Global variable ~INPUT~./                  # BE B2 00 40 00          #:rsi(input)  = 004000__    mov r32, imm32      B8+rd id				
+37 04 00 00	     # ~INPUT@s0 ← 0x000000EC;~                                                                                                              
+13 04 04 0F	     #                                               
+           	     # /# Global variable ~OUTPUT~./                 # BF 30 00 00 10          # rdi(output) = 10000030    mov r32, imm32      B8+rd id				
+B7 04 00 10	     # ~OUTPUT@s1 ← 0x10000030;~                     											
+93 84 04 03	     #                                               
+	   	     # /# Global variable ~VARS~./                   
+37 09 00 10	     # ~VARS@s2 ← 0x10000000;~                       
+13 09 09 00          #
 
-# 00 00 00 00
 
 ################################# binary interpreter
-                     # ~_bi:~                                           
-                     # {{{i(1)}}} /# Loop the binary interpreter./      
-EF 00 80 00          # {{{i(1)}}} ~call bi();~                          
-6F F0 DF FF          # {{{i(1)}}} ~goto _bi.~                           
-                     # ~bi():~                                          
-                     # {{{i(1)}}} /# Read next byte from ~INPUT~./      
-83 42 04 00          # {{{i(1)}}} ~chr@t0 ← [INPUT@s0++];~              
-13 04 14 00          # {{{i(1)}}}                                       
-                     # {{{i(1)}}} /# Does it start a command?/          
-13 03 90 09          # {{{i(1)}}} ~if chr@t0 = 0x99:~                   
-63 88 62 00          # {{{i(2)}}}     ~goto _command.~                  
-                     # {{{i(1)}}} /# If not, just copy the byte/        
-                     # {{{i(1)}}} /# to ~OUTPUT~ and return./           
-23 80 54 00          # {{{i(1)}}} ~[OUTPUT@s1++] ← chr@t0;~             
-93 84 14 00          # {{{i(1)}}}                                       
-67 80 00 00          # {{{i(1)}}} ~return.~                             
-                     # ~_command:~                                      
-                     # {{{i(1)}}} /# Get latest dictionary word/        
-                     # {{{i(1)}}} /# from ~LATEST~ (~VARS + 40~):/      
-03 35 89 02          # {{{i(1)}}} ~xt@a0 ← [LATEST];~                   
-                     # {{{i(1)}}}                                       
-                     # {{{i(1)}}} /# Read command argument./            
-83 45 04 00          # {{{i(1)}}} ~arg@a1 ← [INPUT@s0++];~              
-13 04 14 00          # {{{i(1)}}}                                       
-                     # {{{i(1)}}} /# Command type by argument:/         
-                     # {{{i(1)}}} /# – ~0bi00ccccc~: define;/           
-                     # {{{i(1)}}} /# – ~0b011ccccc~: compile;/          
-                     # {{{i(1)}}} /# – ~0b111ccccc~: execute./          
-93 F2 05 06          # {{{i(1)}}} ~if arg@a1~ ~&~ ~0b01100000~ ~=~ ~0:~ 
-                     # {{{i(2)}}}     /# _Define_ a new word./          
-63 85 02 06          # {{{i(2)}}}     ~goto Head.~                      
-                     # ~_find1:~                                        
-93 F2 F5 07          # {{{i(1)}}} ~chr@t0~ ~←~ ~arg@a1~ ~&~ ~0b0111111;~
-03 43 15 01          # {{{i(1)}}} ~if chr@t0 = [xt@a0 + 17]:~           
-                     # {{{i(2)}}}     /# We found a word whose/         
-                     # {{{i(2)}}}     /# name begins with ~chr~./       
-63 86 62 00          # {{{i(2)}}}     ~goto _match.~                    
-                     # {{{i(1)}}} /# Follow word's link pointer/        
-                     # {{{i(1)}}} /# to previous entry and repeat./     
-03 35 85 00          # {{{i(1)}}} ~xt@a0 ← [xt@a0 + 8];~                
-6F F0 1F FF          # {{{i(1)}}} ~goto _find1.~                        
-                     # ~_match:~                                        
-93 F2 05 08          # {{{i(1)}}} ~if arg@a1 & 0b1000000 = 0:~          
-                     # {{{i(2)}}}     /# _Compile_./                    
-63 8A 02 00          # {{{i(2)}}}     ~goto COMPL.~                     
-                     # {{{i(1)}}} /# _Execute_ word's code./            
-83 32 05 00          # {{{i(1)}}} ~goto [xt@a0].~                       
-67 80 02 00          # {{{i(1)}}}                                       
+                     # ~_bi:~                                            
+                     # {{{i(1)}}} /# Loop the binary interpreter./       
+EF 00 80 00          # {{{i(1)}}} ~call bi();~                           
+6F F0 DF FF          # {{{i(1)}}} ~goto _bi.~                            
+                     # ~bi():~                                           
+                     # {{{i(1)}}} /# Read next byte from ~INPUT~./       
+83 42 04 00          # {{{i(1)}}} ~byte@t0 ← [INPUT@s0];~                
+                     # {{{i(1)}}} /# Does it start a command?/           
+13 03 90 09          # {{{i(1)}}} ~if byte@t0 = 0x99:~                   
+63 0C 53 00          # {{{i(2)}}}     ~goto _command.~                   
+                     # {{{i(1)}}} /# This is just an instruction./       
+                     # {{{i(1)}}} /# Copy four bytes to ~OUTPUT~/        
+                     # {{{i(1)}}} /# and return./                        
+83 62 04 00          # {{{i(1)}}} ~instr@t0 ← [INPUT@s0++4];~            
+13 04 44 00          # {{{i(1)}}}                                        
+23 A0 54 00          # {{{i(1)}}} ~[OUTPUT@s1++4] ← instr@t0;~           
+93 84 44 00          # {{{i(1)}}}                                        
+67 80 00 00          # {{{i(1)}}} ~return.~                              
+                     # ~_command:~                                       
+                     # {{{i(1)}}} /# Get latest dictionary word/         
+                     # {{{i(1)}}} /# from ~LATEST~ (~VARS + 40~):/       
+03 35 89 02          # {{{i(1)}}} ~xt@a0 ← [LATEST];~                    
+                     # {{{i(1)}}}                                        
+                     # {{{i(1)}}} /# Read command argument/              
+                     # {{{i(1)}}} /# and advance ~INPUT~./               
+83 45 14 00          # {{{i(1)}}} ~arg@a1 ← [INPUT@s0 + 1];~             
+13 04 24 00          # {{{i(1)}}} ~INPUT@s0 += 2;~                       
+                     # {{{i(1)}}} /# Command type by argument:/          
+                     # {{{i(1)}}} /# – ~0bi00ccccc~: define;/            
+                     # {{{i(1)}}} /# – ~0b011ccccc~: compile;/           
+                     # {{{i(1)}}} /# – ~0b111ccccc~: execute./           
+93 F2 05 06          # {{{i(1)}}} ~if arg@a1~ ~&~ ~0b01100000~ ~=~ ~0:~  
+                     # {{{i(2)}}}     /# _Define_ a new word./           
+63 0F 50 06          # {{{i(2)}}}     ~goto Head.~                       
+                     # ~_find1:~                                         
+93 F2 F5 07          # {{{i(1)}}} ~chr@t0~ ~←~ ~arg@a1~ ~&~ ~0b0111111;~ 
+03 43 15 01          # {{{i(1)}}} ~if chr@t0 = [xt@a0 + 17]:~            
+                     # {{{i(2)}}}     /# We found a word whose/          
+                     # {{{i(2)}}}     /# name begins with ~chr~./        
+63 86 62 00          # {{{i(2)}}}     ~goto _match.~                     
+                     # {{{i(1)}}} /# Follow word's link pointer/         
+                     # {{{i(1)}}} /# to previous entry and repeat./      
+03 35 85 00          # {{{i(1)}}} ~xt@a0 ← [xt@a0 + 8];~                 
+6F F0 1F FF          # {{{i(1)}}} ~goto _find1.~                         
+                     # ~_match:~                                         
+93 F2 05 08          # {{{i(1)}}} ~if arg@a1 & 0b1000000 = 0:~           
+                     # {{{i(2)}}}     /# _Compile_./                     
+63 8A 02 00          # {{{i(2)}}}     ~goto COMPL.~                      
+                     # {{{i(1)}}} /# _Execute_ word's code./             
+83 32 05 00          # {{{i(1)}}} ~goto [xt@a0].~                        
+67 80 02 00          # {{{i(1)}}}                                        
 
 
 ######################### Interpreter subroutines ################################################
 
 99 05 43 4F 4D 50 4C ####### COMPL Forth's COMPILE
 00    	       	     #
-                     # /# 1. Load code address from ~xt~./                                                            
-83 62 05 00          # ~t0 ← [xt@a0];~                                                                                
-                     #                                                                                                
-                     # /# 2. Assemble and write ~lui~ instr./                                                         
-37 F3 FF FF          # ~t1 ← 0xFFFFF000;~                                                                             
-33 73 53 00          # ~t1 &= t0;~                                                                                    
-13 03 73 2B          # ~t1 += 0x2B7;~  /# 12 fixed bits in ~lui~./                                                    
-23 A0 64 00          # ~[OUTPUT@s1++4] ← t1;~                                                                         
-93 84 44 00          #                                                                                                
-                     # /# 3. Assemble and write ~jalr~ instruction./                                                  
-37 73 0E 28          # ~t1 ← 0x280E7000;~  /# 20 fixed bits in ~jalr~./                                               
-13 53 C3 00          # ~t1 >>>= 12;~                                                                                  
-93 92 42 01          # ~t0 <<= 20;~                                                                                   
-33 63 53 00          # ~t1~ \vert​~= t0;~                                                                                  
-23 A0 64 00          # ~[OUTPUT@s1++4] ← t1;~                                                                         
-93 84 44 00          #                                                                                                
-67 80 00 00          # ~return.~  /# To interpreter loop./                                                           
+                     # /# A useful bit mask./                                                                     
+37 13 00 00          # ~mask@t1 ← 0x00000FFF;~                                                                    
+13 03 F3 FF          #                                                                                            
+                     # /# 1. Load code address from ~xt~ and extract low & high bits./                            
+83 62 05 00          # ~addr@t0 ← [xt@a0];~                                                                       
+93 D3 C2 00          # ~high@t2 ← addr@t0 >> 12;~                                                                 
+33 FE 62 00          # ~low@t3 ← addr@t0 & 0x00000FFF;~                                                           
+                     #                                                                                            
+                     # /# 2. Assemble and write ~lui~ instr./                                                     
+93 5E BE 00          # ~sign@t4 ← low@t3 >> 11;~                                                                  
+B3 83 D3 01          # ~high@t2 ← high@t2 + sign@t4;~                                                             
+93 93 C3 00          # ~instr@t2 ← (high@t2 << 12) \vert 0x00000FB7;~                                                 
+93 7E 73 FB          #                                                                                            
+B3 83 D3 01          #                                                                                            
+23 A0 74 00          # ~[OUTPUT@s1] ← instr@t2;~                                                                  
+                     #                                                                                            
+                     # /# 3. Assemble and write ~jalr~ instruction./                                              
+13 1E 4E 01          # ~instr@t3 = (low@t3 << 20) \vert 0x000F80E7;~                                                  
+B7 8E 0F 00          #                                                                                            
+93 8E 7E 0E          #                                                                                            
+33 6E DE 01          #                                                                                            
+23 A2 C4 01          # ~[OUTPUT@s1 + 4] ← instr@t3;~                                                              
+                     #                                                                                            
+93 84 84 00          # ~OUTPUT@s1 += 8;~                                                                          
+67 80 00 00          # ~return.~  /# To interpreter loop./                                                        
 
 
 99 04 48 65 61 64 ################## Head ================= CB
@@ -517,6 +527,7 @@ e3 18 de ff          # {{{i(2)}}}   ~goto _begin.~
 
 
 99 04 73 65 65 6B ####### seek ( cl dl "ccc" -- eflags ) parse until 1st char of parse area is within [cl, dl) or parse area is empty
+                     #
 13 0f 00 00          # {{{c(2)}}} ~eof@a0 ← 0;~                        
                      # {{{c(2)}}} ~high'@a1 ← high@a1~                 
 b3 85 a5 40          # {{{c(11)}}}         ~- low@a0;~                 
@@ -549,6 +560,7 @@ b3 0e 73 00          # {{{c(10)}}}        ~+ >in@t2];~
 
 99 05 50 41 52 53 45 #### PARSE ( cl dl "ccc<char>" -- rbp=addr rax=u ) addr: where ccc begins ; u: length of ccc
 00                   #
+                     #
 13 01 01 ff          # {{{c( 2)}}} ~push ra;~                         
 23 34 11 00          # {{{c( 2)}}}                                    
 83 32 09 01          # {{{c( 2)}}} ~start@t0 ← [>IN];~                
@@ -577,8 +589,9 @@ b3 05 53 40          # {{{c( 2)}}} ~u@a0~ ~←~ ~end@t1~ ~-~ ~start@t0;~
 67 80 00 00          # {{{c( 2)}}} ~return.~                          
 
 
-99 05 70 6E 61 6D 65 #### pname ( "<spaces>ccc<space>" -- rbp=addr rax=u ) PARSE-NAME ============
+99 05 70 6E 61 6D 65 #### pname ( "<spaces>ccc<space>" -- rbp=addr rax=u ) PARSE-NAME ============ 0x00000000100003b6
 00                   #
+                     #
 13 01 81 ff          # ~push ra;~                        
 23 30 11 00          #                                   
                      # /# Skip non-printables./          
@@ -598,23 +611,23 @@ b3 05 53 40          # {{{c( 2)}}} ~u@a0~ ~←~ ~end@t1~ ~-~ ~start@t0;~
 99 81 5B ############### [ ( -- ) ======= immediate ===========================
 00                   #
                      # /# Set ~STATE~ to 0./    
-23 30 09 02~         # ~[STATE] ← 0;~           
-67 80 00 00~         # ~return.~                
+23 30 09 02          # ~[STATE] ← 0;~           
+67 80 00 00          # ~return.~                
 
 
 99 01 5D ############### ] ( -- ) ===========================================
 00                   #
                      # /# Set ~STATE~ to 1./     
-93 02 10 00~         # ~[STATE] ← 1;~            
-23 30 59 02~         #                           
-67 80 00 00~         # ~return.~                 
+93 02 10 00          # ~[STATE] ← 1;~            
+23 30 59 02          #                           
+67 80 00 00          # ~return.~                 
 
 
 99 81 5C ############### \ ( "ccc<eol>" -- ) ======== immediate ====================================
 00                   #
-83 32 09 00~         # ~#in@t0 ← [#IN];~        
-23 38 59 00~         # ~[>IN] ← #in@t0;~        
-67 80 00 00~         # ~return.~                
+83 32 09 00          # ~#in@t0 ← [#IN];~        
+23 38 59 00          # ~[>IN] ← #in@t0;~        
+67 80 00 00          # ~return.~                
 
 
 99 81 28 ############### ( ( "ccc<rparen>" -- ) ======== immediate ====================================
@@ -665,16 +678,16 @@ b3 05 53 40          # {{{c( 2)}}} ~u@a0~ ~←~ ~end@t1~ ~-~ ~start@t0;~
                      # /# 1. Assemble and write ~addi~./                                                    
 B7 02 81 FF          # ~t0 ← 0xFF810113;~                                                                   
 93 82 32 11          #                                                                                      
-3 A0 54 00           # ~[OUTPUT@s1] ← t0;~                                                                  
+23 A0 54 00          # ~[OUTPUT@s1] ← t0;~                                                                  
                      #                                                                                      
                      # /# 2. Assemble and write ~sd~./                                                      
 B7 32 11 00          # ~t0 ← 0x00113023;~                                                                   
 93 82 32 02          #                                                                                      
-3 A2 54 00           # ~[OUTPUT@s1 + 4] ← t0;~                                                              
+23 A2 54 00          # ~[OUTPUT@s1 + 4] ← t0;~                                                              
 93 84 84 00          # ~OUTPUT@s1 += 8;~                                                                    
                      #                                                                                      
                      # /# Switch to compiling state./                                                       
-99 5D                # ~call rbracket;~  /# Compiled./                                                      
+99 5D                # ~call ];~  /# Compiled./                                                      
 83 30 01 00          # ~pop ra;~                                                                            
 13 01 81 00          #                                                                                      
 67 80 00 00          # ~return.~                                                                            
@@ -707,7 +720,7 @@ B7 02 80 67          # ~t0 ← 0x67800000;~
 23 88 62 00          # ~[xt@t0 + 16] ← flag@t1;~                
                      #                                          
                      # /# Switch to interpreting state./        
-99 5B                # ~call lbracket;~  /# Compiled./          
+99 5B                # ~call [;~  /# Compiled./          
 83 30 01 00          # ~pop ra;~                                
 13 01 81 00          #                                          
 67 80 00 00          # ~return.~                                
@@ -729,126 +742,126 @@ B7 02 80 67          # ~t0 ← 0x67800000;~
                      # /# – instruction:/ ~addi t0, zero, 0x0XY~                                                             
                      # /# – encoded:/ {{{imm(0x0XY)}}} {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00101)}}} {{{op(0010011)}}}     
                      # /# – bits:/ ~0000xxxx·yyyy0000·00000010·10010011~                                                     
-83 C2 09 00~         # ~lit@t0 ← [STACK@s3];~                                                                                
-93 89 89 00~         # ~STACK@s3 += 8;~                                                                                      
-93 92 C2 00~         # ~t0 <<= 12;~                                                                                          
-93 E2 32 29~         # ~t0~ \vert​~= 0x293;~                                                                                      
-23 A0 54 00~         # ~[OUTPUT@s1] ← t0;~                                                                                   
+83 C2 09 00          # ~lit@t0 ← [STACK@s3];~                                                                                
+93 89 89 00          # ~STACK@s3 += 8;~                                                                                      
+93 92 C2 00          # ~t0 <<= 12;~                                                                                          
+93 E2 32 29          # ~t0~ \vert​~= 0x293;~                                                                                      
+23 A0 54 00          # ~[OUTPUT@s1] ← t0;~                                                                                   
                      #                                                                                                       
                      # /# 2. Allocate stack space:/                                                                          
                      # /# – effect:/ ~STACK@s3 -= 8;~                                                                        
                      # /# – instruction:/ ~addi s3, s3, -8~                                                                  
                      # /# – encoded:/ {{{imm(0xFF8)}}} {{{rs1(10011)}}} {{{fn3(000)}}} {{{rd(10011)}}} {{{op(0010011)}}}     
-B7 82 89 FF~         # ~t0 ← 0xFF898993;~                                                                                    
-93 82 32 99~         #                                                                                                       
-23 A2 54 00~         # ~[OUTPUT@s1 + 4] ← t0;~                                                                               
+B7 82 89 FF          # ~t0 ← 0xFF898993;~                                                                                    
+93 82 32 99          #                                                                                                       
+23 A2 54 00          # ~[OUTPUT@s1 + 4] ← t0;~                                                                               
                      #                                                                                                       
                      # /# 3. Write register ~t0~ to stack:/                                                                  
                      # /# – effect:/ ~[STACK@s3] ← t0;~                                                                      
                      # /# – instruction:/ ~sd t0, 0(s3)~                                                                     
                      # /# – encoded:/ {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(10011)}}}                                   
                      # /#/ {{{i(4.7)}}} \(\hookrightarrow\) {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}}                
-B7 B2 59 00~         # ~t0 ← 0x0059B023;~                                                                                    
-93 82 32 02~         #                                                                                                       
-23 A4 54 00~         # ~[OUTPUT@s1 + 8] ← t0;~                                                                               
-93 84 C4 00~         # ~OUTPUT@s1 += 12;~                                                                                    
-67 80 00 00~         # ~return.~                                                                                             
+B7 B2 59 00          # ~t0 ← 0x0059B023;~                                                                                    
+93 82 32 02          #                                                                                                       
+23 A4 54 00          # ~[OUTPUT@s1 + 8] ← t0;~                                                                               
+93 84 C4 00          # ~OUTPUT@s1 += 12;~                                                                                    
+67 80 00 00          # ~return.~                                                                                             
 
 
-99 03 78 74 3D ############### xt= ( addr@a0 u@a1 xt@a2 -​- equal@a0 xt@a2 ) ===========================================
+99 03 78 74 3D ############### xt= ( addr@a0 u@a1 xt@a2 -​- equal@a0 xt@a2 ) =========================================== 0x0000000010000614
 00                   #
                      # {{{c(2)}}} /# "Equal" if ~xt~ zero./             
                      # {{{c(2)}}} ~if xt@a2 = 0:~                       
-63 02 C0 04~         # {{{c(4)}}}   ~goto _equal.~                      
+63 02 C0 04          # {{{c(4)}}}   ~goto _equal.~                      
                      # {{{c(2)}}} /# Not equal if hidden word./         
-83 42 06 01~         # {{{c(2)}}} ~flag@t0 ← [xt@a2 + 16];~             
-13 F3 02 04~         # {{{c(2)}}} ~if flag@t0 & 0x40 = 0:~              
-63 08 60 02~         # {{{c(4)}}}   ~goto _not_equal.~                  
+83 42 06 01          # {{{c(2)}}} ~flag@t0 ← [xt@a2 + 16];~             
+13 F3 02 04          # {{{c(2)}}} ~if flag@t0 & 0x40 != 0:~              
+63 18 60 02          # {{{c(4)}}}   ~goto _not_equal.~                  
                      # {{{c(2)}}} /# Not equal if lengths don't match./ 
-93 F2 F2 01~         # {{{c(2)}}} ~length@t0 ← flag@t0 & 0x1F;~         
+93 F2 F2 01          # {{{c(2)}}} ~length@t0 ← flag@t0 & 0x1F;~         
                      # {{{c(2)}}} ~if length@t0 != u@a1:~               
-63 94 55 02~         # {{{c(4)}}}   ~goto _not_equal.~                  
+63 94 55 02          # {{{c(4)}}}   ~goto _not_equal.~                  
                      # {{{c(2)}}} /# Compare word name (~xt@a0+17~)/    
                      # {{{c(2)}}} /# and ~addr@a1~ upto length ~u@a2~./ 
-93 02 16 01~         # {{{c(2)}}} ~addr'@t0 ← xt@a2 + 17;~              
+93 02 16 01          # {{{c(2)}}} ~addr'@t0 ← xt@a2 + 17;~              
                      # ~_begin:~                                        
                      # {{{c(2)}}} /# No more characters?/               
                      # {{{c(2)}}} ~if u@a1 = 0;~                        
-63 04 B0 02~         # {{{c(4)}}}   ~goto _equal.~                      
+63 04 B0 02          # {{{c(4)}}}   ~goto _equal.~                      
                      # {{{c(2)}}} /# First characters different?/       
-03 43 05 00~         # {{{c(2)}}} ~chr@t1 ← [addr@a0];~                 
-83 C3 02 00~         # {{{c(2)}}} ~chr'@t2 ← [addr'@t0];~               
+03 43 05 00          # {{{c(2)}}} ~chr@t1 ← [addr@a0];~                 
+83 C3 02 00          # {{{c(2)}}} ~chr'@t2 ← [addr'@t0];~               
                      # {{{c(2)}}} ~if chr@t1 != chr'@t2:~               
-63 9A 63 00~         # {{{c(4)}}}   ~goto _not_equal.~                  
+63 9A 63 00          # {{{c(4)}}}   ~goto _not_equal.~                  
                      # {{{c(2)}}} /# Proceed to next characters./       
-13 05 15 00~         # {{{c(2)}}} ~addr@a0++;~                          
-93 82 12 00~         # {{{c(2)}}} ~addr'@t0++;~                         
-93 85 F5 FF~         # {{{c(2)}}} ~u@a1--;~                             
-6F F0 5F FE~         # {{{c(2)}}} ~goto _begin.~                        
+13 05 15 00          # {{{c(2)}}} ~addr@a0++;~                          
+93 82 12 00          # {{{c(2)}}} ~addr'@t0++;~                         
+93 85 F5 FF          # {{{c(2)}}} ~u@a1--;~                             
+6F F0 5F FE          # {{{c(2)}}} ~goto _begin.~                        
                      # ~_not_equal:~                                    
-13 05 00 00~         # {{{c(2)}}} ~equal@a0 ← 0;~                       
-67 80 00 00~         # {{{c(2)}}} ~return.~                             
+13 05 00 00          # {{{c(2)}}} ~equal@a0 ← 0;~                       
+67 80 00 00          # {{{c(2)}}} ~return.~                             
                      # ~_equal:~                                        
-13 05 10 00~         # {{{c(2)}}} ~equal@a0 ← 1;~                       
-67 80 00 00~         # {{{c(2)}}} ~return.~                             
+13 05 10 00          # {{{c(2)}}} ~equal@a0 ← 1;~                       
+67 80 00 00          # {{{c(2)}}} ~return.~                             
 
 
-99 04 46 49 4E 44 ############### FIND ( addr@a0 u@a1 -​- addr@a0 u@a1 xt@a2 ) ===========================================
+99 04 46 49 4E 44 ############### FIND ( addr@a0 u@a1 -​- addr@a0 u@a1 xt@a2 ) =========================================== 0x0000000010000676
                      #
-13 01 81 FE~         # {{{c(2)}}} ~push ra;~                      
-23 38 11 00~         # {{{c(2)}}}                                 
+13 01 81 FE          # {{{c(2)}}} ~push ra;~                      
+23 38 11 00          # {{{c(2)}}}                                 
                      # {{{c(2)}}} /# Begin search at ~LATEST~./   
-03 36 89 02~         # {{{c(2)}}} ~xt@a2 ← [LATEST];~             
+03 36 89 02          # {{{c(2)}}} ~xt@a2 ← [LATEST];~             
                      # ~_begin:~                                  
                      # {{{c(2)}}} /# Save registers that are/     
                      # {{{c(2)}}} /# not preserved by ~xt=~./     
-23 34 A1 00~         # {{{c(2)}}} ~push addr@a0;~                 
-23 30 B1 00~         # {{{c(2)}}} ~push u@a1;~                    
+23 34 A1 00          # {{{c(2)}}} ~push addr@a0;~                 
+23 30 B1 00          # {{{c(2)}}} ~push u@a1;~                    
                      # {{{c(2)}}} /# Does ~xt~ match ~addr~​/​~u~?/ 
-99 78		     # {{{c(2)}}} ~call xt=;~  /# Compiled./      
-93 02 05 00~         # {{{c(2)}}} ~equal@t0 ← equal@a0;~          
-83 35 01 00~         # {{{c(2)}}} ~pop u@a1;~                     
-03 35 81 00~         # {{{c(2)}}} ~pop addr@a0;~                  
+99 78	    	     # {{{c(2)}}} ~call xt=;~  /# Compiled./      
+93 02 05 00          # {{{c(2)}}} ~equal@t0 ← equal@a0;~          
+83 35 01 00          # {{{c(2)}}} ~pop u@a1;~                     
+03 35 81 00          # {{{c(2)}}} ~pop addr@a0;~                  
                      # {{{c(2)}}} /# If matched, we're done!/     
                      # {{{c(2)}}} ~if equal@t0:~                  
-63 16 50 00~         # {{{c(4)}}}   ~goto _end.~                  
+63 16 50 00          # {{{c(4)}}}   ~goto _end.~                  
                      # {{{c(2)}}} /# Otherwise, follow ~xt~'s/    
                      # {{{c(2)}}} /# link pointer and repeat./    
-03 36 86 00~         # {{{c(2)}}} ~xt@a2 ← [xt@a2 + 8];~          
-6F F0 5F FE~         # {{{c(2)}}} ~goto _begin.~                  
+03 36 86 00          # {{{c(2)}}} ~xt@a2 ← [xt@a2 + 8];~          
+6F F0 DF FD          # {{{c(2)}}} ~goto _begin.~                  
                      # ~_end:~                                    
-83 30 01 01~         # {{{c(2)}}} ~pop ra;~                       
-13 01 81 01~         # {{{c(2)}}}                                 
-67 80 00 00~         # {{{c(2)}}} ~return.~                       
+83 30 01 01          # {{{c(2)}}} ~pop ra;~                       
+13 01 81 01          # {{{c(2)}}}                                 
+67 80 00 00          # {{{c(2)}}} ~return.~                       
 
 
 99 03 4E 75 6D ############### Num ( addr@a0 u@a1 -​- n ) ===========================================
 00                   #
-93 02 00 00~         # {{{c(2)}}} ~num@t0 ← 0;~                 
+93 02 00 00          # {{{c(2)}}} ~num@t0 ← 0;~                 
                      # ~_begin:~                                
                      # {{{c(2)}}} /# Parse one character./      
-03 43 05 00~         # {{{c(2)}}} ~chr@t1 ← [addr@a0++];~       
-13 05 15 00~         # {{{c(2)}}}                               
+03 43 05 00          # {{{c(2)}}} ~chr@t1 ← [addr@a0++];~       
+13 05 15 00          # {{{c(2)}}}                               
                      # {{{c(2)}}} /# Is it a ~[0-9]~ digit?/    
-93 03 10 04~         # {{{c(2)}}} ~if chr@t1 < 'A':~            
-63 E4 63 00~         # {{{c(4)}}}   ~goto _digit.~              
+93 03 10 04          # {{{c(2)}}} ~if chr@t1 < 'A':~            
+63 E4 63 00          # {{{c(4)}}}   ~goto _digit.~              
                      # {{{c(2)}}} /# It's an ~[A-F]~ digit./    
-13 03 93 FF~         # {{{c(2)}}} ~chr@t1 -= 7;~                
+13 03 93 FF          # {{{c(2)}}} ~chr@t1 -= 7;~                
                      # ~_digit:~                                
-13 03 03 FD~         # {{{c(2)}}} ~digit@t1 = chr@t1 - '0';~    
+13 03 03 FD          # {{{c(2)}}} ~digit@t1 = chr@t1 - '0';~    
                      # {{{c(2)}}} /# Multiply by base and add/  
                      # {{{c(2)}}} /# the new digit./            
-93 92 42 00~         # {{{c(2)}}} ~num@t0 <<= 4~;               
-B3 E2 62 00~         # {{{c(2)}}} ~num@t0~ \vert​~= digit@t1;~       
+93 92 42 00          # {{{c(2)}}} ~num@t0 <<= 4~;               
+B3 E2 62 00          # {{{c(2)}}} ~num@t0~ \vert​~= digit@t1;~       
                      # {{{c(2)}}} /# Repeat while there are/    
                      # {{{c(2)}}} /# unparsed characters left./ 
-93 85 F5 FF~         # {{{c(2)}}} ~if --u@a1 != 0:~             
-E3 1E B0 FC~         # {{{c(4)}}}   ~goto _begin.~              
+93 85 F5 FF          # {{{c(2)}}} ~if --u@a1 != 0:~             
+E3 1E B0 FC          # {{{c(4)}}}   ~goto _begin.~              
                      # {{{c(2)}}} /# Push the parsed number/    
                      # {{{c(2)}}} /# on the data stack./        
-93 89 89 FF~         # {{{c(2)}}} ~STACK@s3 -= 8;~              
-23 B0 59 00~         # {{{c(2)}}} ~[STACK@s3] ← num@t0;~        
-67 80 00 00~         # {{{c(2)}}} ~return.~                     
+93 89 89 FF          # {{{c(2)}}} ~STACK@s3 -= 8;~              
+23 B0 59 00          # {{{c(2)}}} ~[STACK@s3] ← num@t0;~        
+67 80 00 00          # {{{c(2)}}} ~return.~                     
 
 
 99 04 6D 69 73 73 ############### miss ( addr@a0 u@a1 xt@a2 -​- [num] xt@a0 ) ===========================================
@@ -921,7 +934,7 @@ E7 80 02 00          # ~call [code@t0];~
 67 80 00 00          # {{{c(2)}}} ~return.~                        
 
 
-99 05 68 69 74 ############### hit ( xt@a0 -- ) ===========================================
+99 03 68 69 74 ############### hit ( xt@a0 -- ) ===========================================
 00                   #
 63 08 A0 02          # {{{c(2)}}} ~if xt@a0 = 0:~                        
                      # {{{c(4)}}}   ~goto _end.~                         
@@ -943,35 +956,34 @@ B3 E2 62 00          # {{{c(15)}}}              \vert ~[STATE];~
 67 80 00 00          # {{{c(2)}}} ~return.~                              
 
 
-99 04 53 56 41 4C ############### SVAL ( ··· -- ··· ) ===========================================
+99 04 53 56 41 4C ############### SVAL ( ··· -- ··· ) =========================================== 0x0000000010000886
                      #
-13 01 81 FF~         # {{{c(2)}}} ~push ra;~                             
-23 30 11 00~         #                                                   
+13 01 81 FF          # {{{c(2)}}} ~push ra;~                             
+23 30 11 00          #                                                   
                      # ~_begin:~                                         
 99 70                # {{{c(2)}}} ~call pname;~  {{{c(0)}}}​/# Compiled./ 
 99 46                # {{{c(2)}}} ~call FIND;~   {{{c(1)}}}​/# Compiled./ 
 99 6D                # {{{c(2)}}} ~call miss;~   {{{c(1)}}}​/# Compiled./ 
 99 68                # {{{c(2)}}} ~call hit;~    {{{c(2)}}}​/# Compiled./ 
                      # {{{c(2)}}} /# Characters left in current line?/   
-23 38 59 00~         # {{{c(2)}}} ~>in@t0 ← [>IN];~                      
-23 30 69 00~         # {{{c(2)}}} ~#in@t1 ← [#IN];~                      
+23 38 59 00          # {{{c(2)}}} ~>in@t0 ← [>IN];~                      
+23 30 69 00          # {{{c(2)}}} ~#in@t1 ← [#IN];~                      
                      # {{{c(2)}}} ~if >in@t0 < #in@t1:~                  
-E3 6C 53 FC~         # {{{c(4)}}}   ~goto _begin.~                       
-83 30 01 00~         # {{{c(2)}}} ~pop ra;~                              
-13 01 81 00~         # {{{c(2)}}}                                        
-67 80 00 00~         # {{{c(2)}}} ~return.~                              
+E3 6C 53 FC          # {{{c(4)}}}   ~goto _begin.~                       
+83 30 01 00          # {{{c(2)}}} ~pop ra;~                              
+13 01 81 00          # {{{c(2)}}}                                        
+67 80 00 00          # {{{c(2)}}} ~return.~                              
 
 
-99 02 74 69 ############### ti ( -- ) ===========================================
+99 02 74 69 ############### ti ( -- ) =========================================== 0x00000000100008e4
                      #
-B7 09 00 10~         # {{{c(2)}}} ~STACK@s3 ← 0x10000000;~                
-93 89 09 00~         # {{{c(2)}}}                                         
-93 89 09 00~         # {{{c(2)}}} ~[TIB] ← INPUT@s0;~                     
+B7 09 00 10          # {{{c(2)}}} ~STACK@s3 ← 0x10000000;~                
+23 34 89 00          # {{{c(2)}}} ~[TIB] ← INPUT@s0;~                     
 99 5B                # {{{c(2)}}} ~call [;~  /# Compiled./                
-99                   # ~_begin:~                                          
+                     # ~_begin:~                                          
 99 52                # {{{c(2)}}} ~call REFILL;~  {{{c(0)}}}​/# Compiled./ 
 99 53                # {{{c(2)}}} ~call SVAL;~    {{{c(2)}}}​/# Compiled./ 
-6F F0 DF FF~         # {{{c(2)}}} ~goto _begin.~                          
-
-
+6F F0 1F FF          # {{{c(2)}}} ~goto _begin.~                          
+	    
+	    
 99 F4                # execute ti();
