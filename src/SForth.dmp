@@ -536,7 +536,7 @@ b3 85 a5 40          # {{{c(11)}}}         ~- low@a0;~
                      # ~_begin:~                                       
                      # {{{c(2)}}} /# Is parse area empty?/             
                      # {{{c(2)}}} ~if >in@t2~ \ge{{{unsigned}}} ~#in@t0:~
-63 f0 53 02          # {{{c(4)}}}   ~goto _end_eof.~                   
+63 F0 53 02          # {{{c(4)}}}   ~goto _end_eof.~                   
                      # {{{c(2)}}} /# Get current character./           
 03 33 89 00          # {{{c(2)}}} ~tib@t1 ← [TIB];~                    
                      # {{{c(2)}}} ~chr@t3 ← [tib@t1~                   
@@ -546,7 +546,7 @@ b3 0e 73 00          # {{{c(10)}}}        ~+ >in@t2];~
                      # {{{c(2)}}} ~chr'@t3 ← chr@t3~                   
 33 0e ae 40          # {{{c(10)}}}        ~- low@a0;~                  
                      # {{{c(2)}}} ~if t3~ \lt{{{unsigned}}} ~high'@a1:~  
-63 68 be 00          # {{{c(4)}}}   ~goto _end.~                       
+63 68 BE 00          # {{{c(4)}}}   ~goto _end.~                       
                      # {{{c(2)}}} /# Go to next character./            
 93 83 13 00          # {{{c(2)}}} ~>in@t2++;~                          
 6f f0 5f fe          # {{{c(2)}}} ~goto _begin.~                       
@@ -844,7 +844,7 @@ B7 B2 59 00          # ~t0 ← 0x0059B023;~
 13 05 15 00          # {{{c(2)}}}                               
                      # {{{c(2)}}} /# Is it a ~[0-9]~ digit?/    
 93 03 10 04          # {{{c(2)}}} ~if chr@t1 < 'A':~            
-63 E4 63 00          # {{{c(4)}}}   ~goto _digit.~              
+63 64 73 00          # {{{c(4)}}}   ~goto _digit.~              
                      # {{{c(2)}}} /# It's an ~[A-F]~ digit./    
 13 03 93 FF          # {{{c(2)}}} ~chr@t1 -= 7;~                
                      # ~_digit:~                                
@@ -966,10 +966,10 @@ B3 E5 62 00          # {{{c(15)}}}              \vert ~[STATE];~
 99 6D                # {{{c(2)}}} ~call miss;~   {{{c(1)}}}​/# Compiled./ 
 99 68                # {{{c(2)}}} ~call hit;~    {{{c(2)}}}​/# Compiled./ 
                      # {{{c(2)}}} /# Characters left in current line?/   
-23 38 59 00          # {{{c(2)}}} ~>in@t0 ← [>IN];~                      
-23 30 69 00          # {{{c(2)}}} ~#in@t1 ← [#IN];~                      
+83 32 09 01          # {{{c(2)}}} ~>in@t0 ← [>IN];~                      
+03 33 09 00          # {{{c(2)}}} ~#in@t1 ← [#IN];~                      
                      # {{{c(2)}}} ~if >in@t0 < #in@t1:~                  
-E3 6C 53 FC          # {{{c(4)}}}   ~goto _begin.~                       
+E3 EC 62 FC          # {{{c(4)}}}   ~goto _begin.~                       
 83 30 01 00          # {{{c(2)}}} ~pop ra;~                              
 13 01 81 00          # {{{c(2)}}}                                        
 67 80 00 00          # {{{c(2)}}} ~return.~                              

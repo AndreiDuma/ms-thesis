@@ -122,7 +122,7 @@ is_store(::Val{:sd}) = true
 ### B instructions ###
 
 macro encode_b_instr(mnemonic, funct3, opcode)
-    :(encode(::Val{$mnemonic}, rs2::Symbol, rs1::Symbol, offset::Int; fmt::Symbol=:bin) =
+    :(encode(::Val{$mnemonic}, rs1::Symbol, rs2::Symbol, offset::Int; fmt::Symbol=:bin) =
         encode(BInstr(Int32(offset), rs2, rs1, UInt32($funct3), UInt32($opcode)), Val(fmt)))
 end
 

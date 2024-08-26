@@ -288,7 +288,7 @@ RISC-V on QEMU:
 |                | {{{b(0)}}}​~00 00 40 00 00 00 00 00~ | ~p_vaddr~: Virtual address of loaded segment; ~0x400000~ on ~x86-64~ [cite:@system_v_psabi_amd64]. |
 |                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_paddr~: Only used on systems where physical address is relevant.                                |
 |                | {{{b(0)}}}​~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size of the segment in the file image (~TODO~).                                        |
-|                | {{{b(0)}}}​~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size of the segment in memory (\ge ~p_filesz~).                                         |
+|                | {{{b(0)}}}​~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size of the segment in memory (\ge ~p_filesz~).                                           |
 |                | {{{b(0)}}}​~00 10 00 00 00 00 00 00~ | ~p_align~: Align segment to ~x86-64~ page size (4096 or ~0x1000~) [cite:@system_v_psabi_amd64].    |
 |----------------+-------------------------------------+----------------------------------------------------------------------------------------------------|
 | {{{addr(78)}}} |                                     |                                                                                                    |
@@ -1136,7 +1136,7 @@ Explain:
 | ~_begin:~                                        |                   |                                                                                                        | {{{addr(00)}}} |                              |
 | {{{c(2)}}} /# Is parse area empty?/              |                   |                                                                                                        |                |                              |
 | {{{c(2)}}} ~if >in@t2~ \ge{{{unsigned}}} ~#in@t0:~ |                   |                                                                                                        |                |                              |
-| {{{c(4)}}}   ~goto _end_eof.~                    | bgeu t2, t0, 0x20 | {{{off(0000001)}}} {{{rs2(00111)}}} {{{rs1(00101)}}} {{{fn3(111)}}} {{{off(00000)}}} {{{op(1100011)}}} |                | ~63 F0 53 02~                |
+| {{{c(4)}}}   ~goto _end_eof.~                    | bgeu t2, t0, 0x20 | {{{off(0000001)}}} {{{rs2(00101)}}} {{{rs1(00111)}}} {{{fn3(111)}}} {{{off(00000)}}} {{{op(1100011)}}} |                | ~63 F0 53 02~                |
 | {{{c(2)}}} /# Get current character./            |                   |                                                                                                        |                |                              |
 | {{{c(2)}}} ~tib@t1 ← [TIB];~                     | ld t1, 8(s2)      | {{{off(0x008)}}}                    {{{rs1(10010)}}} {{{fn3(011)}}} {{{rd(00110)}}}  {{{op(0000011)}}} |                | ~03 33 89 00~                |
 | {{{c(2)}}} ~chr@t3 ← [tib@t1~                    |                   |                                                                                                        |                |                              |
@@ -1146,7 +1146,7 @@ Explain:
 | {{{c(2)}}} ~chr'@t3 ← chr@t3~                    |                   |                                                                                                        |                |                              |
 | {{{c(10)}}}        ~- low@a0;~                   | sub t3, t3, a0    | {{{fn7(0100000)}}} {{{rs2(01010)}}} {{{rs1(11100)}}} {{{fn3(000)}}} {{{rd(11100)}}}  {{{op(0110011)}}} |                | ~33 0E AE 40~                |
 | {{{c(2)}}} ~if t3~ \lt{{{unsigned}}} ~high'@a1:~   |                   |                                                                                                        |                |                              |
-| {{{c(4)}}}   ~goto _end.~                        | bltu t3, a1, 0x10 | {{{off(0000000)}}} {{{rs2(11100)}}} {{{rs1(01011)}}} {{{fn3(110)}}} {{{off(10000)}}} {{{op(1100011)}}} | {{{addr(14)}}} | ~63 68 BE 00~                |
+| {{{c(4)}}}   ~goto _end.~                        | bltu t3, a1, 0x10 | {{{off(0000000)}}} {{{rs2(01011)}}} {{{rs1(11100)}}} {{{fn3(110)}}} {{{off(10000)}}} {{{op(1100011)}}} | {{{addr(14)}}} | ~63 68 BE 00~                |
 | {{{c(2)}}} /# Go to next character./             |                   |                                                                                                        |                |                              |
 | {{{c(2)}}} ~>in@t2++;~                           | addi t2, t2, 1    | {{{imm(0x001)}}}                    {{{rs1(00111)}}} {{{fn3(000)}}} {{{rd(00111)}}}  {{{op(0010011)}}} |                | ~93 83 13 00~                |
 | {{{c(2)}}} ~goto _begin.~                        | jal zero, 0xFE4   | {{{off(01111110010100000000)}}}                                     {{{rd(00000)}}}  {{{op(1101111)}}} | {{{addr(1C)}}} | ~6F F0 5F FE~                |
@@ -1188,7 +1188,7 @@ Explain:
 | {{{c( 2)}}} /# carry flag unset [cite:@intel_manual_volume_2]./ |                    |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} ~if CF = 0:~                                        |                    |                  |                |                                                    |                                                                                     |
 | {{{c( 4)}}}   ~goto _end.~                                      | JAE _rel8_         | 73 _cb_          |                | ~73~ {{{offset(04,04-00)}}}                        | +jump _end if U>=                                                                   |
-| {{{c( 2)}}} /# A character not in range/                        |                    |                  | {{{addr(00)}}} |                                                    |                                                                                     |
+| {{{c( 2)}}} /# A character in range/                            |                    |                  | {{{addr(00)}}} |                                                    |                                                                                     |
 | {{{c( 2)}}} /# ~[low, high)~ was found./                        |                    |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} ~[>IN]++;~  /# Skip it./                            | INC r/m64          | REX.W FF /0      |                | ~49 FF~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | [>IN]++                                                                             |
 | ~_end:~                                                         |                    |                  | {{{addr(04)}}} |                                                    | # _end:                                                                             |
@@ -2017,7 +2017,7 @@ Explain:
 | {{{c(2)}}}                               | addi a0, a0, 1      | {{{imm(0x001)}}}                    {{{rs1(01010)}}} {{{fn3(000)}}} {{{rd(01010)}}}  {{{op(0010011)}}} |                | ~13 05 15 00~             |
 | {{{c(2)}}} /# Is it a ~[0-9]~ digit?/    |                     |                                                                                                        |                |                           |
 | {{{c(2)}}} ~if chr@t1 < 'A':~            | addi t2, zero, 65   | {{{imm(0x041)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00111)}}}  {{{op(0010011)}}} |                | ~93 03 10 04~             |
-| {{{c(4)}}}   ~goto _digit.~              | bltu t1, t2, 0x08   | {{{off(0000000)}}} {{{rs2(00110)}}} {{{rs1(00111)}}} {{{fn3(110)}}} {{{off(01000)}}} {{{op(1100011)}}} | {{{addr(0C)}}} | ~63 E4 63 00~             |
+| {{{c(4)}}}   ~goto _digit.~              | bltu t1, t2, 0x08   | {{{off(0000000)}}} {{{rs2(00111)}}} {{{rs1(00110)}}} {{{fn3(110)}}} {{{off(01000)}}} {{{op(1100011)}}} | {{{addr(0C)}}} | ~63 64 73 00~             |
 | {{{c(2)}}} /# It's an ~[A-F]~ digit./    |                     |                                                                                                        |                |                           |
 | {{{c(2)}}} ~chr@t1 -= 7;~                | addi t1, t1, -7     | {{{imm(0xFF9)}}}                    {{{rs1(00110)}}} {{{fn3(000)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                | ~13 03 93 FF~             |
 | ~_digit:~                                |                     |                                                                                                        | {{{addr(14)}}} |                           |
@@ -2393,10 +2393,10 @@ Explain:
 | {{{c(2)}}} ~call miss;~   {{{c(1)}}}​/# Compiled./ | ---                | ---                                                                                                    |                | {{{compile(6D,m)}}}          |
 | {{{c(2)}}} ~call hit;~    {{{c(2)}}}​/# Compiled./ | ---                | ---                                                                                                    |                | {{{compile(68,h)}}}          |
 | {{{c(2)}}} /# Characters left in current line?/   |                    |                                                                                                        |                |                              |
-| {{{c(2)}}} ~>in@t0 ← [>IN];~                      | sd t0, 16(s2)      | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(10000)}}} {{{op(0100011)}}} |                | ~23 38 59 00~                |
-| {{{c(2)}}} ~#in@t1 ← [#IN];~                      | sd t1, 0(s2)       | {{{off(0000000)}}} {{{rs2(00110)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                | ~23 30 69 00~                |
+| {{{c(2)}}} ~>in@t0 ← [>IN];~                      | ld t0, 16(s2)      | {{{off(0x010)}}}                    {{{rs1(10010)}}} {{{fn3(011)}}} {{{rd(00101)}}}  {{{op(0000011)}}} |                | ~83 32 09 01~                |
+| {{{c(2)}}} ~#in@t1 ← [#IN];~                      | ld t1, 0(s2)       | {{{off(0x000)}}}                    {{{rs1(10010)}}} {{{fn3(011)}}} {{{rd(00110)}}}  {{{op(0000011)}}} |                | ~03 33 09 00~                |
 | {{{c(2)}}} ~if >in@t0 < #in@t1:~                  |                    |                                                                                                        |                |                              |
-| {{{c(4)}}}   ~goto _begin.~                       | bltu t0, t1, -0x28 | {{{off(1111110)}}} {{{rs2(00101)}}} {{{rs1(00110)}}} {{{fn3(110)}}} {{{off(11001)}}} {{{op(1100011)}}} | {{{addr(28)}}} | ~E3 6C 53 FC~                |
+| {{{c(4)}}}   ~goto _begin.~                       | bltu t0, t1, -0x28 | {{{off(1111110)}}} {{{rs2(00110)}}} {{{rs1(00101)}}} {{{fn3(110)}}} {{{off(11001)}}} {{{op(1100011)}}} | {{{addr(28)}}} | ~E3 EC 62 FC~                |
 | {{{c(2)}}} ~pop ra;~                              | ld ra, 0(sp)       | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |                | ~83 30 01 00~                |
 | {{{c(2)}}}                                        | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 00~                |
 | {{{c(2)}}} ~return.~                              | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
@@ -2577,6 +2577,22 @@ that it's not wasted.
 - https://github.com/jjyr/jonesforth_riscv
 - https://github.com/theandrew168/derzforth
 - https://github.com/mcmenaminadrian/riscyforth
+
+*** Useful GDB commands & tricks
+**** Breakpoints
+- ~ignore id n~ ignores breakpoint =id= a number of =n= times. 
+- ~tbreak~ for temporary breakpoints.
+
+**** Watchpoints
+- Create with ~watch~ / ~rwatch~ / ~awatch~.
+- They appear on the =info breakpoint= page.
+
+**** Disassembling
+- ~disassemble/r $pc, +4 * 8~ disassembles 8 instructions (4 bytes)
+  starting from =$pc=.
+
+**** Display on every program stop
+- ~display/4i $pc~ prints next 4 instructions after every step.
 
 
 * Footnotes
