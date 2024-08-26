@@ -650,8 +650,9 @@ b3 05 53 40          # {{{c( 2)}}} ~u@a1~ ~←~ ~end@t1~ ~-~ ~start@t0;~
                      # /# its dictionary entry./                                                            
 99 70                # ~call pname;~  /# Compiled./                                                         
 13 04 05 00          # ~INPUT@s0 ← addr@a0;~                                                                
-13 05 89 02          # ~latest@a0 ← LATEST;~                                                                
-                     # /# *TODO*: What about ~flag@a1~???                                                   
+03 35 89 02          # ~latest@a0 ← [LATEST];~                                                                
+                     # /# Word length ~u@a1~ is forwarded/                                                   
+		     # /# as ~flag@a1~ to ~Head~./
 99 48                # ~call Head;~  /# Compiled./                                                          
                      #                                                                                      
                      # /# Set the ~HIDDEN~ bit (~0x40~) on/                                                 

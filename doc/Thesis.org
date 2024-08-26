@@ -1449,7 +1449,8 @@ Explain:
 | ~call pname;~  /# Compiled./          | ---               | ---               | {{{compile(70,p)}}}                       | Call pname  (See Forth 2012 Table 2.1) |
 | ~INPUT@RSI ← addr@RBP;~               | MOV r/m64, r64    | REX.W 89 /r       | ~48 89~ {{{modrm(EE,11,101,110)}}}        | rsi = rbp                              |
 | ~latest@RDX ← LATEST;~                | MOV r32, /imm32/  | B8+rd /id/        | ~BA~ /~28 00 00 10~/                      | rdx = Latest                           |
-| /# *TODO*: What about ~flag@AL~???    |                   |                   |                                           |                                        |
+| /# Word length ~u@RAX~ is forwarded/  |                   |                   |                                           |                                        |
+| /# as ~flag@AL~ to ~Head~./           |                   |                   |                                           |                                        |
 | ~call Head;~  /# Compiled./           | ---               | ---               | {{{compile(48,H)}}}                       | Call Head                              |
 |                                       |                   |                   |                                           |                                        |
 | /# Set the ~HIDDEN~ bit (~0x40~) on/  |                   |                   |                                           |                                        |
@@ -1486,8 +1487,9 @@ Explain:
 | /# its dictionary entry./                                                             |                    |                                                                                                        |                     |
 | ~call pname;~  /# Compiled./                                                          | ---                | ---                                                                                                    | {{{compile(70,p)}}} |
 | ~INPUT@s0 ← addr@a0;~                                                                 | addi s0, a0, 0     | {{{imm(0x000)}}}                    {{{rs1(01010)}}} {{{fn3(000)}}} {{{rd(01000)}}}  {{{op(0010011)}}} | ~13 04 05 00~       |
-| ~latest@a0 ← LATEST;~                                                                 | addi a0, s2, 40    | {{{imm(0x028)}}}                    {{{rs1(10010)}}} {{{fn3(000)}}} {{{rd(01010)}}}  {{{op(0010011)}}} | ~13 05 89 02~       |
-| /# *TODO*: What about ~flag@a1~???                                                    | ???                |                                                                                                        |                     |
+| ~latest@a0 ← [LATEST];~                                                               | ld a0, 40(s2)      | {{{off(0x028)}}}                    {{{rs1(10010)}}} {{{fn3(011)}}} {{{rd(01010)}}}  {{{op(0000011)}}} | ~03 35 89 02~       |
+| /# Word length ~u@a1~ is forwarded/                                                   |                    |                                                                                                        |                     |
+| /# as ~flag@a1~ to ~Head~./                                                           |                    |                                                                                                        |                     |
 | ~call Head;~  /# Compiled./                                                           | ---                | ---                                                                                                    | {{{compile(48,H)}}} |
 |                                                                                       |                    |                                                                                                        |                     |
 | /# Set the ~HIDDEN~ bit (~0x40~) on/                                                  |                    |                                                                                                        |                     |
