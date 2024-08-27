@@ -695,36 +695,37 @@ B7 32 11 00          # ~t0 ← 0x00113023;~
 
 
 99 81 3B ############### ; ( C: -​- ) ======== immediate ===================================
-00                   #
-13 01 81 FF          # ~push ra;~                               
-23 30 11 00          #                                          
-                     # /# 1. Assemble and write ~lb~./          
-B7 02 00 83          # ~t0 ← 0x83000100;~                       
-93 82 02 10          #                                          
-23 A0 54 00          # ~[OUTPUT@s1] ← t0;~                      
-                     #                                          
-                     # /# 2. Assemble and write ~addi~./        
-B7 82 01 13          # ~t0 ← 0x13018100;~                       
-93 82 02 10          #                                          
-23 A2 54 00          # ~[OUTPUT@s1 + 4] ← t0;~                  
-                     #                                          
-                     # /# 3. Assemble and write ~jalr~./        
-B7 02 80 67          # ~t0 ← 0x67800000;~                       
-23 A4 54 00          # ~[OUTPUT@s1 + 8] ← t0;~                  
-93 84 C4 00          # ~OUTPUT@s1 += 12;~                       
-                     #                                          
-                     # /# Clear the ~HIDDEN~ bit (~0x40~) on/   
-                     # /# the dictionary entry's flag./         
-83 32 89 02          # ~xt@t0 ← [LATEST];~                      
-03 C3 02 01          # ~flag@t1 ← [xt@t0 + 16];~                
-13 73 F3 0B          # ~flag@t1 &= 0b10111111;~                 
-23 88 62 00          # ~[xt@t0 + 16] ← flag@t1;~                
-                     #                                          
-                     # /# Switch to interpreting state./        
-99 5B                # ~call [;~  /# Compiled./          
-83 30 01 00          # ~pop ra;~                                
-13 01 81 00          #                                          
-67 80 00 00          # ~return.~                                
+00                   # 
+13 01 81 FF          # ~push ra;~                                               
+23 30 11 00          #                                       
+                     # /# 1. Assemble and write ~ld~./       
+B7 32 01 00          # ~t0 ← 0x00013081;~                    
+93 82 32 08          #                                       
+23 A0 54 00          # ~[OUTPUT@s1] ← t0;~                   
+                     #                                       
+                     # /# 2. Assemble and write ~addi~./     
+B7 02 81 00          # ~t0 ← 0x00810113;~                    
+93 82 32 11          #                                       
+23 A2 54 00          # ~[OUTPUT@s1 + 4] ← t0;~               
+                     #                                       
+                     # /# 3. Assemble and write ~jalr~./     
+B7 82 00 00          # ~t0 ← 0x00008067;~                    
+93 82 72 06	     #                                       
+23 A4 54 00          # ~[OUTPUT@s1 + 8] ← t0;~               
+93 84 C4 00          # ~OUTPUT@s1 += 12;~                    
+                     #                                       
+                     # /# Clear the ~HIDDEN~ bit (~0x40~) on/
+                     # /# the dictionary entry's flag./      
+83 32 89 02          # ~xt@t0 ← [LATEST];~                   
+03 C3 02 01          # ~flag@t1 ← [xt@t0 + 16];~             
+13 73 F3 0B          # ~flag@t1 &= 0b10111111;~              
+23 88 62 00          # ~[xt@t0 + 16] ← flag@t1;~             
+                     #                                       
+                     # /# Switch to interpreting state./     
+99 5B                # ~call [;~  /# Compiled./              
+83 30 01 00          # ~pop ra;~                             
+13 01 81 00          #                                       
+67 80 00 00          # ~return.~                             
 
 
 99 01 2E ############### . ( chr -​- ) ===========================================
