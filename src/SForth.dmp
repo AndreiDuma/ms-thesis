@@ -573,7 +573,7 @@ b3 0e 73 00          # {{{c(10)}}}        ~+ >in@t2];~
                      # {{{c( 2)}}} /# Did ~seek()~ encounter the/     
                      # {{{c( 2)}}} /# end of the parse area?/         
                      # {{{c( 2)}}} ~if eof@a0 != 0:~                   
-63 96 02 00          # {{{c( 4)}}}   ~goto _end.~                     
+63 16 05 00          # {{{c( 4)}}}   ~goto _end.~                     
                      # {{{c( 2)}}} /# A character in range/           
                      # {{{c( 2)}}} /# ~[low, high)~ was found./       
 93 03 13 00          # {{{c( 2)}}} ~[>IN]++;~  /# Skip it./           
