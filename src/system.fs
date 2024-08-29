@@ -99,63 +99,63 @@
   & ;                           \ n' = m & mask            ( -- n' )
 
 \ R-type instructions.
-: r_instr ( rd rs1 rs2 fn7 fn3 op -- )
+: `instr/r ( rd rs1 rs2 fn7 fn3 op -- )
   [ % % % % % v v v v v ]  ( -- op rd rs1 rs2 fn7 fn3 )
   [ % % %         v v v ]  ( -- op rd fn3 rs1 rs2 fn7 )
   5 << | 5 << | 3 << | 5 << | 7 << | ` ;
-: `add  ( rd rs1 rs2 -- )  00 0 33 r_instr ;
-: `sub  ( rd rs1 rs2 -- )  20 0 33 r_instr ;
-: `sll  ( rd rs1 rs2 -- )  00 1 33 r_instr ;
-: `slt  ( rd rs1 rs2 -- )  00 2 33 r_instr ;
-: `sltu ( rd rs1 rs2 -- )  00 3 33 r_instr ;
-: `xor  ( rd rs1 rs2 -- )  00 4 33 r_instr ;
-: `srl  ( rd rs1 rs2 -- )  00 5 33 r_instr ;
-: `sra  ( rd rs1 rs2 -- )  20 5 33 r_instr ;
-: `or   ( rd rs1 rs2 -- )  00 6 33 r_instr ;
-: `and  ( rd rs1 rs2 -- )  00 7 33 r_instr ;
+: `add  ( rd rs1 rs2 -- )  00 0 33 `instr/r ;
+: `sub  ( rd rs1 rs2 -- )  20 0 33 `instr/r ;
+: `sll  ( rd rs1 rs2 -- )  00 1 33 `instr/r ;
+: `slt  ( rd rs1 rs2 -- )  00 2 33 `instr/r ;
+: `sltu ( rd rs1 rs2 -- )  00 3 33 `instr/r ;
+: `xor  ( rd rs1 rs2 -- )  00 4 33 `instr/r ;
+: `srl  ( rd rs1 rs2 -- )  00 5 33 `instr/r ;
+: `sra  ( rd rs1 rs2 -- )  20 5 33 `instr/r ;
+: `or   ( rd rs1 rs2 -- )  00 6 33 `instr/r ;
+: `and  ( rd rs1 rs2 -- )  00 7 33 `instr/r ;
 \ RV64 instructions.
-: `addw ( rd rs1 rs2 -- )  00 0 3B r_instr ;
-: `subw ( rd rs1 rs2 -- )  20 0 3B r_instr ;
-: `sllw ( rd rs1 rs2 -- )  00 1 3B r_instr ;
-: `srlw ( rd rs1 rs2 -- )  00 5 3B r_instr ;
-: `sraw ( rd rs1 rs2 -- )  20 5 3B r_instr ;
+: `addw ( rd rs1 rs2 -- )  00 0 3B `instr/r ;
+: `subw ( rd rs1 rs2 -- )  20 0 3B `instr/r ;
+: `sllw ( rd rs1 rs2 -- )  00 1 3B `instr/r ;
+: `srlw ( rd rs1 rs2 -- )  00 5 3B `instr/r ;
+: `sraw ( rd rs1 rs2 -- )  20 5 3B `instr/r ;
 
 \ I-type instructions.
-: i_instr ( rd rs1 imm fn3 op -- )
+: `instr/i ( rd rs1 imm fn3 op -- )
   [ % % % % v v v v ]  ( -- op rd rs1 imm fn3 )
   [ % %         v v ]  ( -- op rd fn3 rs1 imm )
   5 << | 3 << | 5 << | 7 << | ` ;
-: i_instr/shift ( rd rs1 shamt fn7 fn3 op -- )
-  2SWAP		( -- rd rs1 fn3 op shamt fn7 )
-  5 << |	( -- rd rs1 fn3 op imm )
-  ROT ROT	( -- rd rs1 imm fn3 op )
-  i_instr ;
-: `ecall ( -- )               0 0 000 0 73 i_instr ;
-: `jalr  ( rd rs1 imm   -- )          0 67 i_instr ;
-: `lb    ( rd rs1 imm   -- )          0 03 i_instr ;
-: `lh    ( rd rs1 imm   -- )          1 03 i_instr ;
-: `lw    ( rd rs1 imm   -- )          2 03 i_instr ;
-: `lbu   ( rd rs1 imm   -- )          4 03 i_instr ;
-: `lhu   ( rd rs1 imm   -- )          5 03 i_instr ;
-: `addi  ( rd rs1 imm   -- )          0 13 i_instr ;
-: `slti  ( rd rs1 imm   -- )          2 13 i_instr ;
-: `sltiu ( rd rs1 imm   -- )          3 13 i_instr ;
-: `xori  ( rd rs1 imm   -- )          4 13 i_instr ;
-: `ori   ( rd rs1 imm   -- )          6 13 i_instr ;
-: `andi  ( rd rs1 imm   -- )          7 13 i_instr ;
-: `slli  ( rd rs1 shamt -- )       00 1 13 i_instr/shift ;
-: `srli  ( rd rs1 shamt -- )       00 5 13 i_instr/shift ;
-: `srai  ( rd rs1 shamt -- )       20 5 13 i_instr/shift ;
+: `instr/i/shift ( rd rs1 shamt fn7 fn3 op -- )
+  2SWAP		 ( -- rd rs1 fn3 op shamt fn7 )
+  5 << |	 ( -- rd rs1 fn3 op imm )
+  ROT ROT	 ( -- rd rs1 imm fn3 op )
+  `instr/i ;
+: `ecall ( -- )               0 0 000 0 73 `instr/i ;
+: `jalr  ( rd rs1 imm   -- )          0 67 `instr/i ;
+: `lb    ( rd rs1 imm   -- )          0 03 `instr/i ;
+: `lh    ( rd rs1 imm   -- )          1 03 `instr/i ;
+: `lw    ( rd rs1 imm   -- )          2 03 `instr/i ;
+: `lbu   ( rd rs1 imm   -- )          4 03 `instr/i ;
+: `lhu   ( rd rs1 imm   -- )          5 03 `instr/i ;
+: `addi  ( rd rs1 imm   -- )          0 13 `instr/i ;
+: `slti  ( rd rs1 imm   -- )          2 13 `instr/i ;
+: `sltiu ( rd rs1 imm   -- )          3 13 `instr/i ;
+: `xori  ( rd rs1 imm   -- )          4 13 `instr/i ;
+: `ori   ( rd rs1 imm   -- )          6 13 `instr/i ;
+: `andi  ( rd rs1 imm   -- )          7 13 `instr/i ;
+: `slli  ( rd rs1 shamt -- )       00 1 13 `instr/i/shift ;
+: `srli  ( rd rs1 shamt -- )       00 5 13 `instr/i/shift ;
+: `srai  ( rd rs1 shamt -- )       20 5 13 `instr/i/shift ;
 \ RV64 instructions.	          
-: `lwu   ( rd rs1 imm   -- )          6 03 i_instr ;
-: `ld    ( rd rs1 imm   -- )          3 03 i_instr ;
-: `addiw ( rd rs1 imm   -- )          0 1B i_instr ;
-: `slliw ( rd rs1 shamt -- )       00 1 1B i_instr/shift ;
-: `srliw ( rd rs1 shamt -- )       00 5 1B i_instr/shift ;
-: `sraiw ( rd rs1 shamt -- )       20 5 1B i_instr/shift ;
+: `lwu   ( rd rs1 imm   -- )          6 03 `instr/i ;
+: `ld    ( rd rs1 imm   -- )          3 03 `instr/i ;
+: `addiw ( rd rs1 imm   -- )          0 1B `instr/i ;
+: `slliw ( rd rs1 shamt -- )       00 1 1B `instr/i/shift ;
+: `srliw ( rd rs1 shamt -- )       00 5 1B `instr/i/shift ;
+: `sraiw ( rd rs1 shamt -- )       20 5 1B `instr/i/shift ;
 
 \ S-type instructions.
-: s_instr ( rs2 rs1 offset fn3 op -- )
+: `instr/s ( rs2 rs1 offset fn3 op -- )
   [ % % % % v v v v ]  ( -- op rs2 rs1 offset fn3 )
   [ % % %     v v v ]  ( -- op fn3 rs2 rs1 offset )
   DUP 4 0 [:]          ( -- op fn3 rs2 rs1 offset imm5 )
@@ -163,10 +163,28 @@
   B 5 [:]              ( -- op imm5 fn3 rs2 rs1 imm7 )
   [ ^ %         v v ]  ( -- op imm5 fn3 rs1 rs2 imm7 )
   5 << | 5 << | 3 << | 5 << | 7 << | ` ;
-: `sb  ( rs2 rs1 offset -- )  0 23 s_instr ;
-: `sh  ( rs2 rs1 offset -- )  1 23 s_instr ;
-: `sw  ( rs2 rs1 offset -- )  2 23 s_instr ;
-: `sd  ( rs2 rs1 offset -- )  3 23 s_instr ;
+: `sb  ( rs2 rs1 offset -- )  0 23 `instr/s ;
+: `sh  ( rs2 rs1 offset -- )  1 23 `instr/s ;
+: `sw  ( rs2 rs1 offset -- )  2 23 `instr/s ;
+: `sd  ( rs2 rs1 offset -- )  3 23 `instr/s ;
+
+\ B-type instructions.
+: `instr/b ( rs1 rs2 offset fn3 op -- )
+  [ % % % % v v v v ]  ( -- op rs1 rs2 offset fn3 )
+  [ % % %     v v v ]  ( -- op fn3 rs1 rs2 offset )
+  DUP DUP  4 1 [:]     ( -- op fn3 rs1 rs2 offset offset offset[4:1] )
+  1 << SWAP  B B [:] | ( -- op fn3 rs1 rs2 offset imm5 )
+  [ % % % % v v v v ]  ( -- op imm5 fn3 rs1 rs2 offset )
+  DUP  C C [:]	       ( -- op imm5 fn3 rs1 rs2 offset offset[12] )
+  6 << SWAP  A 5 [:] | ( -- op imm5 fn3 rs1 rs2 imm7 )
+  5 << | 5 << | 3 << | 5 << | 7 << | ` ;
+: `beq  ( rs1 rs2 offset -- )  0 63 `instr/b ;
+: `bne  ( rs1 rs2 offset -- )  1 63 `instr/b ;
+: `blt  ( rs1 rs2 offset -- )  4 63 `instr/b ;
+: `bge  ( rs1 rs2 offset -- )  5 63 `instr/b ;
+: `bltu ( rs1 rs2 offset -- )  6 63 `instr/b ;
+: `bgeu ( rs1 rs2 offset -- )  7 63 `instr/b ;
+
 
 
 
