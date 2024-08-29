@@ -124,7 +124,7 @@
 : i_instr ( rd rs1 imm fn3 op -- )
   [ % % % % v v v v ]  ( -- op rd rs1 imm fn3 )
   [ % %         v v ]  ( -- op rd fn3 rs1 imm )
-  5 << | 3 << | 5 << | 7 << |  ;
+  5 << | 3 << | 5 << | 7 << | ` ;
 : i_instr/shift ( rd rs1 shamt fn7 fn3 op -- )
   2SWAP		( -- rd rs1 fn3 op shamt fn7 )
   5 << |	( -- rd rs1 fn3 op imm )
@@ -154,6 +154,19 @@
 : `srliw ( rd rs1 shamt -- )       00 5 1B i_instr/shift ;
 : `sraiw ( rd rs1 shamt -- )       20 5 1B i_instr/shift ;
 
+\ S-type instructions.
+: s_instr ( rs2 rs1 offset fn3 op -- )
+  [ % % % % v v v v ]  ( -- op rs2 rs1 offset fn3 )
+  [ % % %     v v v ]  ( -- op fn3 rs2 rs1 offset )
+  DUP 4 0 [:]          ( -- op fn3 rs2 rs1 offset imm5 )
+  [ % % % % v v v v ]  ( -- op imm5 fn3 rs2 rs1 offset )
+  B 5 [:]              ( -- op imm5 fn3 rs2 rs1 imm7 )
+  [ ^ %         v v ]  ( -- op imm5 fn3 rs1 rs2 imm7 )
+  5 << | 5 << | 3 << | 5 << | 7 << | ` ;
+: `sb  ( rs2 rs1 offset -- )  0 23 s_instr ;
+: `sh  ( rs2 rs1 offset -- )  1 23 s_instr ;
+: `sw  ( rs2 rs1 offset -- )  2 23 s_instr ;
+: `sd  ( rs2 rs1 offset -- )  3 23 s_instr ;
 
 
 
