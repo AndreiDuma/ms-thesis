@@ -166,9 +166,15 @@ end
 
 # Dispatch...
 function encode_hex(instr::Symbol, args...)
-    enc_str = encode(instr, args...) |> bswap |> repr |> uppercase
+    hex = encode(instr, args...) |> repr |> uppercase
 
-    return string(enc_str[3:4], " ", enc_str[5:6], " ", enc_str[7:8], " ", enc_str[9:10])
+    return hex[3:end]
+end
+
+function encode_hex_bytes(instr::Symbol, args...)
+    hex = encode(instr, args...) |> bswap |> repr |> uppercase
+
+    return "$(hex[3:4]) $(hex[5:6]) $(hex[7:8]) $(hex[9:10])"
 end
 
 function encode(instr::Symbol, args...; fmt::Symbol=:bin)
@@ -176,6 +182,8 @@ function encode(instr::Symbol, args...; fmt::Symbol=:bin)
         encode(Val(instr), args...; fmt=fmt)
     elseif fmt == :hex
         encode_hex(instr, args...)
+    elseif fmt == :hex_bytes
+        encode_hex_bytes(instr, args...)
     end
 end
 

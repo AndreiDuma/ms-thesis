@@ -2,7 +2,7 @@
 
 repl() {
     while IFS= read -p '> ' -r line; do
-	julia -e "include(\"instructions.jl\"); h=encode(parse(\"$line\")...; fmt=:hex); e=encode(parse(\"$line\")...; fmt=:emacs); print(\"\$e | \$h\")" 2> /dev/null | tee >(pbcopy)
+	julia -e "include(\"instructions.jl\"); h=encode(parse(\"$line\")...; fmt=:hex_bytes); e=encode(parse(\"$line\")...; fmt=:emacs); print(\"\$e | \$h\")" 2> /dev/null | tee >(pbcopy)
 	echo; echo
     done
 }
