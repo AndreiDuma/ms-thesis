@@ -46,9 +46,15 @@
   [ 83 C2 39 00 :: ]			         	    \ t0 = [s3 + 3]                            lbu t0, 3(s3)
   [   t> ] . ;                                              \ [s3] = t0                                ---
 
-: SWAP ( n1 n2 -- n2 n1 )
-  [ >u ^ >t ]
-  [ u> v t> ] ;
+: DROP ( n -- )  [ ^ ] ;
+: DUP  ( n -- n n )  [ >t v t> ] ;
+: SWAP ( n1 n2 -- n2 n1 )  [ % v ] ;
+: OVER ( n1 n2 -- n1 n2 n1 )  [ ^ >t v v t> ] ;
+: ROT  ( n1 n2 n3 -- n2 n3 n1 )  [ ^ % v v % v ]  ;
+: 2SWAP ( d1 d2 -- d2 d1 )  [ ^ % % v v v % % v v ] ;
+: 2DUP ( d -- d d )  [ ^ >t v >u v t> v u> ] ;
+: 2OVER ( d1 d2 -- d1 d2 d1 )  [ ^ ^ ^ >t v >u v v v t> v u> ] ;
+: 2DROP ( d1 d2 -- d1 )  [ ^ ^ ] ;
 
 : << ( n u -- n' )
   [ >u ^ ]
@@ -92,145 +98,78 @@
   1 SWAP << 1-		        \ mask = (1 << len) - 1    ( -- m mask )
   & ;                           \ n' = m & mask            ( -- n' )
 
-: % ( n1 n2 -- n2 .. )  SWAP [ ^ ] ;
-
 \ R-type instructions.
-: rinstr ( rd rs1 rs2 fn7 fn3 op -- instr )
-  % % % % % [ v v v v v ]  ( -- op rd rs1 rs2 fn7 fn3 )
-  % % %     [     v v v ]  ( -- op rd fn3 rs1 rs2 fn7 )
-  5 << | 5 << | 3 << | 5 << | 7 << | ;
-: `add  ( rd rs1 rs2 -- instr )  00 0 33 rinstr ` ;
-: `sub  ( rd rs1 rs2 -- instr )  20 0 33 rinstr ` ;
-: `sll  ( rd rs1 rs2 -- instr )  00 1 33 rinstr ` ;
-: `slt  ( rd rs1 rs2 -- instr )  00 2 33 rinstr ` ;
-: `sltu ( rd rs1 rs2 -- instr )  00 3 33 rinstr ` ;
-: `xor  ( rd rs1 rs2 -- instr )  00 4 33 rinstr ` ;
-: `srl  ( rd rs1 rs2 -- instr )  00 5 33 rinstr ` ;
-: `sra  ( rd rs1 rs2 -- instr )  20 5 33 rinstr ` ;
-: `or   ( rd rs1 rs2 -- instr )  00 6 33 rinstr ` ;
-: `and  ( rd rs1 rs2 -- instr )  00 7 33 rinstr ` ;
-\ RV64 instructions
-: `addw ( rd rs1 rs2 -- instr )  00 0 3B rinstr ` ;
-: `subw ( rd rs1 rs2 -- instr )  20 0 3B rinstr ` ;
-: `sllw ( rd rs1 rs2 -- instr )  00 1 3B rinstr ` ;
-: `srlw ( rd rs1 rs2 -- instr )  00 5 3B rinstr ` ;
-: `sraw ( rd rs1 rs2 -- instr )  20 5 3B rinstr ` ;
+: r_instr ( rd rs1 rs2 fn7 fn3 op -- )
+  [ % % % % % v v v v v ]  ( -- op rd rs1 rs2 fn7 fn3 )
+  [ % % %         v v v ]  ( -- op rd fn3 rs1 rs2 fn7 )
+  5 << | 5 << | 3 << | 5 << | 7 << | ` ;
+: `add  ( rd rs1 rs2 -- )  00 0 33 r_instr ;
+: `sub  ( rd rs1 rs2 -- )  20 0 33 r_instr ;
+: `sll  ( rd rs1 rs2 -- )  00 1 33 r_instr ;
+: `slt  ( rd rs1 rs2 -- )  00 2 33 r_instr ;
+: `sltu ( rd rs1 rs2 -- )  00 3 33 r_instr ;
+: `xor  ( rd rs1 rs2 -- )  00 4 33 r_instr ;
+: `srl  ( rd rs1 rs2 -- )  00 5 33 r_instr ;
+: `sra  ( rd rs1 rs2 -- )  20 5 33 r_instr ;
+: `or   ( rd rs1 rs2 -- )  00 6 33 r_instr ;
+: `and  ( rd rs1 rs2 -- )  00 7 33 r_instr ;
+\ RV64 instructions.
+: `addw ( rd rs1 rs2 -- )  00 0 3B r_instr ;
+: `subw ( rd rs1 rs2 -- )  20 0 3B r_instr ;
+: `sllw ( rd rs1 rs2 -- )  00 1 3B r_instr ;
+: `srlw ( rd rs1 rs2 -- )  00 5 3B r_instr ;
+: `sraw ( rd rs1 rs2 -- )  20 5 3B r_instr ;
 
-
-: +' ( n1 n2 -- n )
-  [ >u ^ >t ]
-  [ 05 05 06 `add ]
-  [ t> ] ;
-
-3 4 +' 5 +'
-DBG
-
-  
-
-
-: add ( rd rs1 rs2 -- )
-  [ 0000000 000 0110011 rinstr ] ;
-: sub ( rd rs1 rs2 -- )
-  [ 0100000 000 0110011 rinstr ] ;
-
-: beq ( rs1 rs2 offset -- )
-  [ ... .. binstr ] ;
-
-
-
-
-
-\ : DROP ( n -- )  [ >_ ] ;
-\ : DUP ( n -- n n )  [ >x x> x> ] ;
-\ : SWAP ( n1 n2 -- n2 n1 )  [ >y >x y> x> ] ;
-\ : OVER ( n1 n2 -- n1 n2 n1 )  [ >y >x x> y> x> ] ;
-\ \ : ROT  ( n1 n2 n3 -- n2 n3 n1 )  [ >x SWAP >y x> y> ] ;
-\ \ : 2SWAP ( d1 d2 -- d2 d1 )
-\ \ : 2DUP ( d -- d d )
-\ \ : 2OVER ( d1 d2 -- d1 d2 d1 )
-\ \ : 2DROP ( d1 d2 -- d1 )
-
-
-
-: >>1 ( n -- n' )  >x  13 . 5A . 1A . 00 .  x> ;
-: >>2 ( n -- n' )  >x  13 . 5A . 2A . 00 .  x> ;
-: >>4 ( n -- n' )  >x  13 . 5A . 4A . 00 .  x> ;
-: >>8 ( n -- n' )  >x  13 . 5A . 8A . 00 .  x> ;
-
-: <<1 ( n -- n' )  >x  13 . 1A . 1A . 00 .  x> ;
-: <<2 ( n -- n' )  >x  13 . 1A . 2A . 00 .  x> ;
-: <<4 ( n -- n' )  >x  13 . 1A . 4A . 00 .  x> ;
-: <<8 ( n -- n' )  >x  13 . 1A . 8A . 00 .  x> ;
-
-: & ( n1 n2 -- n ) >y >x  33 . 7A . 5A . 01 .  x> ;
-: | ( n1 n2 -- n ) >y >x  33 . 6A . 5A . 01 .  x> ;
-
-: rinstr ( op rd fn3 rs1 rs2 fn7 -- )
-  [ >r  DUP >>4 >y  | .					    \ 0000000 r
-  
+\ I-type instructions.
+: i_instr ( rd rs1 imm fn3 op -- )
+  [ % % % % v v v v ]  ( -- op rd rs1 imm fn3 )
+  [ % %         v v ]  ( -- op rd fn3 rs1 imm )
+  5 << | 3 << | 5 << | 7 << |  ;
+: i_instr/shift ( rd rs1 shamt fn7 fn3 op -- )
+  2SWAP		( -- rd rs1 fn3 op shamt fn7 )
+  5 << |	( -- rd rs1 fn3 op imm )
+  ROT ROT	( -- rd rs1 imm fn3 op )
+  i_instr ;
+: `ecall ( -- )               0 0 000 0 73 i_instr ;
+: `jalr  ( rd rs1 imm   -- )          0 67 i_instr ;
+: `lb    ( rd rs1 imm   -- )          0 03 i_instr ;
+: `lh    ( rd rs1 imm   -- )          1 03 i_instr ;
+: `lw    ( rd rs1 imm   -- )          2 03 i_instr ;
+: `lbu   ( rd rs1 imm   -- )          4 03 i_instr ;
+: `lhu   ( rd rs1 imm   -- )          5 03 i_instr ;
+: `addi  ( rd rs1 imm   -- )          0 13 i_instr ;
+: `slti  ( rd rs1 imm   -- )          2 13 i_instr ;
+: `sltiu ( rd rs1 imm   -- )          3 13 i_instr ;
+: `xori  ( rd rs1 imm   -- )          4 13 i_instr ;
+: `ori   ( rd rs1 imm   -- )          6 13 i_instr ;
+: `andi  ( rd rs1 imm   -- )          7 13 i_instr ;
+: `slli  ( rd rs1 shamt -- )       00 1 13 i_instr/shift ;
+: `srli  ( rd rs1 shamt -- )       00 5 13 i_instr/shift ;
+: `srai  ( rd rs1 shamt -- )       20 5 13 i_instr/shift ;
+\ RV64 instructions.	          
+: `lwu   ( rd rs1 imm   -- )          6 03 i_instr ;
+: `ld    ( rd rs1 imm   -- )          3 03 i_instr ;
+: `addiw ( rd rs1 imm   -- )          0 1B i_instr ;
+: `slliw ( rd rs1 shamt -- )       00 1 1B i_instr/shift ;
+: `srliw ( rd rs1 shamt -- )       00 5 1B i_instr/shift ;
+: `sraiw ( rd rs1 shamt -- )       20 5 1B i_instr/shift ;
 
 
 
-: @ ( addr -- n )
-  [ >r  03 . 3A . 0A . 00 .  r> ] ;
-
-: 1+ ( n|u -- n'|u' )  [ >x  13 . 0A . 1A . 00 .  x> ] ;
 
 
-\ : >REG ( n reg -- )
-\   59 . 00 . ;
 
+\ TODO:
+\
+\ : @ ( addr -- n )
+\   [ >r  03 . 3A . 0A . 00 .  r> ] ;
 \ : EMIT ( char -- )
 \   [ ??? ] A >REG		\ a0 <- ?
 \   1 B >REG			\ a1 <- 1
 \   TYPE ;
 
-
-0E 07 &
-
-dbg BYE
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-\ : 1+ ( n|u -- n'|u' )  [        
-\      83 . B2 . 09 . 00 .	\ [STACK@s3]++        ld t0, 0(s3)
-\      93 . 82 . 12 . 00 .	\                     addi t0, t0, 1
-\      23 . B0 . 59 . 00 . ] ;	\                     sd t0, 0(s3)
-
-\ 1 2 3 4
-\ 1+
-
-
-
-( comment works )
-\ line comment works.
-
-( empty line ^ works )
-
-\ : ADIOS ( -- )  BYE ;  \ works
-\ ADIOS          \ works
-
-\ : PAPA ( -- )  ADIOS ;  \ works
-\ PAPA            \ works
-
-\ : ( -- )  DIE-IN-THE-MIDDLE [ BYE ] ;  \ works
-
-\ : 1+ ( n|u -- n'|u' )  [        
-\      00 . 09 . B2 . 83 .	\ [STACK@s3]++      ld t0, 0(s3)
-\      00 . 12 . 82 . 93 .	\                   addi t0, t0, 1
-\      00 . 59 . B0 . 23 . ] ;	\                   sd t0, 0(s3)
-\ : 1-        ( n|u -- n'|u' )    [ 49 . FF . 0F . ] ;                \ [r15]--           dec r/m64       REX.W FF /1     00 001 111  OneMinus
+\ TODO:
+\
 \ : 2*        (   x -- x'    )    [ 49 . D1 . 27 . ] ;                \ [r15] <<= 1       sal r/m64, 1    REX.W D1 /4     00 100 111  TwoTimes
 \ : 4*        (   x -- x'    )    [ 49 . C1 . 27 . 02 . ] ;           \ [r15] <<= 2       sal r/m64, imm8 REX.W C1 /4 ib  00 100 111
 \ : 8*        (   x -- x'    )    [ 49 . C1 . 27 . 03 . ] ;           \ [r15] <<= 3       sal r/m64, imm8 REX.W C1 /4 ib  00 100 111
