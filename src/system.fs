@@ -14,9 +14,9 @@
   23 . B0 . 69 . 00 . ;		                            \ [s3] = t1               sd t1, 0(s3)
 
 \ Navigate the stack.
-: ^ ( n -- )
+: ^ ( n -- .. )
   93 . 89 . 89 . 00 . ;                                     \ s3 += 8                 addi s3, s3, 8
-: v ( n -- )									      
+: v ( .. -- n )									      
   93 . 89 . 89 . FF . ;                                     \ s3 -= 8                 addi s3, s3, -8
 
 \ "Float" current stack item "up" the stack, exchanging with item
@@ -234,9 +234,18 @@
 		    SWAP ! ;
 
 \ Return stack management.
-: >R    ( n -- ) ;
-: R>    ( -- n ) ;
-: R@    ( -- n ) ;
+: >>t0 ( R: n -- n )  [ t0 sp 0 `ld ] ;
+: t0>> ( R: ? -- n )  [ t0 sp 0 `sd ] ;
+: ^^   ( R: n -- .. )  [ sp sp   8 `addi ] ;
+: vv   ( R: .. -- n )  [ sp sp FF8 `addi ] ;
+: >R    ( n -- ) ( R: -- n )    [  >t0  ^ ] [ vv t0>> ] ;
+: R>    ( -- n ) ( R: n -- )    [ >>t0 ^^ ] [  v t0>  ] ;
+: R@    ( -- n ) ( R: n -- n )  [ >>t0    ] [  v t0>  ] ;
+
+R> DBG
+\ PROBLEM: Colon installs prologues and epilogues that mess with the
+\ return stack.  We need a way to create "bare" definitions with no
+\ epilogue or prologue.
 
 \ Control flow.
 : IF ( flag -- ) ;
