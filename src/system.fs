@@ -1,93 +1,81 @@
 : DBG   dbg BYE ;
 : REG   reg BYE ;
 
+\ Load current stack item into register `t0` or `t1`.
+: >t0 ( n -- n )									      
+  83 . B2 . 09 . 00 . ;	   			            \ t0 = [s3]               ld t0, 0(s3)
+: >t1 ( n -- n )									      
+  03 . B3 . 09 . 00 . ;	   			            \ t1 = [s3]               ld t1, 0(s3)
+
+\ Store register `t0` or `t1` over current stack item.
+: t0> ( ? -- n )									      
+  23 . B0 . 59 . 00 . ;		                            \ [s3] = t0               sd t0, 0(s3)
+: t1> ( ? -- n )									      
+  23 . B0 . 69 . 00 . ;		                            \ [s3] = t1               sd t1, 0(s3)
+
 \ Navigate the stack.
 : ^ ( n -- )
   93 . 89 . 89 . 00 . ;                                     \ s3 += 8                 addi s3, s3, 8
 : v ( n -- )									      
   93 . 89 . 89 . FF . ;                                     \ s3 -= 8                 addi s3, s3, -8
 
-\ Load current stack item into register `t0` or `t1`.
-: >t ( n -- n )									      
-  83 . B2 . 09 . 00 . ;	   			            \ t0 = [s3]               ld t0, 0(s3)
-: >u ( n -- n )									      
-  03 . B3 . 09 . 00 . ;	   			            \ t1 = [s3]               ld t1, 0(s3)
-
-\ Store register `t0` or `t1` over current stack item.
-: t> ( ? -- n )									      
-  23 . B0 . 59 . 00 . ;		                            \ [s3] = t0               sd t0, 0(s3)
-: u> ( ? -- n )									      
-  23 . B0 . 69 . 00 . ;		                            \ [s3] = t1               sd t1, 0(s3)
-
 \ "Float" current stack item "up" the stack, exchanging with item
 \ above.  Stack pointer follows the item.
 : % ( n1 n2 -- n2 .. )
-  >u ^  >t v
-  t> ^  u> ;
-
-\ Shorthand for compiling 4 bytes to `OUTPUT`, ensuring correct
-\ endianness.
-: :: ( ub1 ub2 ub3 ub4 -- )
-  [ ^ ^ ^ >t v v v v t> ] .                                 \ [s1++] = ub1  ( -- ub1 ub2 ub3 ub4 )
-  [ ^ ^   >t   v v v t> ] .                                 \ [s1++] = ub2  ( -- ub1 ub2 ub3 ub4 )
-  [ ^     >t     v v t> ] .                                 \ [s1++] = ub3  ( -- ub1 ub2 ub3 ub4 )
-  [                     ] .                                 \ [s1++] = ub4  ( -- ub1 ub2 ub3 ub4 )
-  [ ^ ^ ^ ] ;		                                    \ s3 += 32      ( -- )  
-
-\ Compiles a 32-bit instruction (four bytes in the form of a 32-bit
-\ unsigned integer) to `OUTPUT`, ensuring correct endianness.
-: ` ( uw -- )
-  [ 83 C2 09 00 :: ] 	   			            \ t0 = [s3 + 0]                            lbu t0, 0(s3)
-  [ v t> ] .                                                \ [s3] = t0                                ---
-  [ 83 C2 19 00 :: ]				            \ t0 = [s3 + 1]                            lbu t0, 1(s3)
-  [ v t> ] .                                                \ [s3] = t0                                ---
-  [ 83 C2 29 00 :: ]				            \ t0 = [s3 + 2]                            lbu t0, 2(s3)
-  [ v t> ] .                                                \ [s3] = t0                                ---
-  [ 83 C2 39 00 :: ]			         	    \ t0 = [s3 + 3]                            lbu t0, 3(s3)
-  [   t> ] . ;                                              \ [s3] = t0                                ---
+  >t1 ^  >t0 v
+  t0> ^  t1> ;
 
 : DROP ( n -- )  [ ^ ] ;
-: DUP  ( n -- n n )  [ >t v t> ] ;
+: DUP  ( n -- n n )  [ >t0 v t0> ] ;
 : SWAP ( n1 n2 -- n2 n1 )  [ % v ] ;
-: OVER ( n1 n2 -- n1 n2 n1 )  [ ^ >t v v t> ] ;
+: OVER ( n1 n2 -- n1 n2 n1 )  [ ^ >t0 v v t0> ] ;
 : ROT  ( n1 n2 n3 -- n2 n3 n1 )  [ ^ % v v % v ]  ;
 : 2SWAP ( d1 d2 -- d2 d1 )  [ ^ % % v v v % % v v ] ;
-: 2DUP ( d -- d d )  [ ^ >t v >u v t> v u> ] ;
-: 2OVER ( d1 d2 -- d1 d2 d1 )  [ ^ ^ ^ >t v >u v v v t> v u> ] ;
+: 2DUP ( d -- d d )  [ ^ >t0 v >t1 v t0> v t1> ] ;
+: 2OVER ( d1 d2 -- d1 d2 d1 )  [ ^ ^ ^ >t0 v >t1 v v v t0> v t1> ] ;
 : 2DROP ( d1 d2 -- d1 )  [ ^ ^ ] ;
 
 : << ( n u -- n' )
-  [ >u ^ >t ]
-  [ B3 92 62 00 :: ]		\ sll t0, t0, t1
-  [      t> ] ;
+  [ >t1 ^ >t0 ]
+  [ B3 . 92 . 62 . 00 . ]		\ sll t0, t0, t1
+  [       t0> ] ;
 : & ( n1 n2 -- n )
-  [ >u ^ >t ]
-  [ B3 F2 62 00 :: ]		\ and t0, t0, t1
-  [      t> ] ;
+  [ >t1 ^ >t0 ]
+  [ B3 . F2 . 62 . 00 . ]		\ and t0, t0, t1
+  [       t0> ] ;
 : | ( n1 n2 -- n )
-  [ >u ^ >t ]
-  [ B3 E2 62 00 :: ]		\ or t0, t0, t1
-  [      t> ] ;
+  [ >t1 ^ >t0 ]
+  [ B3 . E2 . 62 . 00 . ]		\ or t0, t0, t1
+  [       t0> ] ;
 : + ( n1 n2 -- n )
-  [ >u ^ >t ]
-  [ B3 82 62 00 :: ]		\ add t0, t0, t1
-  [      t> ] ;
+  [ >t1 ^ >t0 ]
+  [ B3 . 82 . 62 . 00 . ]		\ add t0, t0, t1
+  [       t0> ] ;
 : - ( n1 n2 -- n )
-  [ >u ^ >t ]
-  [ B3 82 62 40 :: ]		\ sub t0, t0, t1
-  [      t> ] ;
+  [ >t1 ^ >t0 ]
+  [ B3 . 82 . 62 . 40 . ]		\ sub t0, t0, t1
+  [       t0> ] ;
 
 : 1+ ( n -- n' )  1 + ;
 : 1- ( n -- n' )  1 - ;
 
 : [:] ( n i j -- n' )
-  [ >u ]			\ t1 = j
-  [ ^ ^ >t ]			\ t0 = n                   ( -- n .. )
-  [ B3 D2 62 00 :: ]		\ srl t0, t0, t1
-  [ t> v v ]		        \ m = t0                   ( -- m i j )
+  [ >t1 ]			\ t1 = j
+  [ ^ ^ >t0 ]			\ t0 = n                   ( -- n .. )
+  [ B3 . D2 . 62 . 00 . ]	\ srl t0, t0, t1
+  [ t0> v v ]		        \ m = t0                   ( -- m i j )
   - 1+			        \ len = i - j + 1          ( -- m len )
   1 SWAP << 1-		        \ mask = (1 << len) - 1    ( -- m mask )
   & ;                           \ n' = m & mask            ( -- n' )
+
+\ Compiles a 32-bit instruction (four bytes in the form of a 32-bit
+\ unsigned integer) to `OUTPUT`, ensuring correct endianness.
+: ` ( u -- )
+  DUP 1F 18 [:] SWAP  ( -- u[31:24] u )
+  DUP 17 10 [:] SWAP  ( -- u[31:24] u[23:16] u )
+  DUP 0F 08 [:] SWAP  ( -- u[31:24] u[23:16] u[15:8] u )
+      07 00 [:]       ( -- u[31:24] u[23:16] u[15:8] u[7:0] )
+  . . . . ;
 
 \ --- Assembler --- \
 
@@ -184,7 +172,7 @@
 
 \ Common format for U/J-type instructions.
 : `instr/uj  ( op rd imm20 -- )
-  5 << | 7 << |  ;
+  5 << | 7 << | ` ;
 
 \ U-type instructions.
 : `instr/u ( rd imm opcode -- )
@@ -204,8 +192,13 @@
 : `jal ( rd offset -- )  6F `instr/j ;
 
 
+: X2 ( n -- n' )
+  [ >t0 ]
+  [ 5 5 1 `slli ]
+  [ t0> ] ;
 
-
+1 2 3 X2
+7 DBG
 
 
 
