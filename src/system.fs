@@ -189,49 +189,54 @@
   `instr/uj ;
 : `jal ( rd offset -- )  6F `instr/j ;
 
+\ ABI names for registers.
+: zero 00 ;   : s0   08 ;   : a6  10 ;   : s8  18 ;
+: ra   01 ;   : s1   09 ;   : a7  11 ;   : s9  19 ;
+: sp   02 ;   : a0   0A ;   : s2  12 ;   : s10 1A ;
+: gp   03 ;   : a1   0B ;   : s3  13 ;   : s11 1B ;
+: tp   04 ;   : a2   0C ;   : s4  14 ;   : t3  1C ;
+: t0   05 ;   : a3   0D ;   : s5  15 ;   : t4  1D ;
+: t1   06 ;   : a4   0E ;   : s6  16 ;   : t5  1E ;
+: t2   07 ;   : a5   0F ;   : s7  17 ;   : t6  1F ;
+
 
 \ --- Common FORTH words --- \
 
 \ Arithmetic.
-: +      ( n1 n2 -- n ) ;
-: *      ( n1 n2 -- n ) ;
-: /MOD   ( n1 n2 -- rem quot ) ;
-: /      ( n1 n2 -- quot ) ;
-: MOD    ( n1 n2 -- rem ) ;
-: 1+     ( n -- n' ) ;
-: 1-     ( n -- n' ) ;
-: 2*     ( n -- n' ) ;
-: 2/     ( n -- n' ) ;
-: ABS    ( n -- n' ) ;
-: NEGATE ( n -- n' ) ;
-: MIN    ( n1 n2 -- n ) ;
-: MAX    ( n1 n2 -- n ) ;
+: NEGATE ( n -- n' )     [ >t0 ]       [ t0 zero t0 `sub ] [ t0> ] ;
+: +      ( n1 n2 -- n )  [ >t1 ^ >t0 ] [ t0   t0 t1 `add ] [ t0> ] ;
+: *      ( n1 n2 -- n )          ;
+: /MOD   ( n1 n2 -- rem quot )   ;
+: /      ( n1 n2 -- quot )       ;
+: MOD    ( n1 n2 -- rem )        ;
+: */    ( n1 n2 n3 -- n )        ; 
+: */MOD ( n1 n2 n3 -- rem quot ) ;
+: 1+     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `addi ] [ t0> ] ;
+: 1-     ( n -- n' )     [ >t0 ]       [ t0 t0 FFF `addi ] [ t0> ] ;
+: 2*     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `slli ] [ t0> ] ;
+: 2/     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `srai ] [ t0> ] ;
+: ABS    ( n -- n' )     [ >t0 >t1 ]   [ t1 t1  3F `srai ]            \ mask@t1 >>= 63
+	                               [ t0 t0  t1 `xor  ]            \ t0 = t0 xor mask@t1
+				       [ t0 t0  t1 `sub  ] [ t0> ] ;  \ t0 -= mask@t1
+: MIN    ( n1 n2 -- nmin )  2DUP -          ( -- n1 n2 n1-n2 )
+                            DUP ABS         ( -- n1 n2 n1-n2 |n1-n2| )
+			    - 2/ +          ( -- n1 nmin )
+			    SWAP DROP ;     ( -- nmin )
+: MAX    ( n1 n2 -- n )  2DUP -  DUP ABS  + 2/ +  SWAP DROP ;
 
 \ Memory access.
-: C! ( c addr -- ) ;
-: C@ ( addr -- c ) ;
-: !  ( n addr -- ) ;
-: @  ( addr -- n ) ;
-: +! ( n addr -- ) ;
-: VARIABLE ( C: "ccc" -- ) ( -- addr ) ;
-: CONSTANT ( C: "ccc" n -- ) ( -- n ) ;
+: C! ( c addr -- )  [ >t1 ^ >t0 ^ ] [ t0 t1 0 `sb  ] ;
+: C@ ( addr -- c )  [ >t1         ] [ t0 t1 0 `lbu ] [ t0> ] ;
+: !  ( n addr -- )  [ >t1 ^ >t0 ^ ] [ t0 t1 0 `sd  ] ;
+: @  ( addr -- n )  [ >t1         ] [ t0 t1 0 `ld  ] [ t0> ] ;
+: +! ( n addr -- )  DUP @  ( -- n addr n0 )
+                    ROT +  ( -- addr n' )
+		    SWAP ! ;
 
 \ Return stack management.
 : >R    ( n -- ) ;
 : R>    ( -- n ) ;
 : R@    ( -- n ) ;
-: */    ( n1 n2 n3 -- n ) ;
-: */MOD ( n1 n2 n3 -- rem quot ) ;
-
-\ I/O.
-: KEY    ( -- c ) ;
-: CR     ( -- ) ;
-: SPACES ( -- ) ;
-: SPACE  ( -- ) ;
-: EMIT   ( c -- ) ;
-: .      ( n -- ) ;
-: ."     ( "ccc<DOUBLE-QUOTE>" -- ) ;
-: ?      ( addr -- ) ;
 
 \ Control flow.
 : IF ( flag -- ) ;
@@ -251,3 +256,17 @@
 : ?DUP ( n -- n n  OR  0 -- 0 ) ;
 : ABORT" ( "ccc<DOUBLE-QUOTE>" flag -- ) ;
 
+\ Dictionary.
+: VARIABLE ( C: "ccc" -- ) ( -- addr ) ;
+: CONSTANT ( C: "ccc" n -- ) ( -- n ) ;
+
+\ I/O.
+\ TODO: SYSCALL
+: KEY    ( -- c ) ;
+: CR     ( -- ) ;
+: SPACES ( -- ) ;
+: SPACE  ( -- ) ;
+: EMIT   ( c -- ) ;
+: .      ( n -- ) ;
+: ."     ( "ccc<DOUBLE-QUOTE>" -- ) ;
+: ?      ( addr -- ) ;
