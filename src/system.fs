@@ -205,17 +205,18 @@
 \ Arithmetic.
 : NEGATE ( n -- n' )     [ >t0 ]       [ t0 zero t0 `sub ] [ t0> ] ;
 : +      ( n1 n2 -- n )  [ >t1 ^ >t0 ] [ t0   t0 t1 `add ] [ t0> ] ;
-: *      ( n1 n2 -- n )          ;
-: /MOD   ( n1 n2 -- rem quot )   ;
-: /      ( n1 n2 -- quot )       ;
-: MOD    ( n1 n2 -- rem )        ;
-: */    ( n1 n2 n3 -- n )        ; 
-: */MOD ( n1 n2 n3 -- rem quot ) ;
+: *      ( n1 n2 -- n )           ;
+: /MOD   ( n1 n2 -- rem quot )    ;
+: /      ( n1 n2 -- quot )        ;
+: MOD    ( n1 n2 -- rem )         ;
+: */     ( n1 n2 n3 -- n )        ; 
+: */MOD  ( n1 n2 n3 -- rem quot ) ;
 : 1+     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `addi ] [ t0> ] ;
 : 1-     ( n -- n' )     [ >t0 ]       [ t0 t0 FFF `addi ] [ t0> ] ;
+: >>>    ( n u -- n' )   [ >t1 ^ >t0 ] [ t0 t0  t1 `srl  ] [ t0> ] ;
 : 2*     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `slli ] [ t0> ] ;
 : 2/     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `srai ] [ t0> ] ;
-: ABS    ( n -- n' )     [ >t0 >t1 ]   [ t1 t1  3F `srai ]            \ mask@t1 >>= 63
+: ABS    ( n -- n' )     [ >t0   >t1 ] [ t1 t1  3F `srai ]            \ mask@t1 >>= 63
 	                               [ t0 t0  t1 `xor  ]            \ t0 = t0 xor mask@t1
 				       [ t0 t0  t1 `sub  ] [ t0> ] ;  \ t0 -= mask@t1
 : MIN    ( n1 n2 -- nmin )  2DUP -          ( -- n1 n2 n1-n2 )
@@ -225,13 +226,70 @@
 : MAX    ( n1 n2 -- n )  2DUP -  DUP ABS  + 2/ +  SWAP DROP ;
 
 \ Memory access.
-: C! ( c addr -- )  [ >t1 ^ >t0 ^ ] [ t0 t1 0 `sb  ] ;
-: C@ ( addr -- c )  [ >t1         ] [ t0 t1 0 `lbu ] [ t0> ] ;
-: !  ( n addr -- )  [ >t1 ^ >t0 ^ ] [ t0 t1 0 `sd  ] ;
-: @  ( addr -- n )  [ >t1         ] [ t0 t1 0 `ld  ] [ t0> ] ;
+: C! ( c addr -- )  [ >t1 ^ >t0 ^ ] [ t0 t1  0 `sb  ]         ;
+: C@ ( addr -- c )  [ >t1         ] [ t0 t1  0 `lbu ] [ t0> ] ;
+: !  ( n addr -- )  [ >t1 ^ >t0 ^ ] [ t0 t1  0 `sd  ]         ;
+: @  ( addr -- n )  [ >t1         ] [ t0 t1  0 `ld  ] [ t0> ] ;
 : +! ( n addr -- )  DUP @  ( -- n addr n0 )
                     ROT +  ( -- addr n' )
 		    SWAP ! ;
+
+\ Dictionary.
+: ALLOT ( n -- )  [ >t0 ^       ] [ s1 s1 t0 `add ] ;
+: CHARS  ( n -- n' )       ;
+: INSTRS ( n -- n' )  2 << ;
+: CELLS  ( n -- n' )  3 << ;
+: , ( n -- )
+  [ >t0 ^ ] [ t0 s1 0 `sd ]
+  1 CELLS ALLOT ;
+: C, ( n -- )  . ;
+
+: LITERAL ( C: n -- ) ( -- n )
+  \ Compile "lui t0, 0xHHHHH[+1]".
+  DUP  ( mask: ) FF 4 << F |  &     ( -- n low )
+  DUP B >>> ROT			    ( -- low sign n )
+  C >>> +  t0 SWAP  `lui	    ( -- low )
+  \ Compile "addi t0, 0xLLL".
+  t0 t0 ROT  `addi                  ( -- )
+  \ Compile a sequence that pushes `t0` on the stack.
+  v t0> ;
+
+: X
+  [ 123456 LITERAL ] ;
+
+X
+7 7 7 DBG
+
+: CREATE ( "ccc<SPC>" -- )
+  pname \ [ v ] [ a0 s3 0 `sd ]
+        \ [ v ] [ a1 s3 0 `sd ]
+  [ v ] [ s0 s3  0 `sd   ]	   \ save INPUT@s0
+        [ s0 a0  0 `addi ]	   \ INPUT@s0 = addr@a0
+	[ a0 s2 28 `ld   ]	   \ latest@a0 = [LATEST]
+  Head  [ s0 s3  0 `ld   ] [ ^ ]   \ restore INPUT@s0
+  [ v ] [ s1 s3 0 `sd ] [ LITERAL ] ;  \ generate code that pushes current OUTPUT@s2 on the stack
+
+
+
+
+CREATE TEST
+TEST DBG
+
+
+
+\ : CONSTANT ( "ccc<SPC>" n -- ) ( -- n )
+\   CREATE
+  
+\ DBG
+
+
+
+
+: IMMEDIATE ( -- ) ;
+: ' ( "ccc<SPC>" -- addr ) ;
+			       
+: VARIABLE ( C: "ccc" -- ) ( -- addr ) ;
+: CONSTANT ( C: "ccc" n -- ) ( -- n ) ;
 
 \ Return stack management.
 : >>t0 ( R: n -- n )  [ t0 sp 0 `ld ] ;
@@ -264,10 +322,6 @@ R> DBG
 : XOR ( n1 n2 -- n ) ;
 : ?DUP ( n -- n n  OR  0 -- 0 ) ;
 : ABORT" ( "ccc<DOUBLE-QUOTE>" flag -- ) ;
-
-\ Dictionary.
-: VARIABLE ( C: "ccc" -- ) ( -- addr ) ;
-: CONSTANT ( C: "ccc" n -- ) ( -- n ) ;
 
 \ I/O.
 \ TODO: SYSCALL
