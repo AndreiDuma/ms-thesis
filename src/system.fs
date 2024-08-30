@@ -254,26 +254,24 @@
   \ Compile a sequence that pushes `t0` on the stack.
   v t0> ;
 
-: X
-  [ 123456 LITERAL ] ;
-
-X
-7 7 7 DBG
-
 : CREATE ( "ccc<SPC>" -- )
   pname \ [ v ] [ a0 s3 0 `sd ]
         \ [ v ] [ a1 s3 0 `sd ]
   [ v ] [ s0 s3  0 `sd   ]	   \ save INPUT@s0
         [ s0 a0  0 `addi ]	   \ INPUT@s0 = addr@a0
-	[ a0 s2 28 `ld   ]	   \ latest@a0 = [LATEST]
+	[ a0 s2 28 `ld   ]	   \ latest@a0 = [LATEST] (as required by Head)
   Head  [ s0 s3  0 `ld   ] [ ^ ]   \ restore INPUT@s0
-  [ v ] [ s1 s3 0 `sd ] [ LITERAL ] ;  \ generate code that pushes current OUTPUT@s2 on the stack
+  \ Compile code that pushes on the stack the address of the empty
+  \ space following the CREATEd definition.
+  t0 0 `auipc
+  t0 t0 14 `addi
+  v t0>
+\  \ Compile code that pushes current OUTPUT@s2 on the stack.
+\  [ v ] [ s1 s3 0 `sd ] LITERAL
+  \ Compile "jalr zero, 0(ra)".
+  zero ra 0 `jalr ;
 
-
-
-
-CREATE TEST
-TEST DBG
+: VARIABLE ( -- )   CREATE  0 , ;
 
 
 
