@@ -39,34 +39,28 @@
   [ >t1 ^ >t0 ]
   [ B3 . 92 . 62 . 00 . ]		\ sll t0, t0, t1
   [       t0> ] ;
-: & ( n1 n2 -- n )
-  [ >t1 ^ >t0 ]
-  [ B3 . F2 . 62 . 00 . ]		\ and t0, t0, t1
-  [       t0> ] ;
+
 : | ( n1 n2 -- n )
   [ >t1 ^ >t0 ]
   [ B3 . E2 . 62 . 00 . ]		\ or t0, t0, t1
   [       t0> ] ;
-: + ( n1 n2 -- n )
+
+: & ( n1 n2 -- n )
   [ >t1 ^ >t0 ]
-  [ B3 . 82 . 62 . 00 . ]		\ add t0, t0, t1
+  [ B3 . F2 . 62 . 00 . ]		\ and t0, t0, t1
   [       t0> ] ;
 : - ( n1 n2 -- n )
   [ >t1 ^ >t0 ]
   [ B3 . 82 . 62 . 40 . ]		\ sub t0, t0, t1
   [       t0> ] ;
-
-: 1+ ( n -- n' )  1 + ;
-: 1- ( n -- n' )  1 - ;
-
 : [:] ( n i j -- n' )
-  [ >t1 ]			\ t1 = j
-  [ ^ ^ >t0 ]			\ t0 = n                   ( -- n .. )
-  [ B3 . D2 . 62 . 00 . ]	\ srl t0, t0, t1
-  [ t0> v v ]		        \ m = t0                   ( -- m i j )
-  - 1+			        \ len = i - j + 1          ( -- m len )
-  1 SWAP << 1-		        \ mask = (1 << len) - 1    ( -- m mask )
-  & ;                           \ n' = m & mask            ( -- n' )
+  [ >t1 ]		      \ t1 = j
+  [ ^ ^ >t0 ]		      \ t0 = n                   ( -- n .. )
+  [ B3 . D2 . 62 . 00 . ]     \ srl t0, t0, t1
+  [ t0> v v ]		      \ m = t0                   ( -- m i j )
+  1 -  -		      \ len = i - (j - 1)        ( -- m len )
+  1 SWAP <<  1 -	      \ mask = (1 << len) - 1    ( -- m mask )
+  & ;			      \ n' = m & mask            ( -- n' )
 
 \ Compiles a 32-bit instruction (four bytes in the form of a 32-bit
 \ unsigned integer) to `OUTPUT`, ensuring correct endianness.
@@ -190,6 +184,9 @@
   A << | 1 << | 8 << |  ( -- opcode rd imm20 )
   `instr/uj ;
 : `jal ( rd offset -- )  6F `instr/j ;
+
+
+
 
 
 : X2 ( n -- n' )
