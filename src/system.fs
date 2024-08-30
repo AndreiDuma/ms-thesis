@@ -3,21 +3,21 @@
 
 \ Navigate the stack.
 : ^ ( n -- )
-  93 . 89 . 89 . 00 . ;                                     \ s3 += 8                                  addi s3, s3, 8
-: v ( n -- )											       
-  93 . 89 . 89 . FF . ;                                     \ s3 -= 8                                  addi s3, s3, -8
+  93 . 89 . 89 . 00 . ;                                     \ s3 += 8                 addi s3, s3, 8
+: v ( n -- )									      
+  93 . 89 . 89 . FF . ;                                     \ s3 -= 8                 addi s3, s3, -8
 
 \ Load current stack item into register `t0` or `t1`.
-: >t ( n -- n )											       
-  83 . B2 . 09 . 00 . ;	   			            \ t0 = [s3]                                ld t0, 0(s3)
-: >u ( n -- n )											       
-  03 . B3 . 09 . 00 . ;	   			            \ t1 = [s3]                                ld t1, 0(s3)
+: >t ( n -- n )									      
+  83 . B2 . 09 . 00 . ;	   			            \ t0 = [s3]               ld t0, 0(s3)
+: >u ( n -- n )									      
+  03 . B3 . 09 . 00 . ;	   			            \ t1 = [s3]               ld t1, 0(s3)
 
 \ Store register `t0` or `t1` over current stack item.
-: t> ( ? -- n )											       
-  23 . B0 . 59 . 00 . ;		                            \ [s3] = t0                                sd t0, 0(s3)
-: u> ( ? -- n )											       
-  23 . B0 . 69 . 00 . ;		                            \ [s3] = t1                                sd t1, 0(s3)
+: t> ( ? -- n )									      
+  23 . B0 . 59 . 00 . ;		                            \ [s3] = t0               sd t0, 0(s3)
+: u> ( ? -- n )									      
+  23 . B0 . 69 . 00 . ;		                            \ [s3] = t1               sd t1, 0(s3)
 
 \ "Float" current stack item "up" the stack, exchanging with item
 \ above.  Stack pointer follows the item.
@@ -57,34 +57,25 @@
 : 2DROP ( d1 d2 -- d1 )  [ ^ ^ ] ;
 
 : << ( n u -- n' )
-  [ >u ^ ]
-  [ >t ^ ]
+  [ >u ^ >t ]
   [ B3 92 62 00 :: ]		\ sll t0, t0, t1
-  [ v t> ] ;
-
-: | ( n1 n2 -- n )
-  [ >u ^ ]
-  [ >t ^ ]
-  [ B3 E2 62 00 :: ]		\ or t0, t0, t1
-  [ v t> ] ;
-
+  [      t> ] ;
 : & ( n1 n2 -- n )
-  [ >u ^ ]
-  [ >t ^ ]
+  [ >u ^ >t ]
   [ B3 F2 62 00 :: ]		\ and t0, t0, t1
-  [ v t> ] ;
-
+  [      t> ] ;
+: | ( n1 n2 -- n )
+  [ >u ^ >t ]
+  [ B3 E2 62 00 :: ]		\ or t0, t0, t1
+  [      t> ] ;
 : + ( n1 n2 -- n )
-  [ >u ^ ]
-  [ >t ^ ]
+  [ >u ^ >t ]
   [ B3 82 62 00 :: ]		\ add t0, t0, t1
-  [ v t> ] ;
-
+  [      t> ] ;
 : - ( n1 n2 -- n )
-  [ >u ^ ]
-  [ >t ^ ]
+  [ >u ^ >t ]
   [ B3 82 62 40 :: ]		\ sub t0, t0, t1
-  [ v t> ] ;
+  [      t> ] ;
 
 : 1+ ( n -- n' )  1 + ;
 : 1- ( n -- n' )  1 - ;
@@ -193,7 +184,7 @@
 
 \ Common format for U/J-type instructions.
 : `instr/uj  ( op rd imm20 -- )
-  5 << | 7 << | ` ;
+  5 << | 7 << |  ;
 
 \ U-type instructions.
 : `instr/u ( rd imm opcode -- )
@@ -211,6 +202,9 @@
   A << | 1 << | 8 << |  ( -- opcode rd imm20 )
   `instr/uj ;
 : `jal ( rd offset -- )  6F `instr/j ;
+
+
+
 
 
 
