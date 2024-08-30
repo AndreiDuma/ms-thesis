@@ -35,43 +35,47 @@
 : 2OVER ( d1 d2 -- d1 d2 d1 )  [ ^ ^ ^ >t0 v >t1 v v v t0> v t1> ] ;
 : 2DROP ( d1 d2 -- d1 )  [ ^ ^ ] ;
 
+
+\ --- RISC-V Assembler --- \
+
 : << ( n u -- n' )
   [ >t1 ^ >t0 ]
   [ B3 . 92 . 62 . 00 . ]		\ sll t0, t0, t1
   [       t0> ] ;
 
-: | ( n1 n2 -- n )
+: | ( u1 u2 -- u )
   [ >t1 ^ >t0 ]
   [ B3 . E2 . 62 . 00 . ]		\ or t0, t0, t1
   [       t0> ] ;
 
-: & ( n1 n2 -- n )
+: & ( u1 u2 -- u )
   [ >t1 ^ >t0 ]
   [ B3 . F2 . 62 . 00 . ]		\ and t0, t0, t1
   [       t0> ] ;
+
 : - ( n1 n2 -- n )
   [ >t1 ^ >t0 ]
   [ B3 . 82 . 62 . 40 . ]		\ sub t0, t0, t1
   [       t0> ] ;
-: [:] ( n i j -- n' )
-  [ >t1 ]		      \ t1 = j
-  [ ^ ^ >t0 ]		      \ t0 = n                   ( -- n .. )
-  [ B3 . D2 . 62 . 00 . ]     \ srl t0, t0, t1
-  [ t0> v v ]		      \ m = t0                   ( -- m i j )
-  1 -  -		      \ len = i - (j - 1)        ( -- m len )
-  1 SWAP <<  1 -	      \ mask = (1 << len) - 1    ( -- m mask )
-  & ;			      \ n' = m & mask            ( -- n' )
 
-\ Compiles a 32-bit instruction (four bytes in the form of a 32-bit
-\ unsigned integer) to `OUTPUT`, ensuring correct endianness.
+\ Pick bits `i` (high) through `j` (low) from `n`.
+: [:] ( u i j -- u' )
+  [ >t1 ]		      \ t1 = j
+  [ ^ ^ >t0 ]		      \ t0 = u                   ( -- u .. )
+  [ B3 . D2 . 62 . 00 . ]     \ srl t0, t0, t1
+  [ t0> v v ]		      \ v = t0                   ( -- v i j )
+  1 -  -		      \ len = i - (j - 1)        ( -- v len )
+  1 SWAP <<  1 -	      \ mask = (1 << len) - 1    ( -- v mask )
+  & ;			      \ u' = v & mask            ( -- u' )
+
+\ Compile a 32-bit instruction (in the form of a 32-bit unsigned
+\ integer) to `OUTPUT`, ensuring correct endianness.
 : ` ( u -- )
   DUP 1F 18 [:] SWAP  ( -- u[31:24] u )
   DUP 17 10 [:] SWAP  ( -- u[31:24] u[23:16] u )
   DUP 0F 08 [:] SWAP  ( -- u[31:24] u[23:16] u[15:8] u )
       07 00 [:]       ( -- u[31:24] u[23:16] u[15:8] u[7:0] )
   . . . . ;
-
-\ --- Assembler --- \
 
 \ Common format for R/S/B-type instructions.
 : `instr/rsb ( op rd/imm5 fn3 rs1 rs2 fn7/imm7 -- )
@@ -186,32 +190,64 @@
 : `jal ( rd offset -- )  6F `instr/j ;
 
 
+\ --- Common FORTH words --- \
 
+\ Arithmetic.
+: +      ( n1 n2 -- n ) ;
+: *      ( n1 n2 -- n ) ;
+: /MOD   ( n1 n2 -- rem quot ) ;
+: /      ( n1 n2 -- quot ) ;
+: MOD    ( n1 n2 -- rem ) ;
+: 1+     ( n -- n' ) ;
+: 1-     ( n -- n' ) ;
+: 2*     ( n -- n' ) ;
+: 2/     ( n -- n' ) ;
+: ABS    ( n -- n' ) ;
+: NEGATE ( n -- n' ) ;
+: MIN    ( n1 n2 -- n ) ;
+: MAX    ( n1 n2 -- n ) ;
 
+\ Memory access.
+: C! ( c addr -- ) ;
+: C@ ( addr -- c ) ;
+: !  ( n addr -- ) ;
+: @  ( addr -- n ) ;
+: +! ( n addr -- ) ;
+: VARIABLE ( C: "ccc" -- ) ( -- addr ) ;
+: CONSTANT ( C: "ccc" n -- ) ( -- n ) ;
 
-: X2 ( n -- n' )
-  [ >t0 ]
-  [ 5 5 1 `slli ]
-  [ t0> ] ;
+\ Return stack management.
+: >R    ( n -- ) ;
+: R>    ( -- n ) ;
+: R@    ( -- n ) ;
+: */    ( n1 n2 n3 -- n ) ;
+: */MOD ( n1 n2 n3 -- rem quot ) ;
 
-1 2 3 X2
-7 DBG
+\ I/O.
+: KEY    ( -- c ) ;
+: CR     ( -- ) ;
+: SPACES ( -- ) ;
+: SPACE  ( -- ) ;
+: EMIT   ( c -- ) ;
+: .      ( n -- ) ;
+: ."     ( "ccc<DOUBLE-QUOTE>" -- ) ;
+: ?      ( addr -- ) ;
 
+\ Control flow.
+: IF ( flag -- ) ;
+: = ( n1 n2 -- flag ) ;
+: <> ( n1 n2 -- flag ) ;
+: < ( n1 n2 -- flag ) ;
+: > ( n1 n2 -- flag ) ;
+\ : U< ( u1 u2 -- flag ) ;
+\ : U> ( u1 u2 -- flag ) ;
+: 0= ( n -- flag ) ;
+: 0< ( n -- flag ) ;
+: 0> ( n -- flag ) ;
+: NOT ( n -- n' ) ;
+: AND ( n1 n2 -- n ) ;
+: OR  ( n1 n2 -- n ) ;
+: XOR ( n1 n2 -- n ) ;
+: ?DUP ( n -- n n  OR  0 -- 0 ) ;
+: ABORT" ( "ccc<DOUBLE-QUOTE>" flag -- ) ;
 
-
-
-\ TODO:
-\
-\ : @ ( addr -- n )
-\   [ >r  03 . 3A . 0A . 00 .  r> ] ;
-\ : EMIT ( char -- )
-\   [ ??? ] A >REG		\ a0 <- ?
-\   1 B >REG			\ a1 <- 1
-\   TYPE ;
-
-\ TODO:
-\
-\ : 2*        (   x -- x'    )    [ 49 . D1 . 27 . ] ;                \ [r15] <<= 1       sal r/m64, 1    REX.W D1 /4     00 100 111  TwoTimes
-\ : 4*        (   x -- x'    )    [ 49 . C1 . 27 . 02 . ] ;           \ [r15] <<= 2       sal r/m64, imm8 REX.W C1 /4 ib  00 100 111
-\ : 8*        (   x -- x'    )    [ 49 . C1 . 27 . 03 . ] ;           \ [r15] <<= 3       sal r/m64, imm8 REX.W C1 /4 ib  00 100 111
-\ : 2/        (   x -- x'    )    [ 49 . D1 . 3F . ] ;                \ [r15] >>= 1       sar r/m64, 1    REX.W D1 /7     00 111 111  TwoDiv
