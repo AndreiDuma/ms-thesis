@@ -98,11 +98,17 @@
   1 SWAP << 1-		        \ mask = (1 << len) - 1    ( -- m mask )
   & ;                           \ n' = m & mask            ( -- n' )
 
+\ --- Assembler --- \
+
+\ Common format for R/S/B-type instructions.
+: `instr/rsb ( op rd/imm5 fn3 rs1 rs2 fn7/imm7 -- )
+  5 << | 5 << | 3 << | 5 << | 7 << | ` ;
+
 \ R-type instructions.
 : `instr/r ( rd rs1 rs2 fn7 fn3 op -- )
   [ % % % % % v v v v v ]  ( -- op rd rs1 rs2 fn7 fn3 )
   [ % % %         v v v ]  ( -- op rd fn3 rs1 rs2 fn7 )
-  5 << | 5 << | 3 << | 5 << | 7 << | ` ;
+  `instr/rsb ;
 : `add  ( rd rs1 rs2 -- )  00 0 33 `instr/r ;
 : `sub  ( rd rs1 rs2 -- )  20 0 33 `instr/r ;
 : `sll  ( rd rs1 rs2 -- )  00 1 33 `instr/r ;
@@ -162,7 +168,7 @@
   [ % % % % v v v v ]  ( -- op imm5 fn3 rs2 rs1 offset )
   B 5 [:]              ( -- op imm5 fn3 rs2 rs1 imm7 )
   [ ^ %         v v ]  ( -- op imm5 fn3 rs1 rs2 imm7 )
-  5 << | 5 << | 3 << | 5 << | 7 << | ` ;
+  `instr/rsb ;
 : `sb  ( rs2 rs1 offset -- )  0 23 `instr/s ;
 : `sh  ( rs2 rs1 offset -- )  1 23 `instr/s ;
 : `sw  ( rs2 rs1 offset -- )  2 23 `instr/s ;
@@ -170,14 +176,14 @@
 
 \ B-type instructions.
 : `instr/b ( rs1 rs2 offset fn3 op -- )
-  [ % % % % v v v v ]  ( -- op rs1 rs2 offset fn3 )
-  [ % % %     v v v ]  ( -- op fn3 rs1 rs2 offset )
-  DUP DUP  4 1 [:]     ( -- op fn3 rs1 rs2 offset offset offset[4:1] )
-  1 << SWAP  B B [:] | ( -- op fn3 rs1 rs2 offset imm5 )
-  [ % % % % v v v v ]  ( -- op imm5 fn3 rs1 rs2 offset )
-  DUP  C C [:]	       ( -- op imm5 fn3 rs1 rs2 offset offset[12] )
-  6 << SWAP  A 5 [:] | ( -- op imm5 fn3 rs1 rs2 imm7 )
-  5 << | 5 << | 3 << | 5 << | 7 << | ` ;
+  [ % % % % v v v v ]   ( -- op rs1 rs2 offset fn3 )
+  [ % % %     v v v ]   ( -- op fn3 rs1 rs2 offset )
+  DUP DUP  4 1 [:]      ( -- op fn3 rs1 rs2 offset offset offset[4:1] )
+  1 << SWAP  B B [:] |  ( -- op fn3 rs1 rs2 offset imm5 )
+  [ % % % % v v v v ]   ( -- op imm5 fn3 rs1 rs2 offset )
+  DUP  C C [:]	        ( -- op imm5 fn3 rs1 rs2 offset offset[12] )
+  6 << SWAP  A 5 [:] |  ( -- op imm5 fn3 rs1 rs2 imm7 )
+  `instr/rsb ;
 : `beq  ( rs1 rs2 offset -- )  0 63 `instr/b ;
 : `bne  ( rs1 rs2 offset -- )  1 63 `instr/b ;
 : `blt  ( rs1 rs2 offset -- )  4 63 `instr/b ;
@@ -185,6 +191,26 @@
 : `bltu ( rs1 rs2 offset -- )  6 63 `instr/b ;
 : `bgeu ( rs1 rs2 offset -- )  7 63 `instr/b ;
 
+\ Common format for U/J-type instructions.
+: `instr/uj  ( op rd imm20 -- )
+  5 << | 7 << | ` ;
+
+\ U-type instructions.
+: `instr/u ( rd imm opcode -- )
+  ROT ROT `instr/uj ;
+: `lui   ( rd imm -- )  37 `instr/u ;
+: `auipc ( rd imm -- )  17 `instr/u ;
+
+\ J-type instructions.
+: `instr/j ( rd offset opcode -- )
+  ROT ROT               ( -- opcode rd offset )
+  DUP 13 0C [:] SWAP    ( -- opcode rd offset[19:12] offset )
+  DUP 0B 0B [:] SWAP    ( -- opcode rd offset[19:12] offset[10] offset )
+  DUP 0A 01 [:] SWAP    ( -- opcode rd offset[19:12] offset[10] offset[10:1] offset )
+      14 14 [:]	        ( -- opcode rd offset[19:12] offset[10] offset[10:1] offset[20] )
+  A << | 1 << | 8 << |  ( -- opcode rd imm20 )
+  `instr/uj ;
+: `jal ( rd offset -- )  6F `instr/j ;
 
 
 
