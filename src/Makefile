@@ -1,6 +1,9 @@
 SForth: SForth.dmp system.fs
 	./build.sh
 
+run: SForth
+	./SForth
+
 gdb: SForth
 	gdb -x .gdbinit ./SForth
 

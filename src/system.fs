@@ -2,21 +2,21 @@
 : REG   reg BYE ;
 
 \ Load current stack item into register `t0` or `t1`.
-: >t0 ( n -- n )									      
-  83 . B2 . 09 . 00 . ;	   			            \ t0 = [s3]               ld t0, 0(s3)
-: >t1 ( n -- n )									      
-  03 . B3 . 09 . 00 . ;	   			            \ t1 = [s3]               ld t1, 0(s3)
+: >t0 ( n -- n )
+  83 . B2 . 09 . 00 . ;					    \ t0 = [s3]               ld t0, 0(s3)
+: >t1 ( n -- n )
+  03 . B3 . 09 . 00 . ;					    \ t1 = [s3]               ld t1, 0(s3)
 
 \ Store register `t0` or `t1` over current stack item.
-: t0> ( ? -- n )									      
-  23 . B0 . 59 . 00 . ;		                            \ [s3] = t0               sd t0, 0(s3)
-: t1> ( ? -- n )									      
-  23 . B0 . 69 . 00 . ;		                            \ [s3] = t1               sd t1, 0(s3)
+: t0> ( ? -- n )
+  23 . B0 . 59 . 00 . ;					    \ [s3] = t0               sd t0, 0(s3)
+: t1> ( ? -- n )
+  23 . B0 . 69 . 00 . ;					    \ [s3] = t1               sd t1, 0(s3)
 
 \ Navigate the stack.
 : ^ ( n -- .. )
   93 . 89 . 89 . 00 . ;                                     \ s3 += 8                 addi s3, s3, 8
-: v ( .. -- n )									      
+: v ( .. -- n )
   93 . 89 . 89 . FF . ;                                     \ s3 -= 8                 addi s3, s3, -8
 
 \ "Float" current stack item "up" the stack, exchanging with item
@@ -96,7 +96,7 @@
 : `sra  ( rd rs1 rs2 -- )   20 5 33 `instr/r ;
 : `or   ( rd rs1 rs2 -- )   00 6 33 `instr/r ;
 : `and  ( rd rs1 rs2 -- )   00 7 33 `instr/r ;
-\ RV64 instructions.	   
+\ RV64 instructions.
 : `addw ( rd rs1 rs2 -- )   00 0 3B `instr/r ;
 : `subw ( rd rs1 rs2 -- )   20 0 3B `instr/r ;
 : `sllw ( rd rs1 rs2 -- )   00 1 3B `instr/r ;
@@ -129,7 +129,7 @@
 : `slli  ( rd rs1 shamt -- )        00 1 13 `instr/i/shift ;
 : `srli  ( rd rs1 shamt -- )        00 5 13 `instr/i/shift ;
 : `srai  ( rd rs1 shamt -- )        20 5 13 `instr/i/shift ;
-\ RV64 instructions.	           
+\ RV64 instructions.
 : `lwu   ( rd rs1 imm   -- )           6 03 `instr/i ;
 : `ld    ( rd rs1 imm   -- )           3 03 `instr/i ;
 : `addiw ( rd rs1 imm   -- )           0 1B `instr/i ;
@@ -158,7 +158,7 @@
   DUP DUP  4 1 [:]      ( -- op fn3 rs1 rs2 offset offset offset[4:1] )
   1 << SWAP  B B [:] |  ( -- op fn3 rs1 rs2 offset imm5 )
   [ % % % % v v v v ]   ( -- op imm5 fn3 rs1 rs2 offset )
-  DUP  C C [:]	        ( -- op imm5 fn3 rs1 rs2 offset offset[12] )
+  DUP  C C [:]		( -- op imm5 fn3 rs1 rs2 offset offset[12] )
   6 << SWAP  A 5 [:] |  ( -- op imm5 fn3 rs1 rs2 imm7 )
   `instr/rsb ;
 : `beq  ( rs1 rs2 offset -- )   0 63 `instr/b ;
@@ -179,13 +179,13 @@
 : `auipc ( rd imm -- )   17 `instr/u ;
 
 \ J-type instructions.
-: `instr/j ( rd offset opcode -- )
-  ROT ROT               ( -- opcode rd offset )
-  DUP 13 0C [:] SWAP    ( -- opcode rd offset[19:12] offset )
-  DUP 0B 0B [:] SWAP    ( -- opcode rd offset[19:12] offset[10] offset )
-  DUP 0A 01 [:] SWAP    ( -- opcode rd offset[19:12] offset[10] offset[10:1] offset )
-      14 14 [:]	        ( -- opcode rd offset[19:12] offset[10] offset[10:1] offset[20] )
-  A << | 1 << | 8 << |  ( -- opcode rd imm20 )
+: `instr/j ( rd offset op -- )
+  ROT ROT               ( -- op rd offset )
+  DUP 13 0C [:] SWAP    ( -- op rd offset[19:12] offset )
+  DUP 0B 0B [:] SWAP    ( -- op rd offset[19:12] offset[11] offset )
+  DUP 0A 01 [:] SWAP    ( -- op rd offset[19:12] offset[11] offset[10:1] offset )
+      14 14 [:]		( -- op rd offset[19:12] offset[11] offset[10:1] offset[20] )
+  A << | 1 << | 8 << |  ( -- op rd imm20 )
   `instr/uj ;
 : `jal ( rd offset -- )  6F `instr/j ;
 
@@ -202,14 +202,14 @@
 
 \ --- Common FORTH words --- \
 
-\ Arithmetic.
+\ Arithmetic operators.
 : NEGATE ( n -- n' )      [ >t0 ]       [ t0 zero t0 `sub ] [ t0> ] ;
 : +      ( n1 n2 -- n )   [ >t1 ^ >t0 ] [ t0   t0 t1 `add ] [ t0> ] ;
 : *      ( n1 n2 -- n )           ;
 : /MOD   ( n1 n2 -- rem quot )    ;
 : /      ( n1 n2 -- quot )        ;
 : MOD    ( n1 n2 -- rem )         ;
-: */     ( n1 n2 n3 -- n )        ; 
+: */     ( n1 n2 n3 -- n )        ;
 : */MOD  ( n1 n2 n3 -- rem quot ) ;
 : 1+     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `addi ] [ t0> ] ;
 : 1-     ( n -- n' )     [ >t0 ]       [ t0 t0 FFF `addi ] [ t0> ] ;
@@ -217,13 +217,36 @@
 : 2*     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `slli ] [ t0> ] ;
 : 2/     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `srai ] [ t0> ] ;
 : ABS    ( n -- n' )     [ >t0   >t1 ] [ t1 t1  3F `srai ]            \ mask@t1 >>= 63
-	                               [ t0 t0  t1 `xor  ]            \ t0 = t0 xor mask@t1
+				       [ t0 t0  t1 `xor  ]            \ t0 = t0 xor mask@t1
 				       [ t0 t0  t1 `sub  ] [ t0> ] ;  \ t0 -= mask@t1
 : MIN    ( n1 n2 -- nmin )   2DUP -          ( -- n1 n2 n1-n2 )
-                             DUP ABS         ( -- n1 n2 n1-n2 |n1-n2| )
+			     DUP ABS         ( -- n1 n2 n1-n2 |n1-n2| )
 			     - 2/ +          ( -- n1 nmin )
 			     SWAP DROP ;     ( -- nmin )
 : MAX    ( n1 n2 -- n )   2DUP -  DUP ABS  + 2/ +  SWAP DROP ;
+
+\ Logic (bitwise) operators.
+: FALSE ( -- false )     0 ;
+: TRUE  ( -- true )      [ t0 zero FFF `addi ] [ v t0> ] ;
+: AND ( x1 x2 -- x3 )    & ;
+: OR  ( x1 x2 -- x3 )    | ;
+: XOR ( x1 x2 -- x3 )    [ >t1 ^ >t0 ] [ t0 t0  t1 `xor  ] [ t0> ] ;
+: INVERT ( x1 -- x2 )    [ >t0 ]       [ t0 t0 FFF `xori ] [ t0> ] ;
+
+\ Comparison operators.
+: t0<>0   t1 zero  t0 `sub
+	  t0   t0  t1 `or
+	  t0   t0  3F `srai ;
+: 0<> ( n -- flag )       [ >t0 ]                          [ t0<>0 ] [ t0> ] ;
+: 0=  ( n -- flag )       0<> INVERT ;
+: <>  ( n1 n2 -- flag )   [ >t1 ^ >t0 ] [ t0 t0 t1 `xor  ] [ t0<>0 ] [ t0> ] ;
+: =   ( n1 n2 -- flag )   <> INVERT ;
+: <   ( n1 n2 -- flag )   [ >t1 ^ >t0 ] [ t0 t0 t1 `slt  ] [ t0<>0 ] [ t0> ] ;
+: >   ( n1 n2 -- flag )   [ >t1 ^ >t0 ] [ t0 t1 t0 `slt  ] [ t0<>0 ] [ t0> ] ;
+: U<  ( u1 u2 -- flag )   [ >t1 ^ >t0 ] [ t0 t0 t1 `sltu ] [ t0<>0 ] [ t0> ] ;
+: U>  ( u1 u2 -- flag )   [ >t1 ^ >t0 ] [ t0 t1 t0 `sltu ] [ t0<>0 ] [ t0> ] ;
+: 0<  ( n -- flag )       0 < ;
+: 0>  ( n -- flag )       0 > ;
 
 \ Memory access.
 : C! ( c addr -- )   [ >t1 ^ >t0 ^ ] [ t0 t1  0 `sb  ]         ;
@@ -231,10 +254,10 @@
 : !  ( n addr -- )   [ >t1 ^ >t0 ^ ] [ t0 t1  0 `sd  ]         ;
 : @  ( addr -- n )   [ >t1         ] [ t0 t1  0 `ld  ] [ t0> ] ;
 : +! ( n addr -- )   DUP @  ( -- n addr n0 )
-                     ROT +  ( -- addr n' )
+		     ROT +  ( -- addr n' )
 		     SWAP ! ;
 
-\ Dictionary.
+\ Dictionary management.
 : LATEST ( -- addr )   [ t0 s2 28 `ld   ] [ v t0> ] ;
 : HERE   ( -- addr )   [ t0 s1  0 `addi ] [ v t0> ] ;
 : HERE!  ( addr -- )   [ >t0 ^ ] [ s1 t0  0 `addi ] ;
@@ -262,10 +285,10 @@
 : create ( C: "ccc<SPC>" -- )
   pname
   [ v ] [ s0 s3  0 `sd   ]	   \ save INPUT@s0
-        [ s0 a0  0 `addi ]	   \ INPUT@s0 = addr@a0
+	[ s0 a0  0 `addi ]	   \ INPUT@s0 = addr@a0
 	[ a0 s2 28 `ld   ]	   \ latest@a0 = [LATEST] (as required by Head)
   Head  [ s0 s3  0 `ld   ] [ ^ ] ; \ restore INPUT@s0
-  
+
 : CREATE ( C: "ccc<SPC>" -- ) ( -- addr )
   create
   \ Compile code that pushes on the stack the address of the empty
@@ -283,8 +306,8 @@
   LATEST 10 +			( -- flag-addr )
   DUP C@  80 |			( -- flag-addr flag' )
   SWAP C! ;
-  
-\ : ' ( "ccc<SPC>" -- addr ) ;			       
+
+\ : ' ( "ccc<SPC>" -- addr ) ;
 
 \ \ Return stack management.
 \ : >>t0 ( R: n -- n )  [ t0 sp 0 `ld ] ;
@@ -300,80 +323,111 @@
 \ return stack.  We need a way to create "bare" definitions with no
 \ epilogue or prologue.
 
-\ Control flow.
-: IF ( C: -- addr ) ( flag -- )
+\ Control flow: IF ... ELSE ... THEN
+: IF ( C: -- orig ) ( flag -- )
   \ Syntax: flag IF ... ELSE ... THEN
 
   \ Run-time:
-  \ - pop a flag off the stack into a register;
+  \ - pop a flag off the stack into a register:
   \   -> ">t0 ^"
-  \ - branch based on the register value (offset currently unknown).
+  \ - branch based on the register value (offset currently unknown):
   \   -> "beq t0, zero, +???"
-  >t0 ^		                 \ t0 = flag                       ( -- )
-  t0 zero 0 `beq	         \ if flag@t0 = 0:
-                                 \   goto +???.                    \ To be backpatched by ELSE/THEN.
+  >t0 ^				 \ t0 = flag                       ( -- )
+  t0 zero 0 `beq		 \ if flag@t0 = 0:
+				 \   goto +???.                    \ To be backpatched by ELSE/THEN.
 
   \ Compilation:
   \ - push address of the branch instruction on the stack;
   \   - this address is backpatched by the corresponding ELSE/THEN.
-  HERE 4 -                       \ push HERE-4 (`beq` is previous instruction)  ( C: -- addr )
+  HERE 4 -                       \ push HERE-4 (`beq` is previous instruction)  ( C: -- orig )
   ; IMMEDIATE
 
-: then ( C: addr -- ) ( -- )
+: resolve ( C: orig -- ) ( -- )
   \ Compilation:
-  \ - backpatch branch instruction at `addr` to use offset `HERE - addr`.
+  \ - backpatch branch instruction at `orig` to use offset `HERE - orig`.
   \ - NOTE: this could be simplified if the assembler supported
   \   writing instructions on the stack rather than at `OUTPUT`.
-  HERE                           \ save OUTPUT@s1                  ( C: -- addr OUTPUT )
-  OVER HERE!                     \ OUTPUT@s1 = addr        
-  DUP ROT -                      \ offset = OUTPUT - addr          ( C: -- OUTPUT offset )
+  HERE                           \ save OUTPUT@s1                  ( C: -- orig OUTPUT )
+  OVER HERE!                     \ OUTPUT@s1 = orig
+  DUP ROT -                      \ offset = OUTPUT - orig          ( C: -- OUTPUT offset )
   t0 zero ROT  `beq              \ compile "beq t0, zero, offset"  ( C: -- OUTPUT )
   HERE! ;                        \ restore OUTPUT@s1               ( C: -- )
-: THEN ( C: addr -- ) ( -- )   then ; IMMEDIATE
 
-: ELSE ( C: addr -- addr' ) ( -- )
+: ELSE ( C: orig -- orig' ) ( -- )
   \ Run-time:
-  \ - jump forward unconditionally (offset currently unknown).
-  \   -> "jal zero, +???"
+  \ - jump forward unconditionally (offset currently unknown):
+  \   -> "addi t0, zero, 0
+  \   -> "beq t0, zero, +???"
   t0 zero 0 `addi                \ t0 = 0
   t0 zero 0 `beq                 \ if t0 = 0:  \ Always true!
-                                 \   goto +???.                    \ To be backpatched by THEN.
+				 \   goto +???.                    \ To be backpatched by THEN.
 
   \ Compilation:
-  \ - backpatch branch instr. at `addr` to jump HERE (same as THEN);
-  \ - push address of the jump instruction on the stack;
+  \ - backpatch branch instr. at `orig` to jump HERE (same as THEN);
+  \ - push address of the (unconditionalized) branch on the stack;
   \   - this address is backpatched by the corresponding THEN.
-  then
-  HERE 4 -                       \ push HERE-4 (`beq` is previous instruction)  ( C: -- addr )
+  resolve
+  HERE 4 -                       \ push HERE-4 (`beq` is previous instruction)  ( C: -- orig' )
   ; IMMEDIATE
 
+: THEN ( C: orig -- ) ( -- )
+  \ Compilation:
+  resolve ; IMMEDIATE
+
+\ Control flow: BEGIN ... WHILE ... REPEAT
+: BEGIN ( C: -- dest ) ( -- )
+  \ Compilation:
+  HERE ; IMMEDIATE
+
+: WHILE ( C: dest -- orig dest ) ( flag -- )
+  \ Append run-time semantics to current definition:
+  >t0
+  ^
+  t0 zero BAD `beq
+
+  \ Compilation:
+  HERE 4 - SWAP ; IMMEDIATE
+
+: REPEAT ( C: orig dest -- ) ( -- )
+  \ Run-time:
+  HERE -  			( C: orig offset )
+  zero SWAP  `jal
+
+  \ Compilation:
+  resolve ; IMMEDIATE
 
 
-  
-: t0=0   t1   t0  0 `addi
-         t1 zero t1 `sub
-         t0   t0 t1 `or
-	 t0   t0 3F `srli
-         t0   t0  1 `xori ;
 
-: 0= ( n -- flag )       [ >t0 ]       [ t0=0 ]          [ t0> ] ;
-:  = ( n1 n2 -- flag )   [ >t1 ^ >t0 ] [ t0 t0 t1 `xor ]
-                                       [ t0=0 ]          [ t0> ] ;
-: <> ( n1 n2 -- flag )   = 0= ;
-: <  ( n1 n2 -- flag )   [ >t1 ^ >t0 ] [ t0 t0 t1 `slt  ] [ t0> ] ;
-: >  ( n1 n2 -- flag )   [ >t1 ^ >t0 ] [ t0 t1 t0 `slt  ] [ t0> ] ;
-: U< ( u1 u2 -- flag )   [ >t1 ^ >t0 ] [ t0 t0 t1 `sltu ] [ t0> ] ;
-: U> ( u1 u2 -- flag )   [ >t1 ^ >t0 ] [ t0 t1 t0 `sltu ] [ t0> ] ;
-: 0< ( n -- flag )       0 > ;
-: 0> ( n -- flag )       0 < ;
-: AND ( x1 x2 -- x3 )    & ;
-: OR  ( x1 x2 -- x3 )    | ;
-: XOR ( x1 x2 -- x3 )    [ >t1 ^ >t0 ] [ t0 t0 t1 `xor ] [ t0> ] ;
+: TYPE ( c-addr u -- )
+  [ a1 s3 0 `ld ] [ ^ ]
+  [ a0 s3 0 `ld ] [ ^ ]
+  TYPE ;
+
+
+CREATE FIZZ   46 C, 69 C, 7A C, 7A C,   0A C,
+CREATE BUZZ   42 C, 75 C, 7A C, 7A C,   0A C,
+
+: X
+  BEGIN
+    DUP 0>
+  WHILE
+    1-
+    FIZZ 5 TYPE
+  REPEAT ;
+
+
+10 X
+
+BYE
+7 7 7 DBG
+
+
+
 : ?DUP ( x -- 0 / x x )  DUP IF DUP THEN ;
 
 \ I/O.
 : syscall/1 ( x1 n -- x )   [    a7 s3 0 `ld    ]
-                            [ ^  a0 s3 0 `ld    ]
+			    [ ^  a0 s3 0 `ld    ]
 			    [            `ecall ]
 			    [    a0 s3 0 `sd    ] ;
 
@@ -385,3 +439,8 @@
 : .      ( n -- ) ;
 : ."     ( "ccc<DOUBLE-QUOTE>" -- ) ;
 : ?      ( addr -- ) ;
+
+\ Maybe?
+: ' ( "<spaces>name" -- xt )      ;
+: EXECUTE ( i * x xt -- j * x )   ;
+: STATE ( -- a-addr )             ;
