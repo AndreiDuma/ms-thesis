@@ -2,34 +2,34 @@
 : REG   reg BYE ;
 
 \ Load current stack item into register `t0` or `t1`.
-: >t0 ( n -- n )
+: >t0 ( x -- x )
   83 . B2 . 09 . 00 . ;					    \ t0 = [s3]               ld t0, 0(s3)
-: >t1 ( n -- n )
+: >t1 ( x -- x )
   03 . B3 . 09 . 00 . ;					    \ t1 = [s3]               ld t1, 0(s3)
 
 \ Store register `t0` or `t1` over current stack item.
-: t0> ( ? -- n )
+: t0> ( ? -- x )
   23 . B0 . 59 . 00 . ;					    \ [s3] = t0               sd t0, 0(s3)
-: t1> ( ? -- n )
+: t1> ( ? -- x )
   23 . B0 . 69 . 00 . ;					    \ [s3] = t1               sd t1, 0(s3)
 
 \ Navigate the stack.
-: ^ ( n -- .. )
+: ^ ( x -- .. )
   93 . 89 . 89 . 00 . ;                                     \ s3 += 8                 addi s3, s3, 8
-: v ( .. -- n )
+: v ( .. -- x )
   93 . 89 . 89 . FF . ;                                     \ s3 -= 8                 addi s3, s3, -8
 
 \ "Float" current stack item "up" the stack, exchanging with item
 \ above.  Stack pointer follows the item.
-: % ( n1 n2 -- n2 .. )
+: % ( x1 x2 -- x2 .. )
   >t1 ^  >t0 v
   t0> ^  t1> ;
 
-: DROP ( n -- )                   [ ^ ] ;
-: DUP  ( n -- n n )               [ >t0 v t0> ] ;
-: SWAP ( n1 n2 -- n2 n1 )         [ % v ] ;
-: OVER ( n1 n2 -- n1 n2 n1 )      [ ^ >t0 v v t0> ] ;
-: ROT  ( n1 n2 n3 -- n2 n3 n1 )   [ ^ % v v % v ]  ;
+: DROP ( x -- )                   [ ^ ] ;
+: DUP  ( x -- x x )               [ >t0 v t0> ] ;
+: SWAP ( x1 x2 -- x2 x1 )         [ % v ] ;
+: OVER ( x1 x2 -- x1 x2 x1 )      [ ^ >t0 v v t0> ] ;
+: ROT  ( x1 x2 x3 -- x2 x3 x1 )   [ ^ % v v % v ]  ;
 : 2SWAP ( d1 d2 -- d2 d1 )        [ ^ % % v v v % % v v ] ;
 : 2DUP ( d -- d d )               [ ^ >t0 v >t1 v t0> v t1> ] ;
 : 2OVER ( d1 d2 -- d1 d2 d1 )     [ ^ ^ ^ >t0 v >t1 v v v t0> v t1> ] ;
@@ -226,12 +226,12 @@
 : MAX    ( n1 n2 -- n )   2DUP -  DUP ABS  + 2/ +  SWAP DROP ;
 
 \ Logic (bitwise) operators.
-: FALSE ( -- false )     0 ;
-: TRUE  ( -- true )      [ t0 zero FFF `addi ] [ v t0> ] ;
-: AND ( x1 x2 -- x3 )    & ;
-: OR  ( x1 x2 -- x3 )    | ;
-: XOR ( x1 x2 -- x3 )    [ >t1 ^ >t0 ] [ t0 t0  t1 `xor  ] [ t0> ] ;
-: INVERT ( x1 -- x2 )    [ >t0 ]       [ t0 t0 FFF `xori ] [ t0> ] ;
+: FALSE ( -- false )    0 ;
+: TRUE  ( -- true )     [ t0 zero FFF `addi ] [ v t0> ] ;
+: AND ( x1 x2 -- x )    & ;
+: OR  ( x1 x2 -- x )    | ;
+: XOR ( x1 x2 -- x )    [ >t1 ^ >t0 ] [ t0 t0  t1 `xor  ] [ t0> ] ;
+: INVERT ( x -- x' )    [ >t0 ]       [ t0 t0 FFF `xori ] [ t0> ] ;
 
 \ Comparison operators.
 : t0<>0   t1 zero  t0 `sub
@@ -257,22 +257,36 @@
 		     ROT +  ( -- addr n' )
 		     SWAP ! ;
 
-\ Dictionary management.
-: LATEST ( -- addr )   [ t0 s2 28 `ld   ] [ v t0> ] ;
+
+\ --- Global variables --- \
+
+: STATE ( -- addr )    [ t0 s2 20 `ld ] [ v t0> ] ;
+: LATEST ( -- addr )   [ t0 s2 28 `ld ] [ v t0> ] ;
+
+
+\ --- Data space --- \
+
 : HERE   ( -- addr )   [ t0 s1  0 `addi ] [ v t0> ] ;
 : HERE!  ( addr -- )   [ >t0 ^ ] [ s1 t0  0 `addi ] ;
 
 : ALLOT ( n -- )   [ >t0 ^ ] [ s1 s1 t0 `add ] ;
-: CHARS  ( n -- n' )        ;
-: INSTRS ( n -- n' )   2 << ;
-: CELLS  ( n -- n' )   3 << ;
+: CHARS ( n -- n' )        ;
+: CELLS ( n -- n' )   3 << ;
 
 : , ( n -- )
   1 CELLS ALLOT
   [ >t0 ^ ] [ t0 s1  8 NEGATE  `sd ] ;
 : C, ( n -- )   . ;
 
-: LITERAL ( C: n -- ) ( -- n )
+
+\ --- Defining words --- \
+
+: IMMEDIATE ( -- )
+  LATEST 10 +			( -- flag-addr )
+  DUP C@  80 |			( -- flag-addr flag' )
+  SWAP C! ;
+
+: LITERAL ( C: x -- ) ( -- x )
   \ Compile "lui t0, 0xHHHHH[+1]".
   DUP  ( mask: ) FF 4 << F |  &     ( -- n low )
   DUP B >>> ROT			    ( -- low sign n )
@@ -282,14 +296,14 @@
   \ Compile a sequence that pushes `t0` on the stack.
   v t0> ;
 
-: create ( C: "ccc<SPC>" -- )
+: create ( "<spaces>name" -- )
   pname
   [ v ] [ s0 s3  0 `sd   ]	   \ save INPUT@s0
 	[ s0 a0  0 `addi ]	   \ INPUT@s0 = addr@a0
 	[ a0 s2 28 `ld   ]	   \ latest@a0 = [LATEST] (as required by Head)
   Head  [ s0 s3  0 `ld   ] [ ^ ] ; \ restore INPUT@s0
 
-: CREATE ( C: "ccc<SPC>" -- ) ( -- addr )
+: CREATE ( "<spaces>name" -- ) ( -- addr )
   create
   \ Compile code that pushes on the stack the address of the empty
   \ space following the CREATEd definition.
@@ -299,31 +313,26 @@
   \ Compile "jalr zero, 0(ra)".
   zero ra 0 `jalr ;
 
-: VARIABLE ( C: "ccc<SPC>" -- ) ( -- addr )   CREATE  0 , ;
-: CONSTANT ( C: "ccc<SPC>" n -- ) ( -- n )    create  LITERAL  zero ra 0 `jalr ;
+: VARIABLE ( "<spaces>name" -- ) ( -- addr )   CREATE  0 , ;
+: CONSTANT ( x "<spaces>name" -- ) ( -- x )    create  LITERAL  zero ra 0 `jalr ;
 
-: IMMEDIATE ( -- )
-  LATEST 10 +			( -- flag-addr )
-  DUP C@  80 |			( -- flag-addr flag' )
-  SWAP C! ;
 
-\ : ' ( "ccc<SPC>" -- addr ) ;
+\ --- Return stack management --- \
 
-\ \ Return stack management.
-\ : >>t0 ( R: n -- n )  [ t0 sp 0 `ld ] ;
-\ : t0>> ( R: ? -- n )  [ t0 sp 0 `sd ] ;
-\ : ^^   ( R: n -- .. )  [ sp sp   8 `addi ] ;
-\ : vv   ( R: .. -- n )  [ sp sp FF8 `addi ] ;
-\ : R@    ( -- n ) ( R: n -- n )  [ >>t0    ] [  v t0>  ] ;
+: >>t0 ( R: n -- n )    t0   sp 0        `ld   ;
+: t0>> ( R: ? -- n )    t0   sp 0        `sd   ;
+: ^^   ( R: n -- .. )   sp   sp 8        `addi ;
+: vv   ( R: .. -- n )   sp   sp 8 NEGATE `addi ;
+: ret  ( -- )           zero ra 0        `jalr ;
 
-\ : >R    ( n -- ) ( R: -- n )    [  >t0  ^ ] [ vv t0>> ] ;
-\ : R>    ( -- n ) ( R: n -- )    [ >>t0 ^^ ] [  v t0>  ] ;
+: >R ( x --   ) ( R:   -- x )   [ 8 NEGATE ALLOT ] [  >t0  ^ ] [ vv t0>> ] [ ret ] ;
+: R> (   -- x ) ( R: x --   )   [ 8 NEGATE ALLOT ] [ >>t0 ^^ ] [  v t0>  ] [ ret ] ;
+: R@ (   -- x ) ( R: x -- x )   [ 8 NEGATE ALLOT ] [ >>t0    ] [  v t0>  ] [ ret ] ;
 
-\ PROBLEM: Colon installs prologues and epilogues that mess with the
-\ return stack.  We need a way to create "bare" definitions with no
-\ epilogue or prologue.
 
-\ Control flow: IF ... ELSE ... THEN
+\ --- Control flow --- \
+
+\ IF ... ELSE ... THEN
 : IF ( C: -- orig ) ( flag -- )
   \ Syntax: flag IF ... ELSE ... THEN
 
@@ -335,7 +344,6 @@
   >t0 ^				 \ t0 = flag                       ( -- )
   t0 zero 0 `beq		 \ if flag@t0 = 0:
 				 \   goto +???.                    \ To be backpatched by ELSE/THEN.
-
   \ Compilation:
   \ - push address of the branch instruction on the stack;
   \   - this address is backpatched by the corresponding ELSE/THEN.
@@ -374,7 +382,7 @@
   \ Compilation:
   resolve ; IMMEDIATE
 
-\ Control flow: BEGIN ... WHILE ... REPEAT
+\ BEGIN ... WHILE ... REPEAT
 : BEGIN ( C: -- dest ) ( -- )
   \ Compilation:
   HERE ; IMMEDIATE
@@ -397,50 +405,74 @@
   resolve ; IMMEDIATE
 
 
+\ --- I/O --- \
 
 : TYPE ( c-addr u -- )
   [ a1 s3 0 `ld ] [ ^ ]
   [ a0 s3 0 `ld ] [ ^ ]
   TYPE ;
-
-
-CREATE FIZZ   46 C, 69 C, 7A C, 7A C,   0A C,
-CREATE BUZZ   42 C, 75 C, 7A C, 7A C,   0A C,
-
-: X
-  BEGIN
-    DUP 0>
-  WHILE
+: EMIT ( c -- )
+  [ t0 s3 0 `addi ] [ v t0> ]	( -- c c-addr )
+  1 TYPE  DROP ;
+: CR ( -- )       0A EMIT ;
+: SPACE  ( -- )   20 EMIT ;
+: SPACES ( n -- )
+  BEGIN DUP 0> WHILE
+    SPACE
     1-
-    FIZZ 5 TYPE
   REPEAT ;
 
 
-10 X
-
-BYE
-7 7 7 DBG
+: chr ( digit -- c )   DUP 9 >  IF 7 + THEN  30 + ;
 
 
+\ TODO
+: . ( n -- )
+  BEGIN
+    DUP F AND			( -- n digit )
+    chr				( -- n c )
+
+    TODO
+  WHILE REPEAT ;
+
+
+\ --- FizzBuzz --- \
+
+CREATE Fizz   46 C, 69 C, 7A C, 7A C,   0A C,
+CREATE Buzz   42 C, 75 C, 7A C, 7A C,   0A C,
+
+: FizzBuzz
+  64 BEGIN
+    DUP 0>
+  WHILE
+    1-
+    Fizz 5 TYPE
+  REPEAT ;
+
+FizzBuzz BYE
+
+
+
+\ --- OTHER --- \
 
 : ?DUP ( x -- 0 / x x )  DUP IF DUP THEN ;
 
+\ PROBLEM: Colon installs prologues and epilogues that mess with the
+\ return stack.  We need a way to create "bare" definitions with no
+\ epilogue or prologue.
+
 \ I/O.
+: ."     ( "ccc<DOUBLE-QUOTE>" -- ) ;
+: KEY    ( -- c ) ;
+
+\ System calls.
 : syscall/1 ( x1 n -- x )   [    a7 s3 0 `ld    ]
 			    [ ^  a0 s3 0 `ld    ]
 			    [            `ecall ]
 			    [    a0 s3 0 `sd    ] ;
 
-: KEY    ( -- c ) ;
-: CR     ( -- ) ;
-: SPACES ( -- ) ;
-: SPACE  ( -- ) ;
-: EMIT   ( c -- ) ;
-: .      ( n -- ) ;
-: ."     ( "ccc<DOUBLE-QUOTE>" -- ) ;
-: ?      ( addr -- ) ;
-
 \ Maybe?
 : ' ( "<spaces>name" -- xt )      ;
 : EXECUTE ( i * x xt -- j * x )   ;
-: STATE ( -- a-addr )             ;
+
+
