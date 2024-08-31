@@ -349,27 +349,34 @@
 
 
 
+  
+: t0=0   t1   t0  0 `addi
+         t1 zero t1 `sub
+         t0   t0 t1 `or
+	 t0   t0 3F `srli
+         t0   t0  1 `xori ;
 
-: < ( n1 n2 -- flag )  [ >t1 ^ >t0 ] [ t0 t0 t1 `slt ] [ t0> ] ;
-
-: = ( n1 n2 -- flag ) ;
-: <> ( n1 n2 -- flag ) ;
-: < ( n1 n2 -- flag ) ;
-: > ( n1 n2 -- flag ) ;
-\ : U< ( u1 u2 -- flag ) ;
-\ : U> ( u1 u2 -- flag ) ;
-: 0= ( n -- flag ) ;
-: 0< ( n -- flag ) ;
-: 0> ( n -- flag ) ;
-: NOT ( n -- n' ) ;
-: AND ( n1 n2 -- n ) ;
-: OR  ( n1 n2 -- n ) ;
-: XOR ( n1 n2 -- n ) ;
-: ?DUP ( n -- n n  OR  0 -- 0 ) ;
-: ABORT" ( "ccc<DOUBLE-QUOTE>" flag -- ) ;
+: 0= ( n -- flag )       [ >t0 ]       [ t0=0 ]          [ t0> ] ;
+:  = ( n1 n2 -- flag )   [ >t1 ^ >t0 ] [ t0 t0 t1 `xor ]
+                                       [ t0=0 ]          [ t0> ] ;
+: <> ( n1 n2 -- flag )   = 0= ;
+: <  ( n1 n2 -- flag )   [ >t1 ^ >t0 ] [ t0 t0 t1 `slt  ] [ t0> ] ;
+: >  ( n1 n2 -- flag )   [ >t1 ^ >t0 ] [ t0 t1 t0 `slt  ] [ t0> ] ;
+: U< ( u1 u2 -- flag )   [ >t1 ^ >t0 ] [ t0 t0 t1 `sltu ] [ t0> ] ;
+: U> ( u1 u2 -- flag )   [ >t1 ^ >t0 ] [ t0 t1 t0 `sltu ] [ t0> ] ;
+: 0< ( n -- flag )       0 > ;
+: 0> ( n -- flag )       0 < ;
+: AND ( x1 x2 -- x3 )    & ;
+: OR  ( x1 x2 -- x3 )    | ;
+: XOR ( x1 x2 -- x3 )    [ >t1 ^ >t0 ] [ t0 t0 t1 `xor ] [ t0> ] ;
+: ?DUP ( x -- 0 / x x )  DUP IF DUP THEN ;
 
 \ I/O.
-\ TODO: SYSCALL
+: syscall/1 ( x1 n -- x )   [    a7 s3 0 `ld    ]
+                            [ ^  a0 s3 0 `ld    ]
+			    [            `ecall ]
+			    [    a0 s3 0 `sd    ] ;
+
 : KEY    ( -- c ) ;
 : CR     ( -- ) ;
 : SPACES ( -- ) ;
