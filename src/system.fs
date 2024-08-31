@@ -213,7 +213,8 @@
 : */MOD  ( n1 n2 n3 -- rem quot ) ;
 : 1+     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `addi ] [ t0> ] ;
 : 1-     ( n -- n' )     [ >t0 ]       [ t0 t0 FFF `addi ] [ t0> ] ;
-: >>>    ( n u -- n' )   [ >t1 ^ >t0 ] [ t0 t0  t1 `srl  ] [ t0> ] ;
+: LSHIFT ( n u -- n' )   [ >t1 ^ >t0 ] [ t0 t0  t1 `sll  ] [ t0> ] ;
+: RSHIFT ( n u -- n' )   [ >t1 ^ >t0 ] [ t0 t0  t1 `srl  ] [ t0> ] ;
 : 2*     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `slli ] [ t0> ] ;
 : 2/     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `srai ] [ t0> ] ;
 : ABS    ( n -- n' )     [ >t0   >t1 ] [ t1 t1  3F `srai ]            \ mask@t1 >>= 63
@@ -270,8 +271,8 @@
 : HERE!  ( addr -- )   [ >t0 ^ ] [ s1 t0  0 `addi ] ;
 
 : ALLOT ( n -- )   [ >t0 ^ ] [ s1 s1 t0 `add ] ;
-: CHARS ( n -- n' )        ;
-: CELLS ( n -- n' )   3 << ;
+: CHARS ( n -- n' )            ;
+: CELLS ( n -- n' )   3 LSHIFT ;
 
 : , ( n -- )
   1 CELLS ALLOT
@@ -288,11 +289,11 @@
 
 : LITERAL ( C: x -- ) ( -- x )
   \ Compile "lui t0, 0xHHHHH[+1]".
-  DUP  ( mask: ) FF 4 << F |  &     ( -- n low )
-  DUP B >>> ROT			    ( -- low sign n )
-  C >>> +  t0 SWAP  `lui	    ( -- low )
+  DUP  ( mask: ) FF 4 LSHIFT F |  &  ( -- n low )
+  DUP B RSHIFT ROT		     ( -- low sign n )
+  C RSHIFT +  t0 SWAP  `lui	     ( -- low )
   \ Compile "addi t0, 0xLLL".
-  t0 t0 ROT  `addi                  ( -- )
+  t0 t0 ROT  `addi                   ( -- )
   \ Compile a sequence that pushes `t0` on the stack.
   v t0> ;
 
@@ -421,19 +422,25 @@
     SPACE
     1-
   REPEAT ;
-
-
-: chr ( digit -- c )   DUP 9 >  IF 7 + THEN  30 + ;
-
-
-\ TODO
 : . ( n -- )
-  BEGIN
-    DUP F AND			( -- n digit )
-    chr				( -- n c )
-
-    TODO
-  WHILE REPEAT ;
+  0 >R  >R			( -- ) ( R: -- count n )
+  BEGIN				( -- digit* )
+    R@ F AND			( -- digit* digit )
+    R> 4 RSHIFT			( -- digit* digit n' ) ( R: -- count )
+    R> 1+ >R			( -- digit* digit n' ) ( R: -- count' )
+    DUP >R			( -- digit* digit n' ) ( R: -- count' n' )
+    0 U>			( -- digit* digit flag )
+  WHILE REPEAT			( -- digit* digit ) ( R: -- count' n' )
+  R> DROP 			( R: -- count )
+  BEGIN				( -- digit* digit ) ( R: -- count )
+    DUP  9 > IF			( -- digit* digit letter? )
+      7 +
+    THEN  30 +			( -- digit* char )
+    EMIT			( -- digit* )
+    R> 1- DUP >R		( -- digit* count' ) ( R: -- count' )
+    0>				( -- digit* flag )
+  WHILE REPEAT			( -- digit* ) ( R: -- count' )
+  R> DROP ;			( R: -- )
 
 
 \ --- FizzBuzz --- \
@@ -462,7 +469,7 @@ FizzBuzz BYE
 \ epilogue or prologue.
 
 \ I/O.
-: ."     ( "ccc<DOUBLE-QUOTE>" -- ) ;
+: ."     ( "ccc<quote>" -- ) ;
 : KEY    ( -- c ) ;
 
 \ System calls.
@@ -474,5 +481,3 @@ FizzBuzz BYE
 \ Maybe?
 : ' ( "<spaces>name" -- xt )      ;
 : EXECUTE ( i * x xt -- j * x )   ;
-
-
