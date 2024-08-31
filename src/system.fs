@@ -235,6 +235,10 @@
 		     SWAP ! ;
 
 \ Dictionary.
+: LATEST ( -- addr )   [ t0 s2 28 `ld   ] [ v t0> ] ;
+: HERE   ( -- addr )   [ t0 s1  0 `addi ] [ v t0> ] ;
+: HERE!  ( addr -- )   [ >t0 ^ ] [ s1 t0  0 `addi ] ;
+
 : ALLOT ( n -- )   [ >t0 ^ ] [ s1 s1 t0 `add ] ;
 : CHARS  ( n -- n' )        ;
 : INSTRS ( n -- n' )   2 << ;
@@ -275,8 +279,11 @@
 : VARIABLE ( C: "ccc<SPC>" -- ) ( -- addr )   CREATE  0 , ;
 : CONSTANT ( C: "ccc<SPC>" n -- ) ( -- n )    create  LITERAL  zero ra 0 `jalr ;
 
-
-\ : IMMEDIATE ( -- ) ;
+: IMMEDIATE ( -- )
+  LATEST 10 +			( -- flag-addr )
+  DUP C@  80 |			( -- flag-addr flag' )
+  SWAP C! ;
+  
 \ : ' ( "ccc<SPC>" -- addr ) ;			       
 
 \ \ Return stack management.
@@ -294,12 +301,56 @@
 \ epilogue or prologue.
 
 \ Control flow.
-: IF ( flag -- ) ;
+: IF ( C: -- addr ) ( flag -- )
+  \ Syntax: flag IF ... ELSE ... THEN
+
+  \ Run-time:
+  \ - pop a flag off the stack into a register;
+  \   -> ">t0 ^"
+  \ - branch based on the register value (offset currently unknown).
+  \   -> "beq t0, zero, +???"
+  >t0 ^		                 \ t0 = flag                       ( -- )
+  t0 zero 0 `beq	         \ if flag@t0 = 0:
+                                 \   goto +???.                    \ To be backpatched by ELSE/THEN.
+
+  \ Compilation:
+  \ - push address of the branch instruction on the stack;
+  \   - this address is backpatched by the corresponding ELSE/THEN.
+  HERE 4 -                       \ push HERE-4 (`beq` is previous instruction)  ( C: -- addr )
+  ; IMMEDIATE
+
+: then ( C: addr -- ) ( -- )
+  \ Compilation:
+  \ - backpatch branch instruction at `addr` to use offset `HERE - addr`.
+  \ - NOTE: this could be simplified if the assembler supported
+  \   writing instructions on the stack rather than at `OUTPUT`.
+  HERE                           \ save OUTPUT@s1                  ( C: -- addr OUTPUT )
+  OVER HERE!                     \ OUTPUT@s1 = addr        
+  DUP ROT -                      \ offset = OUTPUT - addr          ( C: -- OUTPUT offset )
+  t0 zero ROT  `beq              \ compile "beq t0, zero, offset"  ( C: -- OUTPUT )
+  HERE! ;                        \ restore OUTPUT@s1               ( C: -- )
+: THEN ( C: addr -- ) ( -- )   then ; IMMEDIATE
+
+: ELSE ( C: addr -- addr' ) ( -- )
+  \ Run-time:
+  \ - jump forward unconditionally (offset currently unknown).
+  \   -> "jal zero, +???"
+  t0 zero 0 `addi                \ t0 = 0
+  t0 zero 0 `beq                 \ if t0 = 0:  \ Always true!
+                                 \   goto +???.                    \ To be backpatched by THEN.
+
+  \ Compilation:
+  \ - backpatch branch instr. at `addr` to jump HERE (same as THEN);
+  \ - push address of the jump instruction on the stack;
+  \   - this address is backpatched by the corresponding THEN.
+  then
+  HERE 4 -                       \ push HERE-4 (`beq` is previous instruction)  ( C: -- addr )
+  ; IMMEDIATE
 
 
 
 
-
+: < ( n1 n2 -- flag )  [ >t1 ^ >t0 ] [ t0 t0 t1 `slt ] [ t0> ] ;
 
 : = ( n1 n2 -- flag ) ;
 : <> ( n1 n2 -- flag ) ;
