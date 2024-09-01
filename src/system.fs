@@ -482,6 +482,8 @@ FizzBuzz BYE
 
 
 
+
+
 \ --- OTHER --- \
 
 : ?DUP ( x -- 0 / x x )  DUP IF DUP THEN ;
@@ -503,3 +505,35 @@ FizzBuzz BYE
 \ Maybe?
 : ' ( "<spaces>name" -- xt )      ;
 : EXECUTE ( i * x xt -- j * x )   ;
+
+\ Attempts to make ." work.
+: PARSE ( char "ccc<char>" -- addr u )
+  DUP 1+  [ a1 s3 0 `ld ]
+  [ ^ ]   [ a0 s3 0 `ld ]
+  PARSE   [ a0 s3 0 `sd ]
+  [ v ]   [ a1 s3 0 `sd ] ;
+
+: PARSE-NAME ( "<spaces>name<space>" -- addr u )
+  pname
+  [ v ]   [ a0 s3 0 `sd ]
+  [ v ]   [ a1 s3 0 `sd ] ;
+
+: ' ( "<spaces>name" -- xt )
+  pname FIND
+  [ v ] [ a2 s3 0 `sd ] ;
+
+: execute ( i * x xt -- j * x )
+  @
+  >t0 ^
+  zero t0 0 `jalr ;
+
+: ." ( C: "ccc<quote>" -- ) ( -- )
+  22 PARSE			\ Parse a double-quote-delimited string.
+  LITERAL LITERAL
+  [ ' TYPE LITERAL ]
+  execute ; IMMEDIATE		\ Print it.
+
+: X
+  ." TEST" CR ;
+
+1 .  X  2 .   BYE
