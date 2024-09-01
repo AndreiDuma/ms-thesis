@@ -440,13 +440,24 @@
     R> 1- DUP >R		( -- digit* count' ) ( R: -- count' )
     0>				( -- digit* flag )
   WHILE REPEAT			( -- digit* ) ( R: -- count' )
-  R> DROP ;			( R: -- )
+  R> DROP  SPACE ;		( R: -- )
 
 
 \ --- FizzBuzz --- \
 
 CREATE Fizz   46 C, 69 C, 7A C, 7A C,   0A C,
 CREATE Buzz   42 C, 75 C, 7A C, 7A C,   0A C,
+
+: MOD ( n1 n2 -- n )
+  SWAP				( -- n2 n1 )
+  BEGIN 2DUP -			( -- n2 n1 diff )
+	DUP 0<			( -- n2 n1 diff flag1 )
+	SWAP 0=			( -- n2 n1 flag1 flag2 )
+	OR			( -- n2 n1 flag )
+  WHILE				( -- n2 n1 )
+    OVER -			( -- n2 n1' )
+  REPEAT
+  SWAP DROP ;          		( -- n1' )
 
 : FizzBuzz
   64 BEGIN
