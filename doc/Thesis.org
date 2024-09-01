@@ -202,28 +202,123 @@ implementation, is just-in-time compiled [cite:@lua_luajit].
 
 In the end Forth's small ``core'', extremely minimal syntax and
 low-level philosophy made it the preferred choice for an educational
-programming language implementation.  We continue by reviewing several
-Forth implementations.
+programming language implementation.  For readers not familiar with
+Forth, we recommend Leo Brodie's classic books /``Starting Forth''/
+[cite:@brodie1981_starting] and /``Thinking Forth''/
+[cite:@brodie2004_thinking]. The already mentioned /Forth 2012
+Standard/ is also an excellent reference for words expected to be
+present in a Forth system. We continue by reviewing several Forth
+implementations.
 
 
 ** A Brief Survey of Forth Implementations
 
-- /Gforth/ [cite:@Gforth]
-- /JONESFORTH/ [cite:@jonesforth]
-- /sectorforth/ [cite:@sectorforth]
-- /milliForth/ [cite:@milliforth]
-- /SmithForth/ [cite:@smithforth]
+/Gforth/ [cite:@gforth] is a major open-source implementation of the
+Forth programming language.  It conforms to the /Forth 2012 Standard/
+[cite:@forth_2012_standard] and supports multiple target
+architectures.  Being featureful and performant, it is a rather
+complex compiler.  Its core is implemented in the C programming
+language with many words and libraries being written in Forth itself.
 
-Resources:
-- /Threaded Interpretive Languages/ [cite:@loeliger1981threaded]
-- [cite:@ertl02]
+There are also many implementations created by Forth enthusiasts for
+educational or experimentation purposes.  /JONESFORTH/
+[cite:@jonesforth] is one popular such Forth, written by Richard
+W.M. Jones as one file of x86 assembly targeting =as=, the GNU
+Assembler, and one file of Forth code.  The former sets up a minimal
+Forth, whereas the latter further defines many standard Forth words,
+including control structures, I/O utilities etc.  JONESFORTH makes
+extensive use of assembler macros for reducing boilerplate around word
+definitions.  The code is thoroughly commented, proving to be an
+excellent resource for learning the inner workings of a Forth system.
+It is notable that it assumes a Linux host, but no C standard library
+--- all interaction with the OS is done through system calls.
+JONESFORTH does not attempt to bootstrap Forth as quickly as possible,
+with the consequence that its assembly part is longer than what it
+could be.
+
+/Sectorforth/ [cite:@sectorforth] by Cesar Blum is ``a 16-bit x86
+Forth that fits entirely within a boot sector (512 bytes)''.  It is
+written in assembly for the NASM assembler and assumes no operating
+system.  It is extremely minimal, providing only several primitives
+out of which a more featureful Forth.  /MilliForth/ [cite:@milliforth]
+takes sectorforth's minimalism even further, reducing the machine code
+size to 340 bytes.
+
+/SmithForth/ [cite:@smithforth] is a recent Forth by David Smith,
+running on x86-64 Linux systems.  It is special among other
+implementations because it bootstraps Forth using only machine code.
+In its author's own words, it uses ``none of the usual tools from the
+world of C, not even an assembler''.  It consists of a =.dmp= file
+containing machine code as commented hexadecimal bytes and a =.fs=
+file containing Forth code to be run once a minimal system was
+bootstrapped.  The hexadecimal bytes are converted into machine code
+using the Linux =xxd= command.  Since SmithForth targets Linux, the
+resulting executable has to be a valid ELF executable, so an ELF file
+header and an ELF program header are included.  It is remarkable that
+SmithForth conforms to the /Forth 2012 Standard/, given how small an
+implementation it is.
+
+Several other sources about implementing Forth systems were consulted.
+We mention Loeliger's /``Threaded Interpretive Languages''/ (1981), a
+full implementation guide for the Zilog Z80 processor
+[cite:@loeliger1981_til]; Peter M. Kogge's /``An Architectural Trail
+to Threaded-Code Systems''/ (1982), which explains the design of
+classical implementation of Forth [cite:@ertl02_variations]; Anton
+Ertl's /``Threaded Code Variations and Optimizations''/ (2002), which
+compares different code threading techniques, with a focus on
+performance [cite:@kogge82_trail].
+
+Researching the Forth implementations and resources above led us to
+the following impressions:
+- We liked /SmithForth/'s approach of starting with machine code,
+  because it makes explicit the steps that transform an instruction as
+  intended by the programmer into machine code bits executable by an
+  actual computer processor.
+- /JONESFORTH/'s self-documenting nature through extensive source code
+  comments is something that we consider essential in an
+  understandable language implementation.
+- We admired /sectorforth/'s and /milliforth/'s quest for minimalism
+  in so far as it leads to elegant and othogonal primitives on which
+  to base a language. Beyond this purpose lie obscurity and
+  complexity, which we're trying to avoid.
+- More than basic adherence to the Forth Standard is not a
+  goal. Instead, we only aim for basic system usability, such as
+  general purpose arithmetic and control flow, definition of variables
+  and constants, printing and so on.
+- The x86 architecture chosen by all surveyed assembly implementations
+  is not ideal for conveying the fundamental computing principles at
+  the heart of implementing a programming language.  Its age is
+  showing in the accumulated historical cruft, which hinder a
+  beginner's understanding of the essential.  We observe that only the
+  /``Volume 2: Instruction Set Reference''/ of Intel's most recent
+  manuals amounts to over 2500 pages [cite:@intel_manual_volume_2].
+  As will be described later, the x86 architecture requires
+  complicated encoding schemes with many edge cases, making it
+  difficult for the novice to even select a collection of key
+  instructions to use in their implementation.
+
+We think /SmithForth/ is an excellent starting point for creating a
+new Forth implementation that focuses on understandability.  We
+propose a number of modifications that aim towards this goal:
+- More detailed pseudocode should accompany the source code.
+- The byte encoding of instructions should be made more explicit,
+  making clear how an instruction as chosen by the programmer from the
+  processor's manual is converted to its final binary representation.
+- The current Forth code, which currently sets up a standard-compliant
+  system, should be replaced with a simpler, shorter and more readable
+  alternative.
+- The implementation should target a processor architecture that was
+  designed with education in mind.  The instructions should be few,
+  simple and orthogonal.  As we will show later, be believe the modern
+  RISC-V architecture is ideally suited for this purpose.
+
+We continue by describing the general organization of SmithForth.
 
 
 ** SmithForth
 
-Citations:
-- /Starting Forth/ [cite:@brodie1981starting] and /Thinking Forth/
-  [cite:@brodie2004thinking]
+
+
 
 
 ** The x86-64 Architecture
@@ -270,7 +365,7 @@ Citations:
 | ~write~ | 1 (~0x01~)  | 64 (~0x40~) | ~unsigned int fd~ | ~const char *buf~ | ~size_t count~ |
 | ~exit~  | 60 (~0x3C~) | 93 (~0x5D~) | ~int error_code~  | –                 | –              |
 
-*** ELF: The _E_​xecutable _F_​ile _F_​ormat
+*** ELF: The _E_​xecutable and _L_​inkable _F_​ormat
 
 Citations:
 - *System V gABI*: Cite /Chapter 4 -- Object Files/ of [cite:/System V
