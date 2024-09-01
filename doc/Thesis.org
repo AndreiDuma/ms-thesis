@@ -93,7 +93,7 @@ TODO.
 # #+end_abstract
 # \clearpage
 
-# Don't show TOC for now.
+# Table of contents.
 #+TOC: headlines 2
 # \clearpage
 
@@ -139,6 +139,9 @@ tool''.  We were inspired by his understandable-by-design Scheme
 compiler to further pursue the topic of understandable programming
 language implementation.
 
+
+** Forth Towards an Understandable Compiler
+
 Most compilers designed for education (Ghuloum's included) generate
 assembly code intended to be further processed by an external
 assembler and linker.  Furthermore, many implementations use
@@ -148,11 +151,11 @@ contrast, we believe that an educational language implementation
 should cover and explain all transformation stages occurring between
 high-level syntax and machine code bits.
 
-Choosing the right language to implement is important, of course, if
-building a compiler for it is to convey useful knowledge (or even
-wisdom) to the student.  The language should be simple enough so that
-its compiler does not grow beyond comprehension.  Still, it should be
-rich enough to expose the student to the implementation of general
+Choosing the right language to implement is also essential if building
+a compiler for it is to convey useful knowledge (or even wisdom) to
+the student.  The language should be simple enough so that its
+compiler does not grow beyond comprehension.  Still, it should be rich
+enough to expose the student to the implementation of general
 computing concepts such as conditional execution, looping, memory
 allocation for variables and constants, program composability through
 some subroutine calling mechanism and so on.  Preferably it should be
@@ -199,22 +202,21 @@ implementation, is just-in-time compiled [cite:@lua_luajit].
 
 In the end Forth's small ``core'', extremely minimal syntax and
 low-level philosophy made it the preferred choice for an educational
-programming language implementation.  We continue by reviewing
-existing Forth implementations.
+programming language implementation.  We continue by reviewing several
+Forth implementations.
 
 
+** A Brief Survey of Forth Implementations
 
-** Objectives and Approach
+- /Gforth/ [cite:@Gforth]
+- /JONESFORTH/ [cite:@jonesforth]
+- /sectorforth/ [cite:@sectorforth]
+- /milliForth/ [cite:@milliforth]
+- /SmithForth/ [cite:@smithforth]
 
-#+begin_comment
-What are the objectives of this thesis?
-- Learn low-level processor programming, interpreter & compiler
-  design.
-- Understand how high-level languages are translated all the way to
-  machine code; understand all intermediate steps.
-- Find a short(est) path to high-level programming from nothing but
-  machine code and Linux system calls.
-#+end_comment
+Resources:
+- /Threaded Interpretive Languages/ [cite:@loeliger1981threaded]
+- [cite:@ertl02]
 
 
 ** SmithForth
@@ -222,12 +224,6 @@ What are the objectives of this thesis?
 Citations:
 - /Starting Forth/ [cite:@brodie1981starting] and /Thinking Forth/
   [cite:@brodie2004thinking]
-- /Threaded Interpretive Languages/ [cite:@loeliger1981threaded]
-- /SmithForth/ [cite:@smithforth] vs /sectorforth/ [cite:@sectorforth]
-  vs /milliForth/ [cite:@milliforth]
-- [cite:@ertl02]
-
-
 
 
 ** The x86-64 Architecture
