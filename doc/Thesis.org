@@ -1,5 +1,5 @@
-#+TITLE: +From Assembly Forth to Lisp (and Back)+
-#+SUBTITLE: A Journey through the Imperative, Concatenative +and Functional Realms+
+#+TITLE: From x86-64 Forth to RISC-V
+#+SUBTITLE: Porting a Forth Implementation to a New Architecture
 #+DATE: September 2024
 #+AUTHOR: Andrei Dorian Duma
 #+EMAIL: andrei-dorian.duma@s.unibuc.ro
@@ -23,7 +23,7 @@
 
 #+LATEX_CLASS: article
 #+LATEX_CLASS_OPTIONS: [a4paper,8pt]
-#+LATEX_HEADER: \usepackage[margin=0.5in]{geometry}
+# #+LATEX_HEADER: \usepackage[margin=0.5in]{geometry}
 #
 # TODO -- manually set the layout for tables with:
 #   \newgeometry{left=0.5in, right=0.5in}
@@ -87,26 +87,9 @@
 
 # Don't show abstract for now.
 # #+begin_abstract
-# In this thesis we explore the process of implementing a high-level
-# programming language, beginning with only a limited set of
-# foundational elements: the =x86_64= architecture, several simple Linux
-# system calls, the GNU Assembler and the shell. We are interested in
-# how the level of abstraction is progressively increased by defining
-# higher-level linguistic constructs in terms of more primitive
-# ones. The approach will be pedagogical, favoring implementation
-# choices that are clear and understandable.
 
-# Our final goal is implementing a usable high-level language in the
-# LISP family, which we will call /quectoLISP/ (following the tradition
-# of prefixing names of small languages with SI submultiples). We
-# accomplish this in three stages. First, we write (in assembly) a
-# threaded interpreter for /quectoFORTH/, a small language inheriting
-# from Chuck Moore's Forth. Then, using this interpreter, we implement a
-# simple /quectoLISP/ interpreter providing the most useful language
-# features. Finally, we write a /quectoLISP/ compiler in /quectoLISP/
-# itself, running it in the stage-two interpreter. This compiler emits
-# =x86_64= assembly and becomes self-hosted, being able to compile
-# itself.
+TODO.
+
 # #+end_abstract
 # \clearpage
 
@@ -115,7 +98,111 @@
 # \clearpage
 
 
-* Introduction                                                     :noexport:
+* Introduction
+
+Modern computing relies on complex toolchains that translate
+high-level programming languages to the machine code that is run by
+computer processors.  Such a toolchain might include, for example, a
+compiler, an assembler and a linker.  The compiler might in turn be
+composed of a frontend that parses and converts the input source code
+into an intermediate representation (IR) and a backend that further
+translates this IR to assembly code.  The assembler and the linker
+continue this process by encoding instructions, calculating relative
+offsets for jumps and branches, producing object files and finally
+resolving symbol addresses when combining these files into an
+executable.
+
+This machinery serves to bridge the wide abstraction gap between a
+high-level programming language and the low-level machine code into
+which it is translated.  Although convenient for developing useful
+computer programs, these tools bring a complexity that can obscure the
+understanding of the basic processes involved in programming a
+computer.  A modern toolchain typically supports multiple target
+architecures and operating systems, implements a plethora of
+optimizations at different levels and has the source code of its own
+components split across many codebases.  The Rust compiler =rustc=,
+for example, handles lexing, parsing into an abstract syntax tree, AST
+lowering to a /High-Level Intermediate Representation/ (HIR) for type
+inference and checking, lowering to a /Mid-level Intermediate
+Representation/ (MIR) for various optimizations, finally converting
+the MIR to LLVM IR to be further processed by the LLVM compiler
+backend [cite:@rust_compiler_overview].
+
+It would be understandable for a student of computer science to be
+left in awe in front of such systems.  In fact, Abdulaziz Ghuloum long
+ago observed that ``compilers are perceived to be magical artifacts,
+carefully crafted by the wizards, and unfathomable by the mere
+mortals'' [cite:@ghuloum2006].  In his 2006 paper /``An Incremental
+Approach to Compiler Construction''/, Ghuloum further notes that
+``real-life compilers are too complex to serve as an educational
+tool''.  We were inspired by his understandable-by-design Scheme
+compiler to further pursue the topic of understandable programming
+language implementation.
+
+Most compilers designed for education (Ghuloum's included) generate
+assembly code intended to be further processed by an external
+assembler and linker.  Furthermore, many implementations use
+functionality provided by the C standard library instead of directly
+interfacing with the operating system (or with the hardware).  In
+contrast, we believe that an educational language implementation
+should cover and explain all transformation stages occurring between
+high-level syntax and machine code bits.
+
+Choosing the right language to implement is important, of course, if
+building a compiler for it is to convey useful knowledge (or even
+wisdom) to the student.  The language should be simple enough so that
+its compiler does not grow beyond comprehension.  Still, it should be
+rich enough to expose the student to the implementation of general
+computing concepts such as conditional execution, looping, memory
+allocation for variables and constants, program composability through
+some subroutine calling mechanism and so on.  Preferably it should be
+an established language with well-understood semantics, as this avoids
+the often unforeseen subtleties of language design and allows mining
+previous literature for implementation ideas and techniques.
+
+Given these criteria, we have considered three languages known for
+allowing relatively simple implementations: Forth, Lisp and Lua.  Each
+is representative of a whole class of programming languages and makes
+different and significant choices in their design.
+
+/Forth/ was invented in 1968 by Charles Moore ``to increase programmer
+productivity without sacrificing machine efficiency''
+[cite:@forth_2012_standard; @rather1996_evolution].  The language
+follows a stack-based approach, using a postfix notation.  Its
+implicit stack manipulation and dictionary-based compilation allow for
+both minimalist syntax and powerful extensibility.  Forth allows
+unrestricted access to computer registers and memory.  The evolution
+of the language is currently steered by the /Forth 200x
+Standardisation Committee/ working on the /Forth 2012 Standard/
+[cite:@forth_2012_standard].  There are many Forth implementations of
+varying size and complexity to draw inspiration from.
+
+/Lisp/ denotes a family of related languages rather than a specific
+language.  The original LISP was created by John McCarthy at MIT
+starting in 1958 [cite:@mccarthy1960lisp].  Modern incarnations of
+Lisp include Scheme (used by Ghuloum in his paper) and Common Lisp.
+Lisp languages use a very regular syntax based on S-expressions
+(parenthesized lists).  Lisp's meta-programming facilities (macros)
+and highly dynamic nature make it ideal for expressing high-level
+concepts as linguistic constructs, effectively adapting the language
+to better suit the problem that requires solving
+[cite:@abelson1996_sicp].  Similarly to Forth, Lisp has given rise to
+many and diverse open-source implementations.
+
+/Lua/ is the most recent of the three languages, having been created
+by Roberto Ierusalimschy, Luiz Henrique de Figueiredo and Waldemar
+Celes in 1993 at PUC-Rio [cite:@lua_puc_rio].  Lua has a simple
+procedural syntax and uses associative arrays for data description and
+extensibility.  Typically it is compiled to bytecode at run-time which
+is then interpreted by a virtual machine or, in the case of the LuaJIT
+implementation, is just-in-time compiled [cite:@lua_luajit].
+
+In the end Forth's small ``core'', extremely minimal syntax and
+low-level philosophy made it the preferred choice for an educational
+programming language implementation.  We continue by reviewing
+existing Forth implementations.
+
+
 
 ** Objectives and Approach
 
@@ -139,6 +226,8 @@ Citations:
 - /SmithForth/ [cite:@smithforth] vs /sectorforth/ [cite:@sectorforth]
   vs /milliForth/ [cite:@milliforth]
 - [cite:@ertl02]
+
+
 
 
 ** The x86-64 Architecture
@@ -2511,7 +2600,7 @@ Explain:
 | jal rd, offset          | J      | {{{off(bbbbbbbbbbbbbbbbbbbb)}}}                                     {{{rd(rrrrr)}}}  {{{op(1101111)}}} | ~offset[20\vert10:1\vert11\vert19:12]             rd              1101111~ |
 
 
-* Bibliography                                                     :noexport:
+* Bibliography
 
 References:
 
