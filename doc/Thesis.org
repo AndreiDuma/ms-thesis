@@ -32,11 +32,15 @@
 
 # #+LATEX_HEADER: \usepackage{geometry}
 #
-# TODO -- manually set the layout for tables with:
+# Set a different page layout with:
 #   \newgeometry{left=0.5in, right=0.5in}
 #   \restoregeometry
-#
 
+# --- Line spacing.
+#+LATEX_HEADER: \usepackage{setspace}
+#+LATEX_HEADER: \onehalfspacing
+
+# --- Allow different margins mid-document.
 #+LATEX_HEADER: \usepackage{changepage}
 
 # --- Nice author line ---
@@ -48,17 +52,17 @@
 #+LATEX_HEADER: \usepackage{array}
 #+LATEX_HEADER: \newcolumntype{H}{>{\setbox0=\hbox\bgroup}c<{\egroup}@{}}
 
-# --- Font size macros.
-#+MACRO: fsource   \fontsize{7pt}{10pt}\selectfont
-#+MACRO: freset    \fontsize{10pt}{12pt}\selectfont
+# --- Source block macros.
+#+MACRO: src      \fontsize{$1}{10pt}\selectfont
+#+MACRO: encsrc   \fontsize{10pt}{12pt}\selectfont
 
 # --- Margin adjustment macros.
 #+MACRO: margin      \vspace{$1} \begin{adjustwidth}{-10em}{-10em}
 #+MACRO: endmargin   \end{adjustwidth} \vspace{$1}
 
 # --- Table macros.
-#+MACRO: table      \vspace{$1} \begin{table}[htbp] \begin{adjustwidth}{-10em}{-10em}
-#+MACRO: endtable   \end{adjustwidth} \end{table} \vspace{$1}
+#+MACRO: table      \vspace{1.5em} \begin{table}[htbp] \begin{adjustwidth}{-10em}{-10em}
+#+MACRO: endtable   \end{adjustwidth} \end{table} \vspace{-0.5em}
 
 # --- Indentation macros.
 #+MACRO: t      \hspace{1em}  # TODO: rewrite this one to use {{{c(x)}}}.
@@ -100,17 +104,19 @@
 # Additional options are set in `.dir-locals.el`.
 
 
-# Don't show abstract for now.
 # #+begin_abstract
 
 TODO.
 
 # #+end_abstract
+
 # \clearpage
+
 
 # Table of contents.
 #+TOC: headlines 3
-# \clearpage
+
+\clearpage
 
 
 * Introduction
@@ -338,7 +344,7 @@ first two stages occur in file =.dmp=, which is written as commented
 hexadecimal bytes.  Here is a code sample from David Smith's original
 =SForth.dmp=:
 
-{{{fsource}}}
+{{{src(7pt)}}}
 #+begin_src fundamental
   99 05 50 41 52 53 45 ## PARSE ( cl dl "ccc<char>" -- rbp=addr rax=u )
   49 C7 C1 00 00 00 10  # r9 = VAR              mov r/m64, imm32   REX.W C7 /0 id  11 000 001
@@ -352,7 +358,7 @@ hexadecimal bytes.  Here is a code sample from David Smith's original
   49 03 69 08           # rbp += [TIB]          add r64, r/m64     REX.W 03 /r     01 101 001
   C3                    # return                ret                C3    
 #+end_src
-{{{freset}}}
+{{{encsrc}}}
 
 The section above defines Forth word ~PARSE~.  Its /stack effects/ are
 described in standard Forth notation ~( cl dl "ccc<char>" -- rbp=addr
@@ -372,9 +378,11 @@ This =.dmp= file is turned into an executable file by first =cut=​ting
 out the comments and then passing the remaining hexadecimal bytes to
 Linux command =xxd= for conversion into binary form:
 
+{{{src(9pt)}}}
 #+begin_src shell
   $ cut SForth.dmp -d'#' -f1 | xxd -p -r >SForth0
 #+end_src
+{{{encsrc}}}
 
 The other source code file in SmithForth is =system.fs=.  Its first
 two lines, included below, define standard Forth words ~1+~ and ~1-~
@@ -382,12 +390,12 @@ by directly generating the corresponding machine code.  The comments
 reflect this, highlighting the same encoding information as the =.dmp=
 file:
 
-{{{fsource}}}
+{{{src(7pt)}}}
 #+begin_src fundamental
   : 1+ ( n|u -- n'|u' )  [ 49 . FF . 07 . ] ;  \ [r15]++   inc r/m64   REX.W FF /0   00 000 111
   : 1- ( n|u -- n'|u' )  [ 49 . FF . 0F . ] ;  \ [r15]--   dec r/m64   REX.W FF /1   00 001 111
 #+end_src
-{{{freset}}}
+{{{encsrc}}}
 
 The =system.fs= file is appended as-is to the binary, cleverly
 generating a half-machine-code, half-Forth-text executable.  The
@@ -519,7 +527,7 @@ the register where the system call number should be placed.  The
 remaining columns list the registers used for the return value and
 arguments.
 
-{{{table(2em)}}}
+{{{table}}}
 #+CAPTION: Calling convention for Linux system calls under x86-64 and RISC-V.
 #+LABEL: tbl:syscall-calling-convention
 #+ATTR_LATEX: :align c|c|c|c|cccc :float nil
@@ -527,7 +535,7 @@ arguments.
 |---------+-----------+-------------+----------+----------+----------+----------+-------------------|
 | x86-64  | ~syscall~ | ~rax~       | ~rax~    | ~rdi~    | ~rsi~    | ~rdx~    | ~r10~, ~r8~, ~r9~ |
 | RISC-V  | ~ecall~   | ~a7~        | ~a0~     | ~a0~     | ~a1~     | ~a2~     | ~a3~, ~a4~, ~a5~  |
-{{{endtable(1em)}}}
+{{{endtable}}}
 
 SmithForth only performs two system calls in its machine code: =exit=
 in the definition of ~BYE~ and =write= in the definition of ~TYPE~.
@@ -536,7 +544,7 @@ The syscall numbers and the type signatures are listed in Table
 translation, we list also include the RISC-V system call numbers as a
 column.
 
-{{{table(2em)}}}
+{{{table}}}
 #+CAPTION: Syscalls used by SmithForth, together with their C type signatures.
 #+LABEL: tbl:syscalls
 #+ATTR_LATEX: :align l|c|c|lll :float nil
@@ -545,7 +553,7 @@ column.
 |---------+-------------+-------------+-------------------+-------------------+----------------|
 | ~write~ | 1 (~0x01~)  | 64 (~0x40~) | ~unsigned int fd~ | ~const char *buf~ | ~size_t count~ |
 | ~exit~  | 60 (~0x3C~) | 93 (~0x5D~) | ~int error_code~  | –                 | –              |
-{{{endtable(1em)}}}
+{{{endtable}}}
 
 For a comprehensive list of available Linux system calls under several
 architectures, refer to the /``Linux System Call Table''/ compiled by
@@ -553,31 +561,46 @@ the ChromiumOS community [cite:@linux_system_calls_table].
 
 *** ELF: The _E_​xecutable and _L_​inkable _F_​ormat
 
+While system calls are the interface between the program and the Linux
+kernel at runtime, the machine code first needs to be loaded into
+memory for execution.  This procedure is called /loading/ and in Linux
+it is subject to the /System V Application Binary Interface/ (ABI)
+specification.  In particular, this means that executables have to
+respect the /Executable and Linkable Format/ (ELF) so that they can be
+loaded correctly by the Linux kernel.
 
-
-Citations:
-- *System V gABI*: Cite /Chapter 4 -- Object Files/ of [cite:/System V
-  Application Binary Interface/ @system_v_gabi].
-- *x86-64 psABI*: Cite /Chapter 4. Object Files/ of
-  [cite:@system_v_psabi_amd64].
-- *RISC-V psABI*: Cite /Chapter 8. ELF Object Files/ of [cite:/RISC-V
-  ABIs Specification/ @system_v_psabi_riscv].
+The ELF format is defined in Chapter 4 of the /``System V: Application
+Binary Interface''/ (``generic ABI'' or ``gABI'') document
+[cite:@system_v_gabi], with architectural particularities given in
+separate ``platform-specific ABI'' (``psABI'') documents.  For x86-64,
+this is the /``AMD64 Architecture Processor Supplement''/
+[cite:@system_v_psabi_amd64], whereas for RISC-V it is the /``RISC-V
+ABIs Specification''/ [cite:@system_v_psabi_riscv].  We will need the
+``gABI'' and the x86-64 ``psaABI'' specifications for understanding
+the ELF header created by SmithForth and the RISC-V ``psABI'' for
+adapting it to the new architecture.
 
 *** Development environment
 
-Citations:
-- Bellard's original QEMU paper [cite:@bellard2005qemu]
+All analysis and porting work done on SmithForth have been done inside
+QEMU virtual machines running under MacOS.  Here we would like to
+express our gratefulness for the amazing QEMU project
+[cite:@bellard2005qemu; @qemu], which makes it remarkably easy to work
+on multi-architecture projects from one machine.  We used QEMU for
+setting up identical Debian VMs under x86-64 and RISC-V, both equipped
+with GDB, =xxd=, =hexdump=, =objdump= and other useful development
+utilities.  The GNU debugger has proved indispensable for debugging
+both erroneus logic and badly (hand-)encoded instructions.
 
-RISC-V on QEMU:
-- Idea:
-  https://www.codeproject.com/Tips/5383029/Run-Debian-RISC-V-In-QEMU-Virtual-Environment-For
-- dqib:
-  https://gitlab.com/giomasce/dqib/-/blob/master/README.md?ref_type=heads
-- Magic files from Apress book:
-  https://github.com/Apress/RISC-V-Assembly-Language-Programming/tree/main/Chapter%201/QEMU
+In the next chapter we will examine SmithForth's machine code
+implementation, annotating it extensively with commented pseudocode.
+This inline code documentation will be used in Chapter [[*Porting
+SmithForth to RISC-V]] for porting SmithForth to RISC-V.
+
+\clearpage
 
 
-* SmithForth Analysis and Porting to RISC-V
+* Understanding and Annotating SmithForth
 
 ** The ELF Header
 
@@ -2834,6 +2857,8 @@ Explain:
 | {{{c(2)}}} ~call SVAL;~    {{{c(2)}}}​/# Compiled./ | ---                | ---                                                                                                    |                | {{{compile(53,S)}}}    |
 | {{{c(2)}}} ~goto _begin.~                          | jal zero, -0x10    | {{{off(11111111000111111111)}}}                                     {{{rd(00000)}}}  {{{op(1101111)}}} | {{{addr(10)}}} | ~6F F0 1F FF~          |
 
+
+* Porting SmithForth to RISC-V
 
 * Forth in Forth
 
