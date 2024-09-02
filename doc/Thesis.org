@@ -57,8 +57,8 @@
 #+MACRO: table_begin   \small
 #+MACRO: table_end     \normalsize
 # TODO: remove?
-# #+MACRO: wtable_begin   \vspace{1.5em} \begin{table}[htbp] \begin{adjustwidth}{-1cm}{-1cm} \small
-# #+MACRO: wtable_end     \normalsize \end{adjustwidth} \end{table} \vspace{-0.5em}
+#+MACRO: wtable_begin   (eval (format "\\vspace{1.5em} \\begin{table}[htbp] \\begin{adjustwidth}{-1cm}{-1cm} \\fontsize{%s}{%f}\\selectfont" $1 (* 1.2 (string-to-number $1))))
+#+MACRO: wtable_end     \normalsize \end{adjustwidth} \end{table} \vspace{-0.5em}
 
 # --- Indentation macros.
 #+MACRO: t      \hspace{1em}  # TODO: rewrite this one to use {{{c(x)}}}.
@@ -622,11 +622,33 @@ SmithForth's minimal ELF header is explored and explained.
 
 ** The ELF Header
 
+A valid ELF executable respects a certain file layout, allowing the
+Linux kernel and other tools to understand its structure.  It begins
+with an ELF file header, followed by:
+- a program header table, which describes one or more memory segments;
+- a section header table, which describes zero or more sections;
+- the data itself, referenced by entries in the program table or in
+  the section header table.
+
+SmithForth uses the simplest possible layout, specifying only one
+loadable memory segment in its program header table.  Therefore the
+executable preamble only has to contain the ELF file header (always
+mandatory) and one ELF program header entry.  We'll look at them in
+turn.
+
 *** ELF File Header
 
+Table [[tbl:elf-file-header:x]] depicts the ELF file header.  The first
+column tracks the address of the header's various fields, the second
+column show the bytes in hexadecimal format, while the last column
+explain the meaning of each field.  Field names, such as
+~e_ident[EI_MAG]~, originate in the System V ``gABI'' specification
+[cite:@system_v_gabi].
+
+{{{wtable_begin(9)}}}
 #+CAPTION: ELF file header for the Linux executable (x86-64).
 #+LABEL: tbl:elf-file-header:x
-#+ATTR_LATEX: :align l|l|l
+#+ATTR_LATEX: :align l|l|l :float nil
 | *&*            | *File Header Bytes*                 | *Explanation*                                                                      |
 |----------------+-------------------------------------+------------------------------------------------------------------------------------|
 | {{{addr(00)}}} | {{{b(0)}}}​~7F 45 4C 46~             | ~e_ident[EI_MAG]~: ELF magic number.                                               |
@@ -653,12 +675,29 @@ SmithForth's minimal ELF header is explored and explained.
 |                | {{{b(6)}}}​~00 00~                   | ~e_shstrndx~: Index of section header containing section names; N/A.               |
 |----------------+-------------------------------------+------------------------------------------------------------------------------------|
 | {{{addr(40)}}} |                                     |                                                                                    |
+{{{wtable_end}}}
+
+We underlined some of the more interesting fields.  Note field
+~e_machine~, which will needs to be modified in the RISC-V port.
+Field ~e_entry~ specifies the address of the first instruction that
+will be run once the executable is loaded in memory by the kernel.  As
+mentioned above, SmithForth requires only one program header entry and
+no section entries; therefore ~e_phnum~ is ~1~ and ~e_shnum~ is ~0~.
 
 *** ELF Program Header
 
+The ELF program header entry, shown in Table [[tbl:elf-program-header:x]],
+instructs the kernel to load (field ~p_type~) the whole (field
+~p_filesz~) contents of the executable starting at offset ~0~ (field
+~p_offset~) and place it at virtual memory address ~0x400000~ (field
+~p_vaddr~) with all execute-write-read flags enabled (field
+~p_flags~).  Segment alignment, mandatory or desirable on many
+systems, is also specified by field ~p_align~.
+
+{{{wtable_begin(9)}}}
 #+CAPTION: ELF program header (x86-64).
 #+LABEL: tbl:elf-program-header:x
-#+ATTR_LATEX: :align l|l|l
+#+ATTR_LATEX: :align l|l|l :float nil
 | *&*            | *File Header Bytes*                 | *Explanation*                                                                                      |
 |----------------+-------------------------------------+----------------------------------------------------------------------------------------------------|
 | {{{addr(40)}}} | {{{b(0)}}}​~01 00 00 00~             | ~p_type~: Segment type; ~1~ → loadable.                                                            |
@@ -666,11 +705,13 @@ SmithForth's minimal ELF header is explored and explained.
 |                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_offset~: Offset of segment in file; we load the whole file, so ~0~.                             |
 |                | {{{b(0)}}}​~00 00 40 00 00 00 00 00~ | ~p_vaddr~: Virtual address of loaded segment; ~0x400000~ on ~x86-64~ [cite:@system_v_psabi_amd64]. |
 |                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_paddr~: Only used on systems where physical address is relevant.                                |
-|                | {{{b(0)}}}​~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size of the segment in the file image (~TODO~).                                        |
+|                | {{{b(0)}}}​~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size of the segment in the file image.                                                 |
 |                | {{{b(0)}}}​~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size of the segment in memory (\ge ~p_filesz~).                                           |
 |                | {{{b(0)}}}​~00 10 00 00 00 00 00 00~ | ~p_align~: Align segment to ~x86-64~ page size (4096 or ~0x1000~) [cite:@system_v_psabi_amd64].    |
 |----------------+-------------------------------------+----------------------------------------------------------------------------------------------------|
 | {{{addr(78)}}} |                                     |                                                                                                    |
+{{{wtable_end}}}
+
 
 ** Global Variables                                                :noexport:
 
