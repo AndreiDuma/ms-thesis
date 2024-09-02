@@ -1740,11 +1740,25 @@ Explain:
 
 ** The ELF Header
 
-*** ELF File Header                                                :noexport:
+Adapting the executable preamble for the RISC-V architecture only
+required a few field modifications in the two ELF headers.  We believe
+this illustrates the benefits of standardization among hardware and
+software platforms.
 
+*** ELF File Header
+
+The most obvious field to change is, of course, ~e_machine~, which
+specifies the architecture on which the executable is meant to run.
+We changed it to the numeric identifier specially allocated for RISC-V
+by the System V ABI specification.  Since RISC-V imposes no
+restrictions on the execution entry point, we set it to ~0~ to
+simplify debugging (field ~e_entry~).  Every other field remains the
+same.
+
+{{{wtable_begin(9)}}}
 #+CAPTION: ELF file header for the Linux executable (RISC-V).
 #+LABEL: tbl:elf-file-header:rv
-#+ATTR_LATEX: :align l|l|l
+#+ATTR_LATEX: :align l|l|l :float nil
 | *&*            | *File Header Bytes*                 | *Explanation*                                                                      |
 |----------------+-------------------------------------+------------------------------------------------------------------------------------|
 | {{{addr(00)}}} | {{{b(0)}}}​~7F 45 4C 46~             | ~e_ident[EI_MAG]~: ELF magic number.                                               |
@@ -1762,7 +1776,7 @@ Explain:
 |                | {{{b(0)}}}​~40 00 00 00 00 00 00 00~ | ~e_phoff~: File offset of program headers; ~0x34~ → ~32-bit~, _~0x40~ → 64-bit_.   |
 |                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~e_shoff~: File offset section headers (we don't have any sections).               |
 |----------------+-------------------------------------+------------------------------------------------------------------------------------|
-|                | {{{b(0)}}}​~00 00 00 00~             | ~e_flags~: 0 for the ~x86-64~ architecture.                                        |
+|                | {{{b(0)}}}​~00 00 00 00~             | ~e_flags~: 0 for the ~RISC-V~ architecture.                                        |
 |                | {{{b(4)}}}​~40 00~                   | ~e_ehsize~: Size of this header; ~0x34~ → 32-bit, _~0x40~ → 64-bit_.               |
 |                | {{{b(6)}}}​~38 00~                   | ~e_phentsize~: Size of each program header; ~0x20~ → 32-bit, _~0x38~ → 64-bit_.    |
 |                | {{{b(0)}}}​~01 00~                   | ~e_phnum~: Number of program headers; here ~1~.                                    |
@@ -1771,12 +1785,20 @@ Explain:
 |                | {{{b(6)}}}​~00 00~                   | ~e_shstrndx~: Index of section header containing section names; N/A.               |
 |----------------+-------------------------------------+------------------------------------------------------------------------------------|
 | {{{addr(40)}}} |                                     |                                                                                    |
+{{{wtable_end}}}
 
-*** ELF Program Header                                             :noexport:
+*** ELF Program Header
 
+In the program header we set the virtual address of the loaded segment
+to ~0~ (field ~p_vaddr~) so that it is in accordance with field
+~e_entry~ in the ELF file header.  The RISC-V specification demands
+segment alignment to be ~4096~, which is the same as what SmithForth
+sets for x86-64 (field ~p_align~).
+
+{{{wtable_begin(9)}}}
 #+CAPTION: ELF program header (RISC-V).
 #+LABEL: tbl:elf-program-header:rv
-#+ATTR_LATEX: :align l|l|l
+#+ATTR_LATEX: :align l|l|l :float nil
 | *&*            | *File Header Bytes*                 | *Explanation*                                                                                   |
 |----------------+-------------------------------------+-------------------------------------------------------------------------------------------------|
 | {{{addr(40)}}} | {{{b(0)}}}​~01 00 00 00~             | ~p_type~: Segment type; ~1~ → loadable.                                                         |
@@ -1784,11 +1806,12 @@ Explain:
 |                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_offset~: Offset of segment in file; we load the whole file, so ~0~.                          |
 |                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_vaddr~: Virtual address of loaded segment; can be 0 in RISC-V. [cite:@riscv_assembly_manual] |
 |                | {{{b(0)}}}​~00 00 00 00 00 00 00 00~ | ~p_paddr~: Only used on systems where physical address is relevant.                             |
-|                | {{{b(0)}}}​~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size of the segment in the file image (~TODO~).                                     |
+|                | {{{b(0)}}}​~02 1E 01 00 00 00 00 00~ | ~p_filesz~: Size of the segment in the file image.                                              |
 |                | {{{b(0)}}}​~00 00 C0 7F 00 00 00 00~ | ~p_memsz~: Size of the segment in memory (\ge ~p_filesz~).                                        |
 |                | {{{b(0)}}}​~00 10 00 00 00 00 00 00~ | ~p_align~: Align segment to RISC-V page size (4096 or ~0x1000~) [cite:@riscv_spec_vol_ii].      |
 |----------------+-------------------------------------+-------------------------------------------------------------------------------------------------|
 | {{{addr(78)}}} |                                     |                                                                                                 |
+{{{wtable_end}}}
 
 
 ** Global Variables                                                :noexport:
