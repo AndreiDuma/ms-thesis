@@ -115,7 +115,7 @@ TODO.
 \clearpage
 
 
-* Introduction
+* Introduction                                                     :noexport:
 
 Modern computing relies on complex toolchains that translate
 high-level programming languages to the machine code that is run by
@@ -604,6 +604,20 @@ SmithForth to RISC-V]] for porting SmithForth to RISC-V.
 
 
 * Understanding and Annotating SmithForth
+
+In this chapter we will delve into the machine code implementation of
+SmithForth.  We will record our understanding as commented pseudocode,
+which we will use to annotate the David Smith's original x86-64 code.
+This documentation will aid the RISC-V implementation in the next
+chapter by providing a higher-level picture of the system's
+operations.
+
+As proposed in the introduction, we will also make explicit the
+encoding scheme used by the x86-64 architecture, highlighting ModR/M &
+SIB bytes, immediate & offset bytes and more.  This will help the
+interested reader explore the low-level details of instruction
+encoding for x86-64 processors.
+
 
 ** The ELF Header
 
@@ -2941,9 +2955,9 @@ References:
 - [ ] Check there's no ~???~ or ~TODO~ left.
   
 *** Sections that I should include in the thesis
-- Legend explaining the typographic conventions.
+- [ ] Legend explaining the typographic conventions.
   - Do it by column for the code tables.
-- Comparison between SmithForth, sectorforth, milliForth, other (?).
+- [X] Comparison between SmithForth, sectorforth, milliForth, other (?).
 - Call graph of the subroutines to show how they are related.
 - Summaries of instructions (~x86-64~ and ~riscv~) used in the two
   implementations.
