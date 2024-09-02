@@ -428,17 +428,44 @@ modern and elegant RISC-V.
 
 *** The RISC-V Instruction Set Architecture
 
+RISC-V is an ``open standard'' reduced instruction set computer (RISC)
+architecture initiated at the University of California, Berkeley.
+RISC-V is available under royalty-free open-source licences for all
+interested hardware implementors.
 
+RISC-V is designed with simplicity in mind, inheriting many ideas from
+Berkeley RISC and MIPS [cite:@waterman2016].  It is a load-store
+architecture with all ALU operations occuring between registers (this
+greatly simplifies addressing modes and fits our purposes).  It
+provides 32 general purpose registers, offering enough temporary
+registers to avoid using the stack in many situations.  An interesting
+design choice is the inclusion of an always-zero =x0=​/​=zero= register
+that simplifies many operations (for example, copying register =t0= to
+register =t1= can be expressed as an add-to-zero instruction: ~add t1,
+t0, zero~).
 
+The ISA offers only a few simple and orthogonal instructions, aiding
+both hardware designers and low-level programmers.  Each instruction
+is encoded according to one of six instruction formats, yielding a
+highly regular encoding scheme.  The ISA specification defines 32-bit
+and 64-bit variants (and even a description of a 128-bit variant
+reserved for future use).  It is extendable through /extensions/; in
+fact, much functionality considered essential in other ISAs is
+provided by extensions in RISC-V: multiplication & division, atomics,
+floating point operations in 32-bit, 64-bit and 128-bit varieties,
+compressed 16-bit instructions for reducing code size, and even ISA
+support for interpreted or JIT-compiled languages.  The number of
+available ISA extensions is growing over time
+[cite:@riscv_ratified_extensions].
 
-Citations:
-- /``The RISC-V Reader: An Open Architecture Atlas''/, Patterson &
-  Waterman: [cite:@patterson2017]
-- /``Design of the RISC-V instruction set architecture''/, PhD Thesis
-  [cite:@waterman2016]
-- RISC-V Instruction Set Manual: Volume I [cite:@riscv_spec_vol_i] and
-  Volume 2 [cite:@riscv_spec_vol_ii]
-- RISC-V Ratified Extensions [cite:@riscv_ratified_extensions]
+For a historical perspective on the motivations behind RISC-V, refer
+to /``The RISC-V Reader: An Open Architecture Atlas''/ by RISC-V
+co-authors David Patterson and Andrew Waterman [cite:@patterson2017].
+For detailed technical aspects and further design rationale, consult
+the /``RISC-V Instruction Set Manual: Volume I''/
+[cite:@riscv_spec_vol_i] and /``Volume II''/
+[cite:@riscv_spec_vol_ii].
+
 
 
 ** The Linux Environment
