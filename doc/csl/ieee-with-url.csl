@@ -203,7 +203,7 @@
           <group delimiter=". ">
             <group delimiter=": ">
               <text term="available at" text-case="capitalize-first"/>
-              <text variable="URL"/>
+              <text variable="URL" font-variant="small-caps"/>
             </group>
             <group prefix="[" suffix="]" delimiter=": ">
               <text term="accessed" text-case="capitalize-first"/>

@@ -9,8 +9,6 @@
 #+CREATOR: Emacs 29.2 (Org mode 9.6.15)
 
 #+BIBLIOGRAPHY: References.bib
-# #+CITE_EXPORT: csl csl/ieee.csl
-# #+CITE_EXPORT: csl csl/acm-siggraph.csl
 #+CITE_EXPORT: csl csl/ieee-with-url.csl
 
 #+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:{} arch:headline
@@ -22,7 +20,7 @@
 #+STARTUP: logdrawer
 
 #+LATEX_CLASS: article
-#+LATEX_CLASS_OPTIONS: [a4paper,10pt,final]
+#+LATEX_CLASS_OPTIONS: [a4paper,12pt,final]
 #+LATEX_HEADER_EXTRA:
 #+DESCRIPTION:
 #+KEYWORDS:
@@ -30,11 +28,10 @@
 #+LATEX_ENGRAVED_THEME:
 #+LATEX_COMPILER: pdflatex
 
-# #+LATEX_HEADER: \usepackage{geometry}
-#
-# Set a different page layout with:
-#   \newgeometry{left=0.5in, right=0.5in}
-#   \restoregeometry
+# --- Document margins.
+#+LATEX_HEADER: \usepackage{geometry}
+#+LATEX_HEADER: \newgeometry{left=2.5cm, right=2.5cm}
+#+LATEX_HEADER: \restoregeometry
 
 # --- Line spacing.
 #+LATEX_HEADER: \usepackage{setspace}
@@ -52,17 +49,16 @@
 #+LATEX_HEADER: \usepackage{array}
 #+LATEX_HEADER: \newcolumntype{H}{>{\setbox0=\hbox\bgroup}c<{\egroup}@{}}
 
-# --- Source block macros.
-#+MACRO: src      \fontsize{$1}{10pt}\selectfont
-#+MACRO: encsrc   \fontsize{10pt}{12pt}\selectfont
-
-# --- Margin adjustment macros.
-#+MACRO: margin      \vspace{$1} \begin{adjustwidth}{-10em}{-10em}
-#+MACRO: endmargin   \end{adjustwidth} \vspace{$1}
+# --- Font size macros.
+#+MACRO: fontset     (eval (format "\\fontsize{%spt}{%fpt}\\selectfont" $1 (* 1.2 (string-to-number $1))))
+#+MACRO: fontreset   \normalsize
 
 # --- Table macros.
-#+MACRO: table      \vspace{1.5em} \begin{table}[htbp] \begin{adjustwidth}{-10em}{-10em}
-#+MACRO: endtable   \end{adjustwidth} \end{table} \vspace{-0.5em}
+#+MACRO: table_begin   \small
+#+MACRO: table_end     \normalsize
+# TODO: remove?
+# #+MACRO: wtable_begin   \vspace{1.5em} \begin{table}[htbp] \begin{adjustwidth}{-1cm}{-1cm} \small
+# #+MACRO: wtable_end     \normalsize \end{adjustwidth} \end{table} \vspace{-0.5em}
 
 # --- Indentation macros.
 #+MACRO: t      \hspace{1em}  # TODO: rewrite this one to use {{{c(x)}}}.
@@ -344,21 +340,23 @@ first two stages occur in file =.dmp=, which is written as commented
 hexadecimal bytes.  Here is a code sample from David Smith's original
 =SForth.dmp=:
 
-{{{src(7pt)}}}
+{{{fontset(9pt)}}}
+# #+CAPTION: Machine code definition of Forth word ~PARSE~.
+#+LABEL: src:SForth-dmp-sample
 #+begin_src fundamental
-  99 05 50 41 52 53 45 ## PARSE ( cl dl "ccc<char>" -- rbp=addr rax=u )
-  49 C7 C1 00 00 00 10  # r9 = VAR              mov r/m64, imm32   REX.W C7 /0 id  11 000 001
-  49 8B 69 10           # rbp = [>IN]           mov r64, r/m64     REX.W 8B /r     01 101 001
-  99 73                 # Call seek
-  49 8B 41 10           # rax = [>IN]           mov r64, r/m64     REX.W 8B /r     01 000 001
-  73 04                 #+jump _end if U>=   00 jae rel8           73 cb
-  49 FF 41 10           # [>IN]++               inc r/m64          REX.W FF /0     01 000 001
-  # _end:               #                    04
-  48 29 E8              # rax -= rbp            sub r/m64, r64     REX.W 29 /r     11 101 000
-  49 03 69 08           # rbp += [TIB]          add r64, r/m64     REX.W 03 /r     01 101 001
-  C3                    # return                ret                C3    
+  99 05 50 41 52 53 45 ##### PARSE ( cl dl "ccc<char>" -- rbp=addr rax=u )
+  49 C7 C1 00 00 00 10     # r9 = VAR              mov r/m64, imm32    REX.W C7 /0 id   11 000 001
+  49 8B 69 10              # rbp = [>IN]           mov r64, r/m64      REX.W 8B /r      01 101 001
+  99 73                    # Call seek				         		      
+  49 8B 41 10              # rax = [>IN]           mov r64, r/m64      REX.W 8B /r      01 000 001
+  73 04                    #+jump _end if U>=   00 jae rel8            73 cb	      
+  49 FF 41 10              # [>IN]++               inc r/m64           REX.W FF /0      01 000 001
+  # _end:                  #                    04		         		      
+  48 29 E8                 # rax -= rbp            sub r/m64, r64      REX.W 29 /r      11 101 000
+  49 03 69 08              # rbp += [TIB]          add r64, r/m64      REX.W 03 /r      01 101 001
+  C3                       # return                ret                 C3    
 #+end_src
-{{{encsrc}}}
+{{{fontreset}}}
 
 The section above defines Forth word ~PARSE~.  Its /stack effects/ are
 described in standard Forth notation ~( cl dl "ccc<char>" -- rbp=addr
@@ -378,11 +376,13 @@ This =.dmp= file is turned into an executable file by first =cut=​ting
 out the comments and then passing the remaining hexadecimal bytes to
 Linux command =xxd= for conversion into binary form:
 
-{{{src(9pt)}}}
+{{{fontset(10pt)}}}
+# #+CAPTION: How hexadecimal bytes are converted into binary form.
+#+LABEL: src:machine-code-conversion
 #+begin_src shell
   $ cut SForth.dmp -d'#' -f1 | xxd -p -r >SForth0
 #+end_src
-{{{encsrc}}}
+{{{fontreset}}}
 
 The other source code file in SmithForth is =system.fs=.  Its first
 two lines, included below, define standard Forth words ~1+~ and ~1-~
@@ -390,12 +390,15 @@ by directly generating the corresponding machine code.  The comments
 reflect this, highlighting the same encoding information as the =.dmp=
 file:
 
-{{{src(7pt)}}}
+{{{fontset(9pt)}}}
+# #+CAPTION: Forth definitions of standard words ~1+~ and ~1-~.
+#+LABEL: src:system-fs-sample
+#+ATTR_LATEX: :float nil
 #+begin_src fundamental
-  : 1+ ( n|u -- n'|u' )  [ 49 . FF . 07 . ] ;  \ [r15]++   inc r/m64   REX.W FF /0   00 000 111
-  : 1- ( n|u -- n'|u' )  [ 49 . FF . 0F . ] ;  \ [r15]--   dec r/m64   REX.W FF /1   00 001 111
+  : 1+ ( n|u -- n'|u' )  [ 49 . FF . 07 . ] ;   \ [r15]++   inc r/m64   REX.W FF /0    00 000 111
+  : 1- ( n|u -- n'|u' )  [ 49 . FF . 0F . ] ;   \ [r15]--   dec r/m64   REX.W FF /1    00 001 111
 #+end_src
-{{{encsrc}}}
+{{{fontreset}}}
 
 The =system.fs= file is appended as-is to the binary, cleverly
 generating a half-machine-code, half-Forth-text executable.  The
@@ -527,7 +530,7 @@ the register where the system call number should be placed.  The
 remaining columns list the registers used for the return value and
 arguments.
 
-{{{table}}}
+{{{table_begin}}}
 #+CAPTION: Calling convention for Linux system calls under x86-64 and RISC-V.
 #+LABEL: tbl:syscall-calling-convention
 #+ATTR_LATEX: :align c|c|c|c|cccc :float nil
@@ -535,7 +538,7 @@ arguments.
 |---------+-----------+-------------+----------+----------+----------+----------+-------------------|
 | x86-64  | ~syscall~ | ~rax~       | ~rax~    | ~rdi~    | ~rsi~    | ~rdx~    | ~r10~, ~r8~, ~r9~ |
 | RISC-V  | ~ecall~   | ~a7~        | ~a0~     | ~a0~     | ~a1~     | ~a2~     | ~a3~, ~a4~, ~a5~  |
-{{{endtable}}}
+{{{table_end}}}
 
 SmithForth only performs two system calls in its machine code: =exit=
 in the definition of ~BYE~ and =write= in the definition of ~TYPE~.
@@ -544,7 +547,7 @@ The syscall numbers and the type signatures are listed in Table
 translation, we list also include the RISC-V system call numbers as a
 column.
 
-{{{table}}}
+{{{table_begin}}}
 #+CAPTION: Syscalls used by SmithForth, together with their C type signatures.
 #+LABEL: tbl:syscalls
 #+ATTR_LATEX: :align l|c|c|lll :float nil
@@ -553,7 +556,7 @@ column.
 |---------+-------------+-------------+-------------------+-------------------+----------------|
 | ~write~ | 1 (~0x01~)  | 64 (~0x40~) | ~unsigned int fd~ | ~const char *buf~ | ~size_t count~ |
 | ~exit~  | 60 (~0x3C~) | 93 (~0x5D~) | ~int error_code~  | –                 | –              |
-{{{endtable}}}
+{{{table_end}}}
 
 For a comprehensive list of available Linux system calls under several
 architectures, refer to the /``Linux System Call Table''/ compiled by
