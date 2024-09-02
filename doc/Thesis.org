@@ -336,9 +336,9 @@ We continue by describing the general organization of SmithForth.
 *** Source Code Layout
 
 SmithForth is bootstrapped from machine code in several stages.  The
-first two stages occur in file =.dmp=, which is written as commented
-hexadecimal bytes.  Here is a code sample from David Smith's original
-=SForth.dmp=:
+first two stages occur in file =.dmp=, which is written as hexadecimal
+bytes interspersed with comments.  Here is a code sample from David
+Smith's original =SForth.dmp=:
 
 {{{fontset(9pt)}}}
 # #+CAPTION: Machine code definition of Forth word ~PARSE~.
@@ -358,12 +358,12 @@ hexadecimal bytes.  Here is a code sample from David Smith's original
 #+end_src
 {{{fontreset}}}
 
-The section above defines Forth word ~PARSE~.  Its /stack effects/ are
-described in standard Forth notation ~( cl dl "ccc<char>" -- rbp=addr
-rax=u )~​, here extended for register operations.  The left column
-contains hexadecimal bytes, while everything beyond the first =#= on
-each line represents a comment.  It is worth noting the three byte
-sequences beginning with byte ~99~; these are special and will be
+The section above defines the Forth word ~PARSE~.  Its /stack effects/
+are described in standard Forth notation ~( cl dl "ccc<char>" --
+rbp=addr rax=u )~​, here extended for register operations.  The left
+column contains hexadecimal bytes, while everything beyond the first
+=#= on each line represents a comment.  It is worth noting the three
+byte sequences beginning with byte ~99~; these are special and will be
 explained shortly.  Five explanation columns follow the bytes: the
 first describes the intention of the current line; the second tracks
 instruction addresses to allow for calculating relative offsets; the
@@ -432,7 +432,8 @@ time has rendered useless.  This means useful instructions often need
 (sometimes multiple) prefix bytes, complicating handwritten machine
 code.  Another consequence is the growth of processor documentation
 beyond the possibility of easy navigation and consultation (Intel's
-most recent 4-volume manual totals over 5000 pages).
+most recent 4-volume manual totals over 5000 pages)
+[cite:@intel_manuals].
 
 The repeated expansion of register width and number, in addition to
 the complicated addressing modes allowed by the x86-64 architecture,
@@ -457,7 +458,7 @@ interested hardware implementors.
 RISC-V is designed with simplicity in mind, inheriting many ideas from
 Berkeley RISC and MIPS [cite:@waterman2016].  It is a load-store
 architecture with all ALU operations occuring between registers (this
-greatly simplifies addressing modes and fits our purposes).  It
+greatly simplifies addressing modes and thus fits our purposes).  It
 provides 32 general purpose registers, offering enough temporary
 registers to avoid using the stack in many situations.  An interesting
 design choice is the inclusion of an always-zero =x0=​/​=zero= register
@@ -490,10 +491,10 @@ the /``RISC-V Instruction Set Manual: Volume I''/
 For our purposes it will suffice to use the base instruction set of
 the 64-bit RISC-V variant, dubbed RV64I.  This consists of RV32I (the
 base 32-bit instruction set) plus a few instructions that extend it to
-64-bits.  The total number of instruction available in RV64I is only
+64-bits.  The total number of instructions available in RV64I is only
 57 (out of which 42 instructions are shared with RV32I).  Notably, our
 implementation will not require multiplication or division, which are
-provided by RV32M and RV64M, respectively).
+provided by the RV32M and RV64M extensions, respectively).
 
 We have concluded that we will port the SmithForth machine code from
 the x86-64 to the RISC-V architecture.  Besides the ISA, there is
@@ -501,9 +502,8 @@ another foundational interface on which the system relies and that is
 the Linux operating system it assumes when doing system calls.  Even
 more, the machine code is embedded in an executable file conforming to
 what Linux expects from loadable files, which is the ELF file format.
-In the next sections we will review the Linux system calls performed
-by SmithForth and the required ELF headers.  We will then see what
-changes are implied by the change to RISC-V.
+In the next sections we will provide a brief overview of Linux system
+calls and the ELF file format.
 
 *** The Linux Environment: System Calls
 
@@ -523,12 +523,11 @@ architecture.  Consult the Linux /``syscalls(2)''/
 [cite:@linux_man_syscall] =man-pages= for more details.
 
 The calling convention for Linux system calls is summarized in Table
-[[tbl:syscall-calling-convention]].  Both the x86-64 and RISC-V are
-included.  The second column lists the instruction used by each
-architecture to perform a system call, while the third column shows
-the register where the system call number should be placed.  The
-remaining columns list the registers used for the return value and
-arguments.
+[[tbl:syscall-calling-convention]] for both x86-64 and RISC-V.  The second
+column lists the instruction used by each architecture to perform a
+system call, while the third column shows the register where the
+system call number should be placed.  The remaining columns list the
+registers used for the return value and arguments.
 
 {{{table_begin}}}
 #+CAPTION: Calling convention for Linux system calls under x86-64 and RISC-V.
@@ -544,7 +543,7 @@ SmithForth only performs two system calls in its machine code: =exit=
 in the definition of ~BYE~ and =write= in the definition of ~TYPE~.
 The syscall numbers and the type signatures are listed in Table
 [[tbl:syscalls]].  Since we expect to use the same syscalls in the RISC-V
-translation, we list also include the RISC-V system call numbers as a
+translation, we also include the RISC-V system call numbers as a
 column.
 
 {{{table_begin}}}
@@ -567,7 +566,7 @@ the ChromiumOS community [cite:@linux_system_calls_table].
 While system calls are the interface between the program and the Linux
 kernel at runtime, the machine code first needs to be loaded into
 memory for execution.  This procedure is called /loading/ and in Linux
-it is subject to the /System V Application Binary Interface/ (ABI)
+it is subject to the System V Application Binary Interface (ABI)
 specification.  In particular, this means that executables have to
 respect the /Executable and Linkable Format/ (ELF) so that they can be
 loaded correctly by the Linux kernel.
