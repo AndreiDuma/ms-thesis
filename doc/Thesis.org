@@ -22,7 +22,7 @@
 #+STARTUP: logdrawer
 
 #+LATEX_CLASS: article
-#+LATEX_CLASS_OPTIONS: [a4paper,8pt]
+#+LATEX_CLASS_OPTIONS: [a4paper,10pt,final]
 # #+LATEX_HEADER: \usepackage[margin=0.5in]{geometry}
 #
 # TODO -- manually set the layout for tables with:
@@ -45,7 +45,12 @@
 #+LATEX_HEADER: \usepackage{array}
 #+LATEX_HEADER: \newcolumntype{H}{>{\setbox0=\hbox\bgroup}c<{\egroup}@{}}
 
-# --- Indentation helper macros.
+# --- Font size macros.
+#+MACRO: freset    \fontsize{10pt}{12pt}\selectfont
+#+MACRO: fsource   \fontsize{7pt}{10pt}\selectfont
+#+MACRO: ftable    \fontsize{8pt}{12pt}\selectfont
+
+# --- Indentation macros.
 #+MACRO: t      \hspace{1em}  # TODO: rewrite this one to use {{{c(x)}}}.
 #+MACRO: i      (eval (format "\\hspace{%sem}" $1))
 #+MACRO: c      (eval (format "\\hspace{%fem}" (* 0.5265 (string-to-number $1))))
@@ -215,10 +220,9 @@ implementations.
 
 /Gforth/ [cite:@gforth] is a major open-source implementation of the
 Forth programming language.  It conforms to the /Forth 2012 Standard/
-[cite:@forth_2012_standard] and supports multiple target
-architectures.  Being featureful and performant, it is a rather
-complex compiler.  Its core is implemented in the C programming
-language with many words and libraries being written in Forth itself.
+and supports multiple target architectures.  Being featureful and
+performant, it is a rather complex compiler.  Its core is implemented
+in C with many words and libraries being written in Forth itself.
 
 There are also many implementations created by Forth enthusiasts for
 educational or experimentation purposes.  /JONESFORTH/
@@ -233,16 +237,16 @@ excellent resource for learning the inner workings of a Forth system.
 It is notable that it assumes a Linux host, but no C standard library
 --- all interaction with the OS is done through system calls.
 JONESFORTH does not attempt to bootstrap Forth as quickly as possible,
-with the consequence that its assembly part is longer than what it
-could be.
+with the consequence that its assembly part is longer than it could
+be.
 
 /Sectorforth/ [cite:@sectorforth] by Cesar Blum is ``a 16-bit x86
 Forth that fits entirely within a boot sector (512 bytes)''.  It is
 written in assembly for the NASM assembler and assumes no operating
-system.  It is extremely minimal, providing only several primitives
-out of which a more featureful Forth.  /MilliForth/ [cite:@milliforth]
-takes sectorforth's minimalism even further, reducing the machine code
-size to 340 bytes.
+system.  It is extremely minimal, providing only several primitives on
+top of which a more featureful Forth can be built.  /MilliForth/
+[cite:@milliforth] takes sectorforth's minimalism even further,
+reducing the machine code size to 340 bytes.
 
 /SmithForth/ [cite:@smithforth] is a recent Forth by David Smith,
 running on x86-64 Linux systems.  It is special among other
@@ -262,7 +266,7 @@ Several other sources about implementing Forth systems were consulted.
 We mention Loeliger's /``Threaded Interpretive Languages''/ (1981), a
 full implementation guide for the Zilog Z80 processor
 [cite:@loeliger1981_til]; Peter M. Kogge's /``An Architectural Trail
-to Threaded-Code Systems''/ (1982), which explains the design of
+to Threaded-Code Systems''/ (1982), which explains the design of a
 classical implementation of Forth [cite:@ertl02_variations]; Anton
 Ertl's /``Threaded Code Variations and Optimizations''/ (2002), which
 compares different code threading techniques, with a focus on
@@ -297,9 +301,9 @@ the following impressions:
   difficult for the novice to even select a collection of key
   instructions to use in their implementation.
 
-We think /SmithForth/ is an excellent starting point for creating a
-new Forth implementation that focuses on understandability.  We
-propose a number of modifications that aim towards this goal:
+We think /SmithForth/ is an excellent starting point towards a Forth
+implementation that focuses on understandability.  We propose a number
+of modifications that aim towards this goal:
 - More detailed pseudocode should accompany the source code.
 - The byte encoding of instructions should be made more explicit,
   making clear how an instruction as chosen by the programmer from the
@@ -315,10 +319,71 @@ propose a number of modifications that aim towards this goal:
 We continue by describing the general organization of SmithForth.
 
 
-** SmithForth
+** A Quick Overview of SmithForth
 
+SmithForth is bootstrapped from machine code in several stages.  The
+first two stages occur in file =.dmp=, which is written as commented
+hexadecimal bytes.  Here is a code sample from David Smith's original
+=SForth.dmp=:
 
+{{{fsource}}}
+#+begin_src fundamental
+  99 05 50 41 52 53 45 ## PARSE ( cl dl "ccc<char>" -- rbp=addr rax=u )
+  49 C7 C1 00 00 00 10  # r9 = VAR              mov r/m64, imm32   REX.W C7 /0 id  11 000 001
+  49 8B 69 10           # rbp = [>IN]           mov r64, r/m64     REX.W 8B /r     01 101 001
+  99 73                 # Call seek
+  49 8B 41 10           # rax = [>IN]           mov r64, r/m64     REX.W 8B /r     01 000 001
+  73 04                 #+jump _end if U>=   00 jae rel8           73 cb
+  49 FF 41 10           # [>IN]++               inc r/m64          REX.W FF /0     01 000 001
+  # _end:               #                    04
+  48 29 E8              # rax -= rbp            sub r/m64, r64     REX.W 29 /r     11 101 000
+  49 03 69 08           # rbp += [TIB]          add r64, r/m64     REX.W 03 /r     01 101 001
+  C3                    # return                ret                C3    
+#+end_src
+{{{freset}}}
 
+The section above defines Forth word ~PARSE~.  Its /stack effects/ are
+described in standard Forth notation ~( cl dl "ccc<char>" -- rbp=addr
+rax=u )~​, here extended for register operations.  The left column
+contains hexadecimal bytes, while everything beyond the first =#= on
+each line represents a comment.  It is worth noting the three byte
+sequences beginning with byte ~99~; these are special and will be
+explained shortly.  Five explanation columns follow the bytes: the
+first describes the intention of the current line; the second tracks
+instruction addresses to allow for calculating relative offsets; the
+third references the x86-64 instruction as documented in the Intel
+manual; the fourth shows the byte encoding of the instruction, again
+using Intel conventions; the fifth optionally shows the ModR/M and/or
+SIB bytes often required in x86 instruction encodings.
+
+This =.dmp= file is turned into an executable file by first =cut=​ting
+out the comments and then passing the remaining hexadecimal bytes to
+Linux command =xxd= for conversion into binary form:
+
+#+begin_src shell
+  $ cut SForth.dmp -d'#' -f1 | xxd -p -r >SForth0
+#+end_src
+
+The other source code file in SmithForth is =system.fs=.  Its first
+two lines, included below, define standard Forth words ~1+~ and ~1-~
+by directly generating the corresponding machine code.  The comments
+reflect this, highlighting the same encoding information as the =.dmp=
+file:
+
+{{{fsource}}}
+#+begin_src fundamental
+  : 1+ ( n|u -- n'|u' )  [ 49 . FF . 07 . ] ;  \ [r15]++   inc r/m64   REX.W FF /0   00 000 111
+  : 1- ( n|u -- n'|u' )  [ 49 . FF . 0F . ] ;  \ [r15]--   dec r/m64   REX.W FF /1   00 001 111
+#+end_src
+{{{freset}}}
+
+The =system.fs= file is appended as-is to the binary, cleverly
+generating a half-machine-code, half-Forth-text executable.  The
+machine code bootstraps a basic system which is then directed to
+interpret the Forth code, thus completing the implementation.  David
+Smith provides a simple =make.sh= shell script [cite:@smithforth] that
+performs these build steps, additionally taking care to fill in the
+executable size in the ELF file header (described below).
 
 
 ** The x86-64 Architecture
@@ -356,7 +421,7 @@ Citations:
 | ~riscv~  | ~ecall~   | ~a7~        | ~a0~     | ~a0~     | ~a1~     | ~a2~     | ~a3~, ~a4~, ~a5~  |
 
 #+CAPTION: Used Linux system calls for ~x86-64~ and ~riscv~, with their signatures.
-#+LABEL: tbl:syscalls:x86-64
+#+LABEL: tbl:syscalls
 #+ATTR_LATEX: :align l|c|c|llllll
 |         | *Syscall #* | *Syscall #* |                   |                   |                |
 | *Name*  | (~x86-64~)  | (~riscv~)   | *Arg. 1*          | *Arg. 2*          | *Arg. 3*       |
@@ -2648,7 +2713,6 @@ Explain:
 
 
 * Forth in Forth
-
 
 * Analysis                                                         :noexport:
 
