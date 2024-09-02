@@ -99,7 +99,7 @@ TODO.
 # \clearpage
 
 # Table of contents.
-#+TOC: headlines 2
+#+TOC: headlines 3
 # \clearpage
 
 
@@ -321,6 +321,8 @@ We continue by describing the general organization of SmithForth.
 
 ** A Quick Overview of SmithForth
 
+*** Source Code Layout
+
 SmithForth is bootstrapped from machine code in several stages.  The
 first two stages occur in file =.dmp=, which is written as commented
 hexadecimal bytes.  Here is a code sample from David Smith's original
@@ -385,19 +387,54 @@ Smith provides a simple =make.sh= shell script [cite:@smithforth] that
 performs these build steps, additionally taking care to fill in the
 executable size in the ELF file header (described below).
 
+*** The x86-64 Instruction Set Architecture
 
-** The x86-64 Architecture
+David Smith implemented SmithForth for the x86-64 architecture.  While
+ubiquitous on personal computers, we believe this architecture is not
+well-suited for building an educational language implementation ``from
+scratch''.
+
+The x86-64 instruction set architecture (ISA) is the 64-bit extension
+of the x86 ISA, which in turn traces its origins to the 8086
+microprocessor released by Intel in 1978.  Its 45 years of history
+have witnessed the evolution from 16-bit to 32-bit processors, the
+introduction of pipelining, the addition of caches, the transition to
+superscalar designs and \mu-op translation, the expansion to multi-core
+CPUs and the extension from 32-bit to 64-bit addressing
+[cite:@kerner2007history].
+
+The changes in hardware design and the shifts in priorities coming
+from software implementors have led to the addition and subsequent
+deprecation of many ISA instructions.  One direct consequence is the
+wasting of ``opcode space'' by old instructions that the passage of
+time has rendered useless.  This means useful instructions often need
+(sometimes multiple) prefix bytes, complicating handwritten machine
+code.  Another consequence is the growth of processor documentation
+beyond the possibility of easy navigation and consultation (Intel's
+most recent 4-volume manual totals over 5000 pages).
+
+The repeated expansion of register width and number, in addition to
+the complicated addressing modes allowed by the x86-64 architecture,
+has led to complex encoding schemes requiring multiple prefix bytes, a
+REX register extension byte, a ModR/M byte, a SIB byte, immediate &
+offset bytes etc.  Fully understanding these schemes is an arduous
+task which, while mandatory for the writers of assemblers, only
+hinders students' understanding of the fundamentals.
+
+The complexity of the x86-64 ISA has led us to look for
+alternatives. After looking at the RISC-V and ARM instruction set
+architectures, we decided the better option for our purposes is the
+modern and elegant RISC-V.
+
+*** The RISC-V Instruction Set Architecture
+
+
+
 
 Citations:
-- /A history of modern 64-bit computing/ [cite:@kerner2007history]
-- Intel Manual Volume 2 (Instruction Set Reference) [cite:@intel_manual_volume_2]
-
-  
-** The RISC-V Architecture
-
-Citations:
-- Patterson & Waterman: [cite:@patterson2017]
-- /Design of the RISC-V instruction set architecture/, PhD Thesis
+- /``The RISC-V Reader: An Open Architecture Atlas''/, Patterson &
+  Waterman: [cite:@patterson2017]
+- /``Design of the RISC-V instruction set architecture''/, PhD Thesis
   [cite:@waterman2016]
 - RISC-V Instruction Set Manual: Volume I [cite:@riscv_spec_vol_i] and
   Volume 2 [cite:@riscv_spec_vol_ii]
