@@ -513,32 +513,47 @@ architecture.  Consult the Linux /``syscalls(2)''/
 
 The calling convention for Linux system calls is summarized in Table
 [[tbl:syscall-calling-convention]].  Both the x86-64 and RISC-V are
-included.
+included.  The second column lists the instruction used by each
+architecture to perform a system call, while the third column shows
+the register where the system call number should be placed.  The
+remaining columns list the registers used for the return value and
+arguments.
 
-{{{table(1em)}}}
-#+CAPTION: Calling convention for Linux system calls under =x86-64= and =riscv=.
+{{{table(2em)}}}
+#+CAPTION: Calling convention for Linux system calls under x86-64 and RISC-V.
 #+LABEL: tbl:syscall-calling-convention
-#+ATTR_LATEX: :align c|c|c|c|ccccc :float nil
-| *Arch.*  | *Instr.*  | *Syscall #* | *Return* | *Arg. 1* | *Arg. 2* | *Arg. 3* | *Args. 4, 5, 6*   |
-|----------+-----------+-------------+----------+----------+----------+----------+-------------------|
-| ~x86-64~ | ~syscall~ | ~rax~       | ~rax~    | ~rdi~    | ~rsi~    | ~rdx~    | ~r10~, ~r8~, ~r9~ |
-| ~riscv~  | ~ecall~   | ~a7~        | ~a0~     | ~a0~     | ~a1~     | ~a2~     | ~a3~, ~a4~, ~a5~  |
+#+ATTR_LATEX: :align c|c|c|c|cccc :float nil
+| *Arch.* | *Instr.*  | *Syscall #* | *Return* | *Arg. 1* | *Arg. 2* | *Arg. 3* | *Args. 4, 5, 6*   |
+|---------+-----------+-------------+----------+----------+----------+----------+-------------------|
+| x86-64  | ~syscall~ | ~rax~       | ~rax~    | ~rdi~    | ~rsi~    | ~rdx~    | ~r10~, ~r8~, ~r9~ |
+| RISC-V  | ~ecall~   | ~a7~        | ~a0~     | ~a0~     | ~a1~     | ~a2~     | ~a3~, ~a4~, ~a5~  |
 {{{endtable(1em)}}}
 
-Citations:
-- Chromium's Linux System Call Table [cite:@linux_system_calls_table]
+SmithForth only performs two system calls in its machine code: =exit=
+in the definition of ~BYE~ and =write= in the definition of ~TYPE~.
+The syscall numbers and the type signatures are listed in Table
+[[tbl:syscalls]].  Since we expect to use the same syscalls in the RISC-V
+translation, we list also include the RISC-V system call numbers as a
+column.
 
-#+CAPTION: Used Linux system calls for x86-64 and RISC-V, with their signatures.
+{{{table(2em)}}}
+#+CAPTION: Syscalls used by SmithForth, together with their C type signatures.
 #+LABEL: tbl:syscalls
-#+ATTR_LATEX: :align l|c|c|llllll
+#+ATTR_LATEX: :align l|c|c|lll :float nil
 |         | *Syscall #* | *Syscall #* |                   |                   |                |
-| *Name*  | (~x86-64~)  | (~riscv~)   | *Arg. 1*          | *Arg. 2*          | *Arg. 3*       |
+| *Name*  | (x86-64)    | (RISC-V)    | *Arg. 1*          | *Arg. 2*          | *Arg. 3*       |
 |---------+-------------+-------------+-------------------+-------------------+----------------|
-| ~read~  | 0 (~0x00~)  | 63 (~0x3F~) | ~unsigned int fd~ | ~char *buf~       | ~size_t count~ |
 | ~write~ | 1 (~0x01~)  | 64 (~0x40~) | ~unsigned int fd~ | ~const char *buf~ | ~size_t count~ |
 | ~exit~  | 60 (~0x3C~) | 93 (~0x5D~) | ~int error_code~  | –                 | –              |
+{{{endtable(1em)}}}
+
+For a comprehensive list of available Linux system calls under several
+architectures, refer to the /``Linux System Call Table''/ compiled by
+the ChromiumOS community [cite:@linux_system_calls_table].
 
 *** ELF: The _E_​xecutable and _L_​inkable _F_​ormat
+
+
 
 Citations:
 - *System V gABI*: Cite /Chapter 4 -- Object Files/ of [cite:/System V
