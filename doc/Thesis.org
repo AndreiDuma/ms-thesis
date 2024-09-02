@@ -23,18 +23,21 @@
 
 #+LATEX_CLASS: article
 #+LATEX_CLASS_OPTIONS: [a4paper,10pt,final]
-# #+LATEX_HEADER: \usepackage[margin=0.5in]{geometry}
-#
-# TODO -- manually set the layout for tables with:
-#   \newgeometry{left=0.5in, right=0.5in}
-#   \restoregeometry
-#
 #+LATEX_HEADER_EXTRA:
 #+DESCRIPTION:
 #+KEYWORDS:
 #+SUBTITLE:
 #+LATEX_ENGRAVED_THEME:
 #+LATEX_COMPILER: pdflatex
+
+# #+LATEX_HEADER: \usepackage{geometry}
+#
+# TODO -- manually set the layout for tables with:
+#   \newgeometry{left=0.5in, right=0.5in}
+#   \restoregeometry
+#
+
+#+LATEX_HEADER: \usepackage{changepage}
 
 # --- Nice author line ---
 #+LATEX_HEADER: \usepackage{authblk}
@@ -46,9 +49,16 @@
 #+LATEX_HEADER: \newcolumntype{H}{>{\setbox0=\hbox\bgroup}c<{\egroup}@{}}
 
 # --- Font size macros.
-#+MACRO: freset    \fontsize{10pt}{12pt}\selectfont
 #+MACRO: fsource   \fontsize{7pt}{10pt}\selectfont
-#+MACRO: ftable    \fontsize{8pt}{12pt}\selectfont
+#+MACRO: freset    \fontsize{10pt}{12pt}\selectfont
+
+# --- Margin adjustment macros.
+#+MACRO: margin      \vspace{$1} \begin{adjustwidth}{-10em}{-10em}
+#+MACRO: endmargin   \end{adjustwidth} \vspace{$1}
+
+# --- Table macros.
+#+MACRO: table      \vspace{$1} \begin{table}[htbp] \begin{adjustwidth}{-10em}{-10em}
+#+MACRO: endtable   \end{adjustwidth} \end{table} \vspace{$1}
 
 # --- Indentation macros.
 #+MACRO: t      \hspace{1em}  # TODO: rewrite this one to use {{{c(x)}}}.
@@ -466,25 +476,59 @@ the /``RISC-V Instruction Set Manual: Volume I''/
 [cite:@riscv_spec_vol_i] and /``Volume II''/
 [cite:@riscv_spec_vol_ii].
 
+For our purposes it will suffice to use the base instruction set of
+the 64-bit RISC-V variant, dubbed RV64I.  This consists of RV32I (the
+base 32-bit instruction set) plus a few instructions that extend it to
+64-bits.  The total number of instruction available in RV64I is only
+57 (out of which 42 instructions are shared with RV32I).  Notably, our
+implementation will not require multiplication or division, which are
+provided by RV32M and RV64M, respectively).
 
+We have concluded that we will port the SmithForth machine code from
+the x86-64 to the RISC-V architecture.  Besides the ISA, there is
+another foundational interface on which the system relies and that is
+the Linux operating system it assumes when doing system calls.  Even
+more, the machine code is embedded in an executable file conforming to
+what Linux expects from loadable files, which is the ELF file format.
+In the next sections we will review the Linux system calls performed
+by SmithForth and the required ELF headers.  We will then see what
+changes are implied by the change to RISC-V.
 
-** The Linux Environment
+*** The Linux Environment: System Calls
 
-*** Linux System Calls
+System calls are ``the fundamental interface between an application
+and the Linux kernel'' [cite:@linux_man_syscalls].  Processes request
+and receive resources such as memory or I/O access from the operating
+system by invoking system calls (also called /syscalls/).  When doing
+so, they need to respect a /calling convention/, which allows
+user-level programs and the kernel to interoperate.  For programs
+written in assembly or machine code, before performing a system call
+one needs to know its /system call number/.  This syscall number plus
+the syscall arguments then need to be placed in specific registers.
+Once the system call is performed, a result and an error might be
+returned by the kernel in one or more registers, depending on the
+architecture.  Consult the Linux /``syscalls(2)''/
+[cite:@linux_man_syscalls] and /``syscall(2)''/
+[cite:@linux_man_syscall] =man-pages= for more details.
 
-Citations:
-- Chromium's Linux System Call Table [cite:@linux_system_calls_table]
-- ~syscall(2)~ Linux manual page [cite:@linux_man_syscall]
+The calling convention for Linux system calls is summarized in Table
+[[tbl:syscall-calling-convention]].  Both the x86-64 and RISC-V are
+included.
 
+{{{table(1em)}}}
 #+CAPTION: Calling convention for Linux system calls under =x86-64= and =riscv=.
 #+LABEL: tbl:syscall-calling-convention
-#+ATTR_LATEX: :align c|c|c|c|ccccc
+#+ATTR_LATEX: :align c|c|c|c|ccccc :float nil
 | *Arch.*  | *Instr.*  | *Syscall #* | *Return* | *Arg. 1* | *Arg. 2* | *Arg. 3* | *Args. 4, 5, 6*   |
 |----------+-----------+-------------+----------+----------+----------+----------+-------------------|
 | ~x86-64~ | ~syscall~ | ~rax~       | ~rax~    | ~rdi~    | ~rsi~    | ~rdx~    | ~r10~, ~r8~, ~r9~ |
 | ~riscv~  | ~ecall~   | ~a7~        | ~a0~     | ~a0~     | ~a1~     | ~a2~     | ~a3~, ~a4~, ~a5~  |
+{{{endtable(1em)}}}
 
-#+CAPTION: Used Linux system calls for ~x86-64~ and ~riscv~, with their signatures.
+Citations:
+- Chromium's Linux System Call Table [cite:@linux_system_calls_table]
+
+#+CAPTION: Used Linux system calls for x86-64 and RISC-V, with their signatures.
 #+LABEL: tbl:syscalls
 #+ATTR_LATEX: :align l|c|c|llllll
 |         | *Syscall #* | *Syscall #* |                   |                   |                |
@@ -517,7 +561,7 @@ RISC-V on QEMU:
 - Magic files from Apress book:
   https://github.com/Apress/RISC-V-Assembly-Language-Programming/tree/main/Chapter%201/QEMU
 
-  
+
 * SmithForth Analysis and Porting to RISC-V
 
 ** The ELF Header
