@@ -918,14 +918,14 @@ lifted in the next stage, once ~FIND~ is implemented.
 *** Subroutine ~COMPL~
 
 In the case of a /compile/ binary interpreter command, control is
-given to ~COMPL~, shown in Table [[tbl:forth:compl:x]].  This subroutine
+given to ~COMPL~, shown in Table [[tbl:forth:COMPL:x]].  This subroutine
 dynamically constructs an x86-64 =CALL= to the code of the given Forth
 word, embedding this code address as four immediate bytes.  It is one
 of the more subtle parts of SmithForth.
 
 {{{wtable_begin(10)}}}
 #+CAPTION: =COMPL=, the FORTH compiler.
-#+LABEL: tbl:forth:compl:x
+#+LABEL: tbl:forth:COMPL:x
 #+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                                                                                | *Instruction*   | *Opcode*   | *&*            | *Machine code*                  | *Intention*                                        |
 |---------------------------------------------------------------------------------------------+-----------------+------------+----------------+---------------------------------+----------------------------------------------------|
@@ -1207,7 +1207,7 @@ under six functionality categories:
 - /Handling numbers/ allows Forth definitions to contain literal
   numbers.  It also permits ``executing'' numbers, which means pushing
   them on the Forth data stack.
-- /Compiling and executing/ turns executions tokens into latent or
+- /Compiling and executing/ turns execution tokens into latent or
   active effects, by either compiling calls to their code or executing
   them right away.
 - Finally, /bringing everything together/ means being able to
@@ -1225,7 +1225,7 @@ The next six words defined by SmithForth work together to parse Forth
 code from ~INPUT~.  ~REFILL~ brings a new line from input to the
 /parse area/, which is then traversed character by character by
 ~seek~. ~PARSE~ knows how to detect the end of words or the end of the
-parse area.  Finally ~pname~ puts everything together, traversing the
+parse area.  Finally, ~pname~ puts everything together, traversing the
 parse area word by word, returning them as strings.
 
 Words ~'('~ and ~'\'~ handle Forth inline and line comments,
@@ -1236,7 +1236,7 @@ whereas in other languages they require complex parsing mechanisms.
 Parsing words are built around [[tbl:globals:x][global variables]] ~TIB~, ~#IN~ and
 ~>IN~.  ~TIB~ stores the address of the current line to be parsed,
 while ~#N~ stores the line's length.  ~>IN~ counts the number of
-character already parsed.  The /parse area/ is defined as the range
+characters already parsed.  The /parse area/ is defined as the range
 ~[TIB + >IN, TIB + #IN)~, that is, the part of the line not yet
 parsed.
 
@@ -1256,7 +1256,7 @@ parsed.
 |                                                  |                      |                  |                |                                                           |                  |
 | {{{i(1)}}} /# Base address of globals./          |                      |                  |                |                                                           |                  |
 | {{{i(1)}}} ~VARS@R9 ← 0x10000000;~               | mov r9, /0x10000000/ | REX.W C7 /​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}}                        | r9 = VAR         |
-|                                                  |                      |                  |                | \hookrightarrow /~00 00 00 10~/                 |                  |
+|                                                  |                      |                  |                | \hookrightarrow /~00 00 00 10~/                           |                  |
 | {{{i(1)}}}                                       |                      |                  |                |                                                           |                  |
 | {{{i(1)}}} /# Advance ~TIB~​ by ~#IN~./           |                      |                  |                |                                                           |                  |
 | {{{i(1)}}} /#/                                   |                      |                  |                |                                                           |                  |
@@ -1297,7 +1297,7 @@ parsed.
 | /# or parse area is empty./                        |                      |                  |                |                                                    |                                             |
 |                                                    |                      |                  |                |                                                    |                                             |
 | {{{c(2)}}} ~VARS@R9 ← 0x10000000;~                 | mov r9, /0x10000000/ | REX.W C7 /​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}}                 | r9 = VAR                                    |
-|                                                    |                      |                  |                | \hookrightarrow /~00 00 00 10~/          |                                             |
+|                                                    |                      |                  |                | \hookrightarrow /~00 00 00 10~/                    |                                             |
 | {{{c(2)}}} ~high@DL -= low@CL;~                    | sub dl, cl           | 2A /r            |                | ~2A~ {{{modrm(D1,11,010,001)}}}                    | dl -= cl                                    |
 | ~_begin:~                                          |                      |                  | {{{addr(00)}}} |                                                    | # _beg:  like WITHIN ( al cl dl -- eflags ) |
 | {{{c(2)}}} /# Is parse area empty?/                |                      |                  |                |                                                    |                                             |
@@ -1337,7 +1337,7 @@ parsed.
 | /# address and length./                                         |                      |                  |                |                                                    |                                                                                     |
 |                                                                 |                      |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} ~VARS@R9 ← 0x10000000;~                             | mov r9, /0x10000000/ | REX.W C7 /​​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}}                 | r9 = VAR                                                                            |
-|                                                                 |                      |                  |                | \hookrightarrow /~00 00 00 10~/                                     |                                                                                     |
+|                                                                 |                      |                  |                | \hookrightarrow /~00 00 00 10~/                    |                                                                                     |
 | {{{c( 2)}}} ~start@RBP ← [>IN];~                                | mov rbp, [r9+0x10]   | REX.W 8B /r      |                | ~49 8B~ {{{modrm(69,01,101,001)}}} {{{displ(10)}}} | rbp = [>IN]                                                                         |
 | {{{c( 2)}}} /# Compile a call to ~seek~/                        |                      |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} /# that advances ~>IN~./                            |                      |                  |                |                                                    |                                                                                     |
@@ -1432,7 +1432,6 @@ to present them here, directly after the other words related to
 parsing.
 \clearpage
 
-
 *** Defining New Forth Words: ~:~, ~;~, ~[~, ~]~, ~.~, ~LIT~
 
 The next six Forth words are probably the most interesting in
@@ -1449,7 +1448,7 @@ the definition by enabling the ~HIDDEN~ flag on the entry.  Finally,
 colon switches to compilation mode by calling ~']'~.
 
 {{{wtable_begin(10)}}}
-#+CAPTION: ~':'~ sets up a word's dictionary entry and begin compilation (x86-64).
+#+CAPTION: ~':'~ sets up a word's dictionary entry and begins compilation (x86-64).
 #+LABEL: tbl:forth:colon:x
 #+ATTR_LATEX: :align l|ll|lH :float nil
 | *Pseudocode*                          | *Instruction*     | *Opcode*          | *Machine code*                            | *Intention*                            |
@@ -1485,7 +1484,7 @@ colon switches to compilation mode by calling ~']'~.
 Forth word ~';'~ (semicolon), displayed in Table
 [[tbl:forth:semicolon:x]], finalizes a word definiton by compiling a
 return instruction.  It then ``unhides'' the word by flipping its
-~HIDDEN~ field in the dictionary entry and switches back to
+~HIDDEN~ flag in the dictionary entry and switches back to
 interpreting mode.
 
 {{{wtable_begin(10)}}}
@@ -1518,8 +1517,8 @@ interpreting mode.
 
 As already mentioned in the explanations of ~':'~ and ~';'~, two words
 can be used in the middle of definitions (but not only) to switch in
-and out of interpreting state.  This enables many tricks by allows the
-mixing of compilation-time and run-time code execution.  The two
+and out of interpreting state.  This enables many tricks by allowing
+mixed compilation-time and run-time code execution.  The two
 subroutines, listed in tables [[tbl:forth:lbracket:x]] and
 [[tbl:forth:rbracket:x]], have surprisingly simple implementations.
 
@@ -1559,12 +1558,12 @@ subroutines, listed in tables [[tbl:forth:lbracket:x]] and
 
 Note that both ~'['~ and ~']'~ are /immediate/ words, which means, as
 we will see later, that they are executed right away when encountered
-in definitions instead of being compiled as a call sequence as
+in definitions instead of being compiled as a call sequence like
 non-immediate words are.
 
 The following word, shown in Table [[tbl:forth:.:x]], is equivalent in
-functionality to standard Forth word ~'C,'~​, pops a byte off the data
-stack and writes it, literally, to ~OUTPUT~.  This word is used
+functionality to standard Forth word ~'C,'~​. It pops a byte off the
+data stack and writes it, literally, to ~OUTPUT~.  This word is used
 extensively by SmithForth in ~system.fs~ to (sometimes dynamically!)
 generate machine code in Forth.  We will use it as well in our
 Forth-in-Forth stage to write ... an assembler!
@@ -1658,7 +1657,6 @@ instruction) and then copies the number into the slot (a pair of
 {{{wtable_end}}}
 \clearpage
 
-
 *** Searching the Dictionary: ~xt=~, ~FIND~
 
 The next problem SmithForth solves is that of finding words by name in
@@ -1667,16 +1665,16 @@ examine in turn.
 
 Shown in Table [[tbl:forth:xt=:x]] is ~xt=~, which tests whether a word
 given by its /execution token/ (argument /xt/) has its name equal to a
-given string (arguments ~addr~ and ~u~).  A few observations are
-worthwhile.  First, the test fails if the word is hidden: this is to
+given string (arguments ~addr~ and ~u~).  A few observations are worth
+making.  First, the test fails if the word is hidden: this is to
 prevent colon definitions to reference themselves before they are
-complete.  Secondly, being designed for the x86-64, SmithForth uses a
-combined ~REPE CMPS~ instruction for the string comparison.  This will
-need to be replaced with an explicit loop in our RISC-V
-implementation.  Another feature specific to x86-64 is the use of the
-implicit ~RFLAGS~ to pass information between instructions (and even
-subroutines).  The ~ZF~ flags set here by SmithForth is read only in
-~FIND~.
+complete.  Secondly, being designed for the x86-64 architecture,
+SmithForth uses a combined ~REPE CMPS~ instruction for the string
+comparison.  This will need to be replaced with an explicit loop in
+our RISC-V implementation.  Another feature specific to x86-64 is the
+use of the implicit ~RFLAGS~ to pass information between instructions
+(and even subroutines).  The ~ZF~ flag set here by SmithForth is only
+read in ~FIND~.
 
 {{{wtable_begin(10)}}}
 #+CAPTION: ~xt=~ compares an execution token's name with a given string (x86-64).
@@ -1776,7 +1774,6 @@ alternative solution in our RISC-V implementation.
 | {{{c(2)}}} ~return.~                       | RET            | C3          |                | ~C3~                                                        | return           |
 {{{wtable_end}}}
 \clearpage
-
 
 *** Handling Numbers: ~Num~, ~miss~
 
@@ -1881,7 +1878,6 @@ interpretation semantics for numbers.
 {{{wtable_end}}}
 \clearpage
 
-
 *** Compile or Execute: ~EXEC~, ~exec~, ~compl~, ~hit~
 
 While ~miss~ and ~Num~ handle tokens not found in the dictionary, it
@@ -1893,7 +1889,7 @@ begin with the explanation of the helper words.
 and executes the code associated with it immediately.  It does this in
 a complicated fashion whose purpose we didn't fully understand (it is
 actually the only point of confusion we had in the excellent machine
-code implementation of SmithForth): it uses a ~COMPL~ to compile a
+code implementation of SmithForth): it uses ~COMPL~ to compile a
 ~CALL~ instruction at a remote memory address; to that it appends a
 ~RET~ instruction; finally it calls into that remote location, thus
 performing two jumps for what could have been a simple indirect call.
@@ -1934,7 +1930,7 @@ In the our RISC-V implementation a simple ~jalr~ worked equally well.
 
 Subroutines ~exec~ and ~compl~ in Tables [[tbl:forth:exec:x]] and
 [[tbl:forth:compl:x]] work similarly to ~miss~ and ~exec~, but at a
-different level.  Chain-called one after the other, they receive an
+different level.  Chain-called one after the other, they receive a
 word's execution token and handle four different cases, depending
 on 1) whether the word is immediate, and 2) which mode is currently
 active (compilation or interpretation).  If interpreting or the word
@@ -1943,7 +1939,7 @@ otherwise ~compl~ passes the word to ~COMPL~ to be compiled into the
 current definition.
 
 {{{wtable_begin(10)}}}
-#+CAPTION: Subroutine ~exec~ executes a word if it's immediate or if  (x86-64).
+#+CAPTION: ~exec~ executes a word if it's immediate or if we're interpreting (x86-64).
 #+LABEL: tbl:forth:exec:x
 #+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                              | *Instruction*  | *Opcode* | *&*            | *Machine code*               | *Intention*        |
@@ -2028,11 +2024,10 @@ Table [[tbl:forth:hit:x]].
 {{{wtable_end}}}
 \clearpage
 
-
 *** Bringing Everything Together: ~SVAL~, ~ti~
 
 We have arrived nearly at the end of our journey through SmithForth's
-machine code.  Here two final words combine words from the five
+machine code.  Here two final words combine subroutines from the five
 categories we have discussed to create an interpreting loop that
 consumes tokens from ~INPUT~, attempts to find them as words in the
 dictionary and either compiles or executes them according to their
@@ -2076,10 +2071,10 @@ long as there are characters left in the current parse area.
 | {{{c(2)}}} ~return.~                              | RET            | C3          |                | ~C3~                                                        | return          |
 {{{wtable_end}}}
 
-Table [[tbl:forth:ti:x][tbl:forth:ti:x]] showcases ~ti~, the word which, in Forth fashion,
+Table [[tbl:forth:ti:x]] showcases ~ti~, the word which, in Forth fashion,
 brings everything together.  It first sets up the data stack right
-below the global variables.  This very interesting in practice,
-because any accidental data stack underflow might corrupt the global
+below the global variables.  This is interesting in practice, because
+any accidental data stack underflow might corrupt the global
 variables, which hold parsing and dictionary state.  Most underflow
 errors result therefore in crashes or infinite loops.  SmithForth
 makes no attempt to protect against stack underflow, which would be
@@ -2122,14 +2117,15 @@ system in Forth instead of machine code.  A victory in bootstrapping!
 
 * Porting SmithForth to RISC-V
 
+TODO.
 
-** The ELF Header (RISC-V)                                         :noexport:
+
+** The ELF Header (RISC-V)
 
 Adapting the executable preamble for the RISC-V architecture only
 required a few field modifications in the two ELF headers.  We believe
 this illustrates the benefits of standardization among hardware and
 software platforms.
-
 
 *** ELF File Header
 
@@ -2201,7 +2197,7 @@ sets for x86-64 (field ~p_align~).
 \clearpage
 
 
-** Global Variables (RISC-V)                                       :noexport:
+** Global Variables (RISC-V)
 
 In RISC-V the allocation of registers and memory locations for global
 variables, shown in Table [[tbl:globals:rv]], is similar to SmithForth's.
@@ -2269,7 +2265,7 @@ since it spares several instructions.
 \clearpage
 
 
-** Binary Interpreter (RISC-V)                                     :noexport:
+** Binary Interpreter (RISC-V)
 
 Adapting the binary interpreter loop to RISC-V was mostly
 straightforward.  A notable difference between the two architectures
@@ -2342,7 +2338,7 @@ on the same line as the instruction.
 
 *** Subroutine ~COMPL~
 
-The implementation of ~COMPL~, shown in Table [[tbl:forth:compl:rv]],
+The implementation of ~COMPL~, shown in Table [[tbl:forth:COMPL:rv]],
 proved to be quite subtle.  Whereas x86-64's ~CALL~ instruction
 implicitly pushes the return address on the stack, RISC-V's mostly
 homologous ~jalr~ doesn't do such thing.  Instead, it only writes the
@@ -2362,7 +2358,7 @@ Forth word.
 
 {{{wtable_begin(7)}}}
 #+CAPTION: =COMPL=, the FORTH compiler.
-#+LABEL: tbl:forth:compl:rv
+#+LABEL: tbl:forth:COMPL:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                                                                   | *Instruction*        | *Encoding*                                                                                             | *&*             | *Machine code*                  |
 |------------------------------------------------------------------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------+-----------------+---------------------------------|
@@ -2508,7 +2504,7 @@ that we didn't learn this right away...
 \clearpage
 
 
-** Interacting with the Outside World (RISC-V)                     :noexport:
+** Interacting with the Outside World (RISC-V)
 
 Subroutine ~BYE~ is straightforward to implement on RISC-V (see Table
 [[tbl:forth:BYE:rv]]).  The calling convention for RISC-V requires placing
@@ -2600,7 +2596,7 @@ argument registers ~a0~ and ~a1~ to callee-saved registers ~s0~ and
 \clearpage
 
 
-** Debugging Utilities (RISC-V)                                    :noexport:
+** Debugging Utilities (RISC-V)
 
 Debugging utilities ~dbg~ and ~reg~ were ported to RISC-V in a
 straightforward manner.  Subroutine ~dbg~, shown in Table
@@ -2711,25 +2707,21 @@ is listed in Table [[tbl:forth:reg:rv]].
 
 ** Text Interpreter (RISC-V)
 
-# ============= TEXT INTERPRETER
-#
-# Standard Forth handles input one line at a time.
-# SmithForth's text interpreter is a simple interpreter in the standard Forth style.
-# SVAL (see standard Forth's EVALUATE) interprets each line.
-# REFILL fetches a line of input, including its trailing LF, and sets the input source state.
-#     10000000 #IN      cell contains #characters in the current line.
-#     10000008 TIB      cell contains the address where the current line begins.
-#     10000010 >IN      cell contains #characters in the current line that have been parsed.
-#     10000020 STATE    cell contains 0(Interpreting) or 1(Compiling).
-#     10000028 Latest   cell contains the execution token (xt) of the latest defined Forth word.
-# In Forth, to parse is to remove from the input stream. As a line is parsed, [>IN] increases from 0 to [#IN].
-# Forth's "parse area" is the part of the line not yet parsed.
+In porting SmithForth's text interpreter to RISC-V we followed its
+general structure.  We will present the ported RISC-V routines in the
+same fashion that we used for their x86-64 versions, commenting only
+on local aspects that we found interesting.
 
+*** Parsing Forth: ~REFILL~, ~seek~, ~PARSE~, ~pname~, ~(~, ~\~ (RISC-V)
 
+Explicitly allocating a saved register for the ~VARS~ global variable
+has payed off in this group of routines, as we were able to indirectly
+reference variables ~TIB~, ~#IN~ and ~>IN~ without mentioning their
+addresses.  This technique, useful in many applications where shared
+global state is accessed independently from different routines, is
+made easy by RISC-V large number of callee-saved registers.
 
-*** Parsing Forth: ~REFILL~, ~seek~, ~PARSE~, ~pname~ (RISC-V)
-
-{{{wtable_begin(8)}}}
+{{{wtable_begin(7)}}}
 #+CAPTION: Subroutine ~REFILL~ replenishes the /parse area/ by advancing ~TIB~ and ~#IN~ (RISC-V).
 #+LABEL: tbl:forth:refill:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
@@ -2816,6 +2808,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c(2)}}} ~eof@a0 ← eof@t5;~                       | addi a0, t5, 0    | {{{imm(0x000)}}}                    {{{rs1(11110)}}} {{{fn3(000)}}} {{{rd(01010)}}}  {{{op(0010011)}}} |                | ~13 05 0F 00~                |
 | {{{c(2)}}} ~return.~                                | jalr zero, 0(ra)  | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 {{{wtable_end}}}
+
+The x86-64 version of ~PARSE~ implicitly received information from
+~seek~ through ~CF~ (the carry flag).  Since RISC-V completely does
+away with the flags register, we adapted ~PARSE~ and ~seek~ (shown in
+Tables [[tbl:forth:parse:rv]] and [[tbl:forth:seek:rv]]) to pass information
+explicitly through registers.
 
 {{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~PARSE~ returns the address and size of a newly parsed string (RISC-V).
@@ -2913,28 +2911,46 @@ is listed in Table [[tbl:forth:reg:rv]].
 #+CAPTION: Subroutine ~'('~ implements inline comments, ending with a corresponding ~')'~ (RISC-V).
 #+LABEL: tbl:forth:lparen:rv
 #+ATTR_LATEX: :align l|ll|l :float nil
-| *Pseudocode*                               | *Instruction*     | *Encoding*                                                                                             |   | *Machine code*      |
-|--------------------------------------------+-------------------+--------------------------------------------------------------------------------------------------------+---+---------------------|
-| /# Define immediate:/ _~(~_                | ---               | ---                                                                                                    |   | {{{define(81,28)}}} |
-| /# In/Out:/ ~( "ccc<rparen>" -​- )~         |                   |                                                                                                        |   | {{{padding(00)}}}   |
-| /#/                                        |                   |                                                                                                        |   |                     |
-| /# Consume characters until a ')' occurs./ |                   |                                                                                                        |   |                     |
-|                                            |                   |                                                                                                        |   |                     |
-| ~push ra;~                                 | addi sp, sp, -8   | {{{imm(0xFF8)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |   | ~13 01 81 FF~       |
-|                                            | sd ra, 0(sp)      | {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |   | ~23 30 11 00~       |
-| ~low@a0 ← ')';~                            | addi a0, zero, 41 | {{{imm(0x029)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(01010)}}}  {{{op(0010011)}}} |   | ~13 05 90 02~       |
-| ~high@a1 ← ')' + 1;~                       | addi a1, zero, 42 | {{{imm(0x02A)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(01011)}}}  {{{op(0010011)}}} |   | ~93 05 A0 02~       |
-| ~call PARSE;~  /# Compiled./               | ---               | ---                                                                                                    |   | {{{compile(50,P)}}} |
-| ~pop ra;~                                  | ld ra, 0(sp)      | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |   | ~83 30 01 00~       |
-|                                            | addi sp, sp, 8    | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |   | ~13 01 81 00~       |
-| ~return.~                                  | jalr zero, 0(ra)  | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |   | ~67 80 00 00~       |
+| *Pseudocode*                       | *Instruction*     | *Encoding*                                                                                             | *Machine code*      |
+|------------------------------------+-------------------+--------------------------------------------------------------------------------------------------------+---------------------|
+| /# Define immediate:/ _~(~_        | ---               | ---                                                                                                    | {{{define(81,28)}}} |
+| /# In/Out:/ ~( "ccc<rparen>" -​- )~ |                   |                                                                                                        | {{{padding(00)}}}   |
+| /#/                                |                   |                                                                                                        |                     |
+| /# Consume characters until a ')'/ |                   |                                                                                                        |                     |
+| /# is encountered./                |                   |                                                                                                        |                     |
+|                                    |                   |                                                                                                        |                     |
+| ~push ra;~                         | addi sp, sp, -8   | {{{imm(0xFF8)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 FF~       |
+|                                    | sd ra, 0(sp)      | {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 30 11 00~       |
+| ~low@a0 ← ')';~                    | addi a0, zero, 41 | {{{imm(0x029)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(01010)}}}  {{{op(0010011)}}} | ~13 05 90 02~       |
+| ~high@a1 ← ')' + 1;~               | addi a1, zero, 42 | {{{imm(0x02A)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(01011)}}}  {{{op(0010011)}}} | ~93 05 A0 02~       |
+| ~call PARSE;~  /# Compiled./       | ---               | ---                                                                                                    | {{{compile(50,P)}}} |
+| ~pop ra;~                          | ld ra, 0(sp)      | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} | ~83 30 01 00~       |
+|                                    | addi sp, sp, 8    | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 00~       |
+| ~return.~                          | jalr zero, 0(ra)  | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
 {{{wtable_end}}}
 
+There is not much to comment on the other parsing routines, as they
+were straightforward to translate to RISC-V.
 
 *** Defining New Forth Words: ~:~, ~;~, ~[~, ~]~, ~.~, ~LIT~
 
+The word-defining words are more interesting.  When we analyzed
+~COMPL~ in SmithForth, we explained how RISC-V is different in the way
+it doesn't save return addresses when performing function calls with
+~jalr~.  Return addresses have to be saved and restored around call
+sites or in function prologues and epilogues.  In order to keep colon
+definitions small, we chose to implement the latter option.  It is
+here, in ~':'~, where we have to install a prologue before a allowing
+a Forth definition to proceed.
+
+Shown in Table [[tbl:forth:colon:rv]], in addition to the responsibilities
+inherited from the original SmithForth, subroutine ~':'~ compiles two
+instructions that effectively save the return address on the stack: an
+~addi~ instruction that allocates one stack slot, and an ~sd~
+instruction that stores return address register ~ra~ onto the stack.
+
 {{{wtable_begin(8)}}}
-#+CAPTION: Subroutine ~':'~ (colon) begins compiling a word after setting up its dictionary entry (RISC-V).
+#+CAPTION:  ~':'~ sets up a word's dictionary entry and begins compilation (RISC-V).
 #+LABEL: tbl:forth:colon:rv
 #+ATTR_LATEX: :align l|ll|l :float nil
 | *Pseudocode*                                                                          | *Instruction*      | *Encoding*                                                                                             | *Machine code*      |
@@ -3001,6 +3017,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 |                                                                                       | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 00~       |
 | ~return.~                                                                             | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
 {{{wtable_end}}}
+
+The semicolon routine, listed in Table [[tbl:forth:semicolon:rv]],
+compiles code that performs the reverse operation: an ~ld~ instruction
+that loads the return address from the stack back into the register
+~ra~, and an ~addi~ instruction that releases the unused stack slot.
+Finally, it also compiles a return operation as a ~jalr~ instruction.
 
 {{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting (RISC-V).
@@ -3087,7 +3109,7 @@ is listed in Table [[tbl:forth:reg:rv]].
 {{{wtable_end}}}
 
 {{{wtable_begin(8)}}}
-#+CAPTION: Subroutine ~']'~ changes Forth's ~STATE~ to compiling (RISC-V).
+#+CAPTION: Subroutine ~']'~ changes Forth's ~STATE~ back to compiling (RISC-V).
 #+LABEL: tbl:forth:rbracket:rv
 #+ATTR_LATEX: :align l|ll|l :float nil
 | *Pseudocode*                   | *Instruction*    | *Encoding*                                                                                             | *Machine code*      |
@@ -3102,6 +3124,15 @@ is listed in Table [[tbl:forth:reg:rv]].
 |                                | sd t0, 32(s2)    | {{{off(0000001)}}} {{{rs2(00101)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 30 59 02~       |
 | ~return.~                      | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
 {{{wtable_end}}}
+
+The ~'.'~ subroutine, shown in Table [[tbl:forth:.:rv]], is equivalent to
+its x86-64 version.  There is a significant difference in its later
+utilisation, however.  While the x86-64 instruction encoding scheme is
+byte-oriented, allowing for any instruction to be easily encoded by
+appending whole bytes or sequences of bytes, RISC-V encodes
+instructions as concatenated bit ranges of various lengths.
+Therefore, using ~'.'~ for assembling instructions in the next stage
+is not as direct in RISC-V as in x86-64.
 
 {{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~'.'~ compiles a byte from the stack to ~OUTPUT~ (RISC-V).
@@ -3123,6 +3154,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 |                                  | addi s1, s1, 1   | {{{imm(0x001)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | ~93 84 14 00~       |
 | ~return.~                        | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
 {{{wtable_end}}}
+
+The RISC-V translation of ~LIT~, listed in Table [[tbl:forth:lit:rv]], is
+mostly equivalent to the original.  It is slightly more complicated to
+load an immediate byte in a register, for the same reason given in our
+comments on ~'.'~: it requires bit twiddling as opposed to simply
+embedding the byte in the flow of instructions as in x86-64.
 
 {{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~LIT~ compiles a literal byte into a word definition (RISC-V).
@@ -3178,8 +3215,13 @@ is listed in Table [[tbl:forth:reg:rv]].
 | ~return.~                                                                                         | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~             |
 {{{wtable_end}}}
 
+*** Searching the Dictionary: ~xt=~, ~FIND~
 
-*** Searching the Dictionary: ~xt=~, ~FIND~                        :noexport:
+The subroutine used to test dictionary entries for a matching name,
+~xt=~, is given in Table [[tbl:forth:xt=:rv]].  In contrast to its x86-64
+variant, it does not use the ~FLAGS~ register for information passing.
+Additionally, it needs to implement an explicit loop where SmithForth
+simply used the ~REPE CMPS~ repeated comparison instruction sequence.
 
 {{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~xt=~ compares an execution token's name with a given string (RISC-V).
@@ -3232,6 +3274,11 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c(2)}}} ~return.~                             | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~             |
 {{{wtable_end}}}
 
+~FIND~, shown in Table [[tbl:forth:find:rv]], is an almost direct
+translation of SmithForth's ~FIND~.  The only significant change is
+the same as done for ~xt=~, that is, explicitly receiving return
+information instead of using the ~FLAGS~ register.
+
 {{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~FIND~ searches the dictionary for a word matching a given name (RISC-V).
 #+LABEL: tbl:forth:find:rv
@@ -3275,8 +3322,11 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c(2)}}} ~return.~                       | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 {{{wtable_end}}}
 
+*** Handling Numbers: ~Num~, ~miss~
 
-*** Handling Numbers: ~Num~, ~miss~                                :noexport:
+The porting of words ~Num~ and ~miss~, shown in Tables
+[[tbl:forth:num:rv]] and [[tbl:forth:miss:rv]], was straightforward, almost
+line-by-line.
 
 {{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~Num~ parses a character string as a number and pushes it on the stack (RISC-V).
@@ -3359,8 +3409,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c(2)}}} ~return.~                   | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 {{{wtable_end}}}
 
+*** Compile or Execute: ~EXEC~, ~exec~, ~compl~, ~hit~
 
-*** Compile or Execute: ~EXEC~, ~exec~, ~compl~, ~hit~             :noexport:
+The RISC-V ~EXEC~, listed in Table [[tbl:forth:EXEC:rv]], is likely the
+only translation significantly shorter than the original.  As
+explained before, we believe this could have been implemented in a
+more direct manner in x86-64 as well.
 
 {{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~EXEC~ executes a Forth word (RISC-V).
@@ -3478,10 +3532,21 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c(2)}}} ~return.~                              | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~             |
 {{{wtable_end}}}
 
+We make no further comments on the other subroutines ported in this
+section, as they are very similar to their x86-64 original source
+code.
 
-*** Bringing Everything Together: ~SVAL~, ~ti~                     :noexport:
+*** Bringing Everything Together: ~SVAL~, ~ti~
 
-{{{wtable_begin(8)}}}
+We have almost reached the end of our efforts to port SmithForth to
+RISC-V.  In the final two translated subroutines, displayed in Tables
+[[tbl:forth:SVAL:rv]] and [[tbl:forth:ti:rv]], word evaluation and the
+interpreter loop are being set up.  Similarly to SmithForth, all file
+contents following the last ~jalr~ instruction in ~ti~ is interpreted
+by the loop as Forth source code.  In the next chapter, we will show a
+possible way to continue extending our Forth in Forth itself.
+
+{{{wtable_begin(7)}}}
 #+CAPTION: Subroutine ~SVAL~ evaluates a line of Forth code (RISC-V).
 #+LABEL: tbl:forth:SVAL:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
@@ -3590,6 +3655,7 @@ References:
 
 
 * Notes                                                            :noexport:
+
 
 *** TODOs
 - [X] Convert all *&* columns to use the ~addr~ macro.
