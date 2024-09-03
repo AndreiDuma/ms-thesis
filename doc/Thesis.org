@@ -1895,11 +1895,18 @@ sets for x86-64 (field ~p_align~).
 {{{wtable_end}}}
 
 
-** Global Variables                                                :noexport:
+** Global Variables
 
+In RISC-V the allocation of registers and memory locations for global
+variables, shown in Table [[tbl:globals:rv]], is similar to SmithForth's.
+Note that for the first four variables we used ``saved registers'',
+designated as callee-saved registers by RISC-V's software calling
+convention [cite:@riscv_spec_vol_i].
+
+{{{wtable_begin(10)}}}
 #+CAPTION: Global variables in SmithForth (RISC-V).
 #+LABEL: tbl:globals:rv
-#+ATTR_LATEX: :align l|l|l
+#+ATTR_LATEX: :align l|l|l :float nil
 | *Variable* | *Register*​/​*Address*   | *Contents*                                                    |
 |------------+------------------------+---------------------------------------------------------------|
 | ~INPUT~    | ~s0~                   | Source address of binary interpreter data and commands.       |
@@ -1912,10 +1919,21 @@ sets for x86-64 (field ~p_align~).
 | ~>IN~      | ~0x10000010 (VARS+16)~ | The number of /parsed/ characters in the current line.        |
 | ~STATE~    | ~0x10000020 (VARS+32)~ | Either ~0~ (/interpreting/ state) or ~1~ (/compiling/ state). |
 | ~LATEST~   | ~0x10000028 (VARS+40)~ | The execution token (/xt/) of the latest defined Forth word.  |
+{{{wtable_end}}}
 
+The code that initializes ~INPUT~ and ~OUTPUT~ is similar, if a bit
+more verbose due to RISC-V's splitting of immediate loads in 20-bit
+``upper immediate'' loads and 12-bit immediate additions
+[cite:@riscv_spec_vol_i; @patterson2017].  We have chosen to represent
+the sub-byte encoding scheme used by RISC-V in the `Encoding' column,
+highlighting source & destination registers, immediates and offsets.
+The encoding process of the first =lui= instruction is explained in
+detail.
+
+{{{wtable_begin(10)}}}
 #+CAPTION: RISC-V: Initialize global variables =INPUT= and =OUTPUT=.
 #+LABEL: tbl:forth:init-io:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                     | *Instruction*      | *Encoding*                                                                                             | *&*            | *Mach. code*  |
 |----------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+----------------+---------------|
 | /# Global variable ~INPUT~./     |                    |                                                                                                        |                |               |
@@ -1938,7 +1956,10 @@ sets for x86-64 (field ~p_align~).
 | ~VARS@s2 ← 0x10000000;~          | ~lui s2,0x10000~   | {{{imm(0x10000)}}}                                 {{{rd(10010)}}}   {{{op(0110111)}}}                 |                | ~37 09 00 10~ |
 |                                  | ~addi s2,s2,0x000~ | {{{imm(0x000)}}}   {{{rs1(10010)}}} {{{fn3(000)}}} {{{rd(10010)}}}   {{{op(0010011)}}}                 |                | ~13 09 09 00~ |
 |                                  |                    |                                                                                                        | {{{addr(90)}}} |               |
+{{{wtable_end}}}
 
+We initialized ~VARS~ here rather than in individual subroutines,
+since it spares several instructions.
 
 ** Binary Interpreter
 
