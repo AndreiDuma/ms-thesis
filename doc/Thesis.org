@@ -100,13 +100,13 @@
 # Additional options are set in `.dir-locals.el`.
 
 
-# #+begin_abstract
+#+begin_abstract
 
 TODO.
 
-# #+end_abstract
+#+end_abstract
 
-# \clearpage
+\clearpage
 
 
 # Table of contents.
@@ -605,7 +605,7 @@ SmithForth to RISC-V]] for porting SmithForth to RISC-V.
 
 In this chapter we will delve into the machine code implementation of
 SmithForth.  We will record our understanding as commented pseudocode,
-which we will use to annotate the David Smith's original x86-64 code.
+which we will use to annotate David Smith's original x86-64 code.
 This documentation will aid the RISC-V implementation in the next
 chapter by providing a higher-level picture of the system's
 operations.
@@ -633,15 +633,15 @@ with an ELF file header, followed by:
 SmithForth uses the simplest possible layout, specifying only one
 loadable memory segment in its program header table.  Therefore the
 executable preamble only has to contain the ELF file header (always
-mandatory) and one ELF program header entry.  We'll look at them in
+mandatory) and one ELF program header entry.  We will look at them in
 turn.
 
 *** ELF File Header
 
 Table [[tbl:elf-file-header:x]] depicts the ELF file header.  The first
 column tracks the address of the header's various fields, the second
-column show the bytes in hexadecimal format, while the last column
-explain the meaning of each field.  Field names, such as
+column shows the bytes in hexadecimal format, while the last column
+explains the meaning of each field.  Field names, such as
 ~e_ident[EI_MAG]~, originate in the System V ``gABI'' specification
 [cite:@system_v_gabi].
 
@@ -678,9 +678,9 @@ explain the meaning of each field.  Field names, such as
 {{{wtable_end}}}
 
 We underlined some of the more interesting fields.  Note field
-~e_machine~, which will needs to be modified in the RISC-V port.
-Field ~e_entry~ specifies the address of the first instruction that
-will be run once the executable is loaded in memory by the kernel.  As
+~e_machine~, which will need to be modified in the RISC-V port.  Field
+~e_entry~ specifies the address of the first instruction that will be
+run once the executable is loaded in memory by the kernel.  As
 mentioned above, SmithForth requires only one program header entry and
 no section entries; therefore ~e_phnum~ is ~1~ and ~e_shnum~ is ~0~.
 
@@ -716,7 +716,10 @@ We are now ready to examine the first x86-64 instructions that
 SmithForth runs once it is loaded.
 
 
-** Global Variables                                                :noexport:
+\clearpage
+
+
+** Global Variables
 
 SmithForth could have been implemented purely in machine code, word by
 word.  That would have led, however, to much code repetition, since no
@@ -728,16 +731,16 @@ doesn't have that luxury.
 
 Instead of operating entirely at one level of abstraction, SmithForth
 is built in stages, with each stage using the facilities provided by
-the stage bellow.  The implementation begins with setting up a
-``binary interpreter'', a minimal meta-programming mechanism using a
-simple binary convention to allow for the easy definition, compilation
-and execution of Forth words.  This mechanism will be detailed in the
-next [[*Binary Interpreter][section]].
+the stage below.  The implementation begins with setting up a ``binary
+interpreter'', a minimal meta-programming mechanism using a simple
+binary convention to allow for the easy definition, compilation and
+execution of Forth words.  This mechanism will be detailed in the [[*Binary Interpreter][next
+section]].
 
 This first stage is used by the next, which builds primitives for
-[[*A Way Out][exiting]], [[*Debugging Utilities][debugging]] and [[*Text Interpreter][text interpretation]].  Together, these two
-stages construct a basic Forth system able to compile and execute
-the Forth code at the next stage, defined in ~system.fs~.
+[[*Interacting with the World][exiting and printing]], [[*Debugging Utilities][debugging]] and [[*Text Interpreter][executing]] Forth code. Together,
+these two stages construct a basic Forth system able to compile and
+execute the Forth code at the next stage, defined in ~system.fs~.
 
 The different components of the system described above communicate
 mainly through three mechanisms:
@@ -778,14 +781,14 @@ programmer from the effort of creating these repetitive structures
 manually.
 
 Variable ~VARS~, held in a register, is used to indirectly address the
-five variables held stored in memory, listed in the second half of the
+five variables stored in memory, listed in the second half of the
 table. These variables, in turn, are used by the text interpreter for
 reading Forth code from input (~#IN~, ~TIB~ and ~>IN~), for
 distinguishing between compilation mode and interpretation mode
 (~STATE~) and for referring to the Forth dictionary (~LATEST~).
 
-Finally, the last variable in a register, ~STACK~, points to the top
-of the Forth data stack, once it is set up.
+Finally, the last variable kept in a register, ~STACK~, points to the
+top of the Forth data stack, once it is set up.
 
 The first two SmithForth machine instructions, shown in Table
 [[tbl:forth:init-io:x]], initialize variables ~INPUT~ and ~OUTPUT~, used
@@ -793,16 +796,17 @@ further by the binary interpreter.  Note the typographic conventions
 used in this table, as they will be used all along our analysis of the
 SmithForth x86-64 codebase.  In the first column we wrote our
 annotations, in the form of pseudocode interspersed with comments;
-this will be the most important resource during the RISC-V port in the
-next chapter.  The following two columns show the x86-64 instructions
-in assembly and ``opcode'' format; the mnemonic of the former can be
-used to search the Intel manuals for generic instructions, while the
-latter specifies the concrete hardware instruction that was chosen for
-encoding.  The last column contains the encoded binary instructions as
-annotated hexadecimal bytes.  The *&* column, when present, is used to
-track addresses for calculating relative offsets calls, jumps and
-branches.  Note the address of the first instruction, =0x78=, the same
-that we saw used as the entry point in the ELF header.
+this documentation will be the most important resource during the
+RISC-V port in the next chapter.  The following two columns show the
+x86-64 instructions in assembly and ``opcode'' format; the mnemonic of
+the former can be used to search the Intel manuals for generic
+instructions, while the latter specifies the concrete hardware
+instruction that was chosen for encoding.  The last column contains
+the encoded binary instructions as annotated hexadecimal bytes.  The
+*&* column, when present, is used to track addresses for calculating
+relative offsets for calls, jumps and branches.  Note the address of
+the first instruction, =0x78=, the same that we saw used as the entry
+point in the ELF header.
 
 {{{wtable_begin(10)}}}
 #+CAPTION: x86-64: Initialize global variables =INPUT= and =OUTPUT=.
@@ -829,12 +833,14 @@ interpreter is going to start writing, so this is the initial value
 that global variable ~OUTPUT~ receives.
 
 
-** Binary Interpreter                                              :noexport:
+\clearpage
+
+** Binary Interpreter
 
 The binary interpreter implements a simple meta-programming device for
 easily defining, compiling and executing Forth words in machine code.
 It consists of a loop, shown in Table [[tbl:forth:bi:x]], that repeatedly:
-- Consumes a byte from ~INPUT~;
+- Consumes a byte from ~INPUT~.
 - If this byte has the special value =0x99=, it is understood as
   signaling the beginning of a binary interpreter /command/.  Another
   /command argument/ byte is consumed from ~INPUT~ and is used to
@@ -954,7 +960,7 @@ of the more subtle parts of SmithForth.
 *** Subroutine ~Head~
 
 Central to Forth systems is the /word dictionary/, a linked list of
-/dictionary entries/ containing information about defined word.  In
+/dictionary entries/ containing information about defined words.  In
 SmithForth, a dictionary entry consists of four fields:
 - the _code_ field (8 bytes), which contains the memory address where the word's
   code begins;
@@ -1012,9 +1018,11 @@ described above.
 {{{wtable_end}}}
 
 
-** Interacting with the World                                      :noexport:
+\clearpage
 
-The first user-level, non-infrastructural, word defined by SmithForth
+** Interacting with the World
+
+The first user-level, non-infrastructural word defined by SmithForth
 is ~BYE~, used for terminating the program.  Its definition is shown
 in Table [[tbl:forth:bye:x]].  The syscall number for ~exit~ is loaded in
 register ~RAX~ and the status code is loaded in ~RDI~, as expected by
@@ -1071,7 +1079,7 @@ output/, implemented in ~TYPE~ and shown in Table [[tbl:forth:type:x]].
 | {{{i(1)}}} ~u@RDX -= ret@RAX;~                   | sub rdx, rax  | REX.W 29 /r |                      | ~48 29~ {{{modrm(C2,11,000,010)}}} | rdx(count) -= rax     |
 | {{{i(1)}}} ~if u > 0:~                           |               |             |                      |                                    |                       |
 | {{{i(2)}}}     /# We still have bytes to print./ |               |             |                      |                                    |                       |
-| {{{i(2)}}}     ~goto _begin.~                    | jg __beg_     | 7F _cb_     |                      | ~7F~ {{{offset(EF,00-11)}}}        | -jump _beg if >       |
+| {{{i(2)}}}     ~goto _begin.~                    | jg __begin_   | 7F _cb_     |                      | ~7F~ {{{offset(EF,00-11)}}}        | -jump _beg if >       |
 | ~_end:~                                          |               |             | {{{addr(11)}}}       |                                    |                       |
 | {{{i(1)}}} ~return.~                             | ret           | C3          |                      | ~C3~                               | return                |
 {{{wtable_end}}}
@@ -1083,7 +1091,10 @@ loop that maintains the remaining byte count and current source
 address is implemented to this effect.
 
 
-** Debugging Utilities                                             :noexport:
+\clearpage
+
+
+** Debugging Utilities
 
 Low-level programming often requires debugging utilities for
 inspecting the registers and the memory at particular source
@@ -1132,11 +1143,11 @@ command recommended by David Smith:
 #+end_src
 
 Debugging utility ~reg~, displayed in Table [[tbl:forth:reg:x]], prints
-all 16 general-purpose registers of a x86-64 processor.  It first
+all 16 general-purpose registers of an x86-64 processor.  It first
 pushes the registers, carefully ordered, on the stack and then it
-calls ~TYPE~ for printing that section of the stack.  Similarly to
-~dbg~, reading the output at the Linux terminal requires a conversion
-to printable characters.  We have successfully used ~xxd -u -g8 -o
+calls ~TYPE~ for printing that stack section.  Similarly to ~dbg~,
+reading the output at the Linux terminal requires a conversion to
+printable characters.  We have successfully used ~xxd -u -g8 -o
 0x0fffffe0 -R always~.
 
 {{{wtable_begin(10)}}}
@@ -1182,26 +1193,60 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 {{{wtable_end}}}
 
 
+\clearpage
+
 ** Text Interpreter
 
-# ============= TEXT INTERPRETER
-#
-# Standard Forth handles input one line at a time.
-# SmithForth's text interpreter is a simple interpreter in the standard Forth style.
-# SVAL (see standard Forth's EVALUATE) interprets each line.
-# REFILL fetches a line of input, including its trailing LF, and sets the input source state.
-#     10000000 #IN      cell contains #characters in the current line.
-#     10000008 TIB      cell contains the address where the current line begins.
-#     10000010 >IN      cell contains #characters in the current line that have been parsed.
-#     10000020 STATE    cell contains 0(Interpreting) or 1(Compiling).
-#     10000028 Latest   cell contains the execution token (xt) of the latest defined Forth word.
-# In Forth, to parse is to remove from the input stream. As a line is parsed, [>IN] increases from 0 to [#IN].
-# Forth's "parse area" is the part of the line not yet parsed.
+SmithForth has now sufficient basic tools to build its second stage,
+the text interpreter.  This consists of about 20 words that we grouped
+under six functionality categories:
+- /Parsing/ consumes text from ~INPUT~ and return tokens as string. It
+  also handles inline and line comments.
+- /Defining new Forth words/ allows extending the language by
+  combining existing words into ``secondary'' words.  The core words
+  are ~':'~ (colon) and ~';'~ (semicolon), which begin and finalize
+  definitions.
+- /Searching the dictionary/ involves identifying a Forth word in the
+  dictionary by its textual name and returning an /execution token/,
+  or /xt/.
+- /Handling numbers/ allows Forth definitions to contain literal
+  numbers.  It also permits ``executing'' numbers, which means pushing
+  them on the Forth data stack.
+- /Compiling and executing/ turns executions tokens into latent or
+  active effects, by either compiling calls to their code or executing
+  them right away.
+- Finally, /bringing everything together/ means being able to
+  repeatedly parse a new token, identify it as an existing Forth word
+  or as a number, executing or compiling it according to its nature.
+  The text interpreter is bootstrapped here, allowing for further
+  extension of the system in Forth itself.
 
-*** Parsing Forth: REFILL, seek, PARSE, pname
+We will look at the six word categories in turn.
 
-{{{wtable_begin(10)}}}
-#+CAPTION: Subroutine ~REFILL~ replenishes the /parse area/ by advancing ~TIB~ and ~#IN~ (x86-64).
+\clearpage
+*** Parsing Forth: ~REFILL~, ~seek~, ~PARSE~, ~pname~, ~'('~, ~'\'~
+
+The next six words defined by SmithForth work together to parse Forth
+code from ~INPUT~.  ~REFILL~ brings a new line from input to the
+/parse area/, which is then traversed character by character by
+~seek~. ~PARSE~ knows how to detect the end of words or the end of the
+parse area.  Finally ~pname~ puts everything together, traversing the
+parse area word by word, returning them as strings.
+
+Words ~'('~ and ~'\'~ handle Forth inline and line comments,
+respectively.  It is worthwhile noting that many syntactical
+``structures'' emerge naturally in Forth from its basic principles,
+whereas in other languages they require complex parsing mechanisms.
+
+Parsing words are built around [[tbl:globals:x][global variables]] ~TIB~, ~#IN~ and
+~>IN~.  ~TIB~ stores the address of the current line to be parsed,
+while ~#N~ stores the line's length.  ~>IN~ counts the number of
+character already parsed.  The /parse area/ is defined as the range
+~[TIB + >IN, TIB + #IN)~, that is, the part of the line not yet
+parsed.
+
+{{{wtable_begin(9)}}}
+#+CAPTION: ~REFILL~ replenishes the /parse area/ by advancing ~TIB~ and ~#IN~ (x86-64).
 #+LABEL: tbl:forth:refill:x
 #+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                                     | *Instruction*        | *Opcode*         | *&*            | *Machine code*                                            | *Intention*      |
@@ -1209,12 +1254,14 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | /# Define:/ _~REFILL~_                           | ---                  | ---              |                | {{{define(06,52 45 46 49 4C 4C)}}}                        | define REFILL    |
 | /# In/Out:/ ~( -​- )~                             |                      |                  |                |                                                           |                  |
 | /#/                                              |                      |                  |                |                                                           |                  |
-| /# Advance ~TIB~ and ~#IN~ so/                   |                      |                  |                |                                                           |                  |
-| /# that ~[TIB, TIB + #IN)~ contains/             |                      |                  |                |                                                           |                  |
-| /# a new line to be parsed./                     |                      |                  |                |                                                           |                  |
+| /# Advance ~TIB~ and set ~#IN~/                  |                      |                  |                |                                                           |                  |
+| /# so that ~[TIB, TIB + #IN)~/                   |                      |                  |                |                                                           |                  |
+| /# contains a new line to be/                    |                      |                  |                |                                                           |                  |
+| /# parsed./                                      |                      |                  |                |                                                           |                  |
 |                                                  |                      |                  |                |                                                           |                  |
 | {{{i(1)}}} /# Base address of globals./          |                      |                  |                |                                                           |                  |
-| {{{i(1)}}} ~VARS@R9 ← 0x10000000;~               | mov r9, /0x10000000/ | REX.W C7 /​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}} /~00 00 00 10~/        | r9 = VAR         |
+| {{{i(1)}}} ~VARS@R9 ← 0x10000000;~               | mov r9, /0x10000000/ | REX.W C7 /​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}}                        | r9 = VAR         |
+|                                                  |                      |                  |                | \hookrightarrow /~00 00 00 10~/                 |                  |
 | {{{i(1)}}}                                       |                      |                  |                |                                                           |                  |
 | {{{i(1)}}} /# Advance ~TIB~​ by ~#IN~./           |                      |                  |                |                                                           |                  |
 | {{{i(1)}}} /#/                                   |                      |                  |                |                                                           |                  |
@@ -1235,7 +1282,7 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | {{{i(1)}}} ~RAX += [#IN];~                       | add rax, [r9]        | REX.W 03 /r      |                | ~49 03~ {{{modrm(01,00,000,001)}}}                        | rax += [#IN]     |
 | {{{i(1)}}} /# Newline character?/                |                      |                  |                |                                                           |                  |
 | {{{i(1)}}} ~if [RAX - 1] != 0x0A:~               | cmp [rax-0x1], /0xA/ | 80 /​7 /ib/       |                | ~80~ {{{modrm(78,01,111,000)}}} {{{displ(FF)}}} /~0A~/    | cmp [rax-1], LF  |
-| {{{i(2)}}}   ~goto _begin.~                      | jne __beg_           | 75 _cb_          |                | ~75~ {{{offset(F0,00-10)}}}                               | -jump _beg if != |
+| {{{i(2)}}}   ~goto _begin.~                      | jne _~_begin~_       | 75 _cb_          |                | ~75~ {{{offset(F0,00-10)}}}                               | -jump _beg if != |
 | {{{i(1)}}} ~return.~                             | ret                  | C3               | {{{addr(10)}}} | ~C3~                                                      | return           |
 {{{wtable_end}}}
 
@@ -1254,13 +1301,14 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | /# char is within ~[low, high)~/                   |                      |                  |                |                                                    |                                             |
 | /# or parse area is empty./                        |                      |                  |                |                                                    |                                             |
 |                                                    |                      |                  |                |                                                    |                                             |
-| {{{c(2)}}} ~VARS@R9 ← 0x10000000;~                 | mov r9, /0x10000000/ | REX.W C7 /​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}} /~00 00 00 10~/ | r9 = VAR                                    |
+| {{{c(2)}}} ~VARS@R9 ← 0x10000000;~                 | mov r9, /0x10000000/ | REX.W C7 /​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}}                 | r9 = VAR                                    |
+|                                                    |                      |                  |                | \hookrightarrow /~00 00 00 10~/          |                                             |
 | {{{c(2)}}} ~high@DL -= low@CL;~                    | sub dl, cl           | 2A /r            |                | ~2A~ {{{modrm(D1,11,010,001)}}}                    | dl -= cl                                    |
 | ~_begin:~                                          |                      |                  | {{{addr(00)}}} |                                                    | # _beg:  like WITHIN ( al cl dl -- eflags ) |
 | {{{c(2)}}} /# Is parse area empty?/                |                      |                  |                |                                                    |                                             |
 | {{{c(2)}}} ~>in@RAX ← [>IN];~                      | mov rax, [r9+0x10]   | REX.W 8B /r      |                | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | rax = [>IN]                                 |
 | {{{c(2)}}} ~if >in@RAX~ \ge{{{unsigned}}} ~[#IN]:~   | cmp rax, [r9]        | REX.W 3B /r      |                | ~49 3B~ {{{modrm(01,00,000,001)}}}                 | cmp rax, [#IN]                              |
-| {{{c(4)}}}   ~goto _end.~                          | jae __end_           | 73 _cb_          |                | ~73~ {{{offset(16,1F-09)}}}                        | +jump _end if U>=                           |
+| {{{c(4)}}}   ~goto _end.~                          | jae _~_end~_         | 73 _cb_          |                | ~73~ {{{offset(16,1F-09)}}}                        | +jump _end if U>=                           |
 | {{{c(2)}}} /# Get current character./              |                      |                  | {{{addr(09)}}} |                                                    |                                             |
 | {{{c(2)}}} ~RAX ← [TIB];~                          | mov rax, [r9+0x8]    | REX.W 8B /r      |                | ~49 8B~ {{{modrm(41,01,000,001)}}} {{{displ(08)}}} | rax = [TIB]                                 |
 | {{{c(2)}}} ~RAX += [>IN];~                         | add rax, [r9+0x10]   | REX.W 03 /r      |                | ~49 03~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | rax += [>IN]                                |
@@ -1268,16 +1316,16 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | {{{c(2)}}} /# Is ~chr~ in ~[low, high)~?/          |                      |                  |                |                                                    |                                             |
 | {{{c(2)}}} ~chr'@AL -= low@CL;~                    | sub al, cl           | 2A /r            |                | ~2A~ {{{modrm(C1,11,000,001)}}}                    | al -= cl                                    |
 | {{{c(2)}}} ~if chr'@AL~ \lt{{{unsigned}}} ~high@DL:~ | cmp al, dl           | 3A /r            |                | ~3A~ {{{modrm(C2,11,000,010)}}}                    | cmp al, dl                                  |
-| {{{c(4)}}}   ~goto _end.~                          | jb __end_            | 72 _cb_          |                | ~72~ {{{offset(06,1F-19)}}}                        | +jump _end if U<                            |
+| {{{c(4)}}}   ~goto _end.~                          | jb _~_end~_          | 72 _cb_          |                | ~72~ {{{offset(06,1F-19)}}}                        | +jump _end if U<                            |
 | {{{c(2)}}} /# Go to next character./               |                      |                  | {{{addr(19)}}} |                                                    |                                             |
 | {{{c(2)}}} ~[>IN]++;~                              | inc [r9+0x10]        | REX.W FF /0      |                | ~49 FF~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | [>IN]++                                     |
-| {{{c(2)}}} ~goto _begin.~                          | jmp __beg_           | EB _cb_          |                | ~EB~ {{{offset(E1,00-1F)}}}                        | -jump _beg                                  |
+| {{{c(2)}}} ~goto _begin.~                          | jmp _~_begin~_       | EB _cb_          |                | ~EB~ {{{offset(E1,00-1F)}}}                        | -jump _beg                                  |
 | ~_end:~                                            |                      |                  | {{{addr(1F)}}} |                                                    | # _end:                                     |
 | {{{c(2)}}} ~return.~                               | ret                  | C3               |                | ~C3~                                               | return                                      |
 {{{wtable_end}}}
 
 {{{wtable_begin(10)}}}
-#+CAPTION: Subroutine ~PARSE~ returns the address and size of a newly parsed string (x86-64).
+#+CAPTION: ~PARSE~ returns the address and size of a newly parsed string (x86-64).
 #+LABEL: tbl:forth:parse:x
 #+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                                                    | *Instruction*        | *Opcode*         | *&*            | *Machine code*                                     | *Intention*                                                                         |
@@ -1293,7 +1341,8 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | /# Return parsed string as its/                                 |                      |                  |                |                                                    |                                                                                     |
 | /# address and length./                                         |                      |                  |                |                                                    |                                                                                     |
 |                                                                 |                      |                  |                |                                                    |                                                                                     |
-| {{{c( 2)}}} ~VARS@R9 ← 0x10000000;~                             | mov r9, /0x10000000/ | REX.W C7 /​​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}} /~00 00 00 10~/ | r9 = VAR                                                                            |
+| {{{c( 2)}}} ~VARS@R9 ← 0x10000000;~                             | mov r9, /0x10000000/ | REX.W C7 /​​0 /id/ |                | ~49 C7~ {{{modrm(C1,11,000,001)}}}                 | r9 = VAR                                                                            |
+|                                                                 |                      |                  |                | \hookrightarrow /~00 00 00 10~/                                     |                                                                                     |
 | {{{c( 2)}}} ~start@RBP ← [>IN];~                                | mov rbp, [r9+0x10]   | REX.W 8B /r      |                | ~49 8B~ {{{modrm(69,01,101,001)}}} {{{displ(10)}}} | rbp = [>IN]                                                                         |
 | {{{c( 2)}}} /# Compile a call to ~seek~/                        |                      |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} /# that advances ~>IN~./                            |                      |                  |                |                                                    |                                                                                     |
@@ -1305,7 +1354,7 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | {{{c( 2)}}} /# ~seek~ will have left the/                       |                      |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} /# carry flag unset [cite:@intel_manual_volume_2]./ |                      |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} ~if CF = 0:~                                        |                      |                  |                |                                                    |                                                                                     |
-| {{{c( 4)}}}   ~goto _end.~                                      | jae __end_           | 73 _cb_          |                | ~73~ {{{offset(04,04-00)}}}                        | +jump _end if U>=                                                                   |
+| {{{c( 4)}}}   ~goto _end.~                                      | jae _~_end~_         | 73 _cb_          |                | ~73~ {{{offset(04,04-00)}}}                        | +jump _end if U>=                                                                   |
 | {{{c( 2)}}} /# A character in range/                            |                      |                  | {{{addr(00)}}} |                                                    |                                                                                     |
 | {{{c( 2)}}} /# ~[low, high)~ was found./                        |                      |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} ~[>IN]++;~  /# Skip it./                            | inc [r9+0x10]        | REX.W FF /0      |                | ~49 FF~ {{{modrm(41,01,000,001)}}} {{{displ(10)}}} | [>IN]++                                                                             |
@@ -1317,7 +1366,6 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | {{{c( 2)}}} ~addr@RBP ← start@RBP~                              | add rbp, [r9+0x8]    | REX.W 03 /r      |                | ~49 03~ {{{modrm(69,01,101,001)}}} {{{displ(08)}}} | rbp += [TIB]                                                                        |
 | {{{c(11)}}}          ~+ [TIB];~                                 |                      |                  |                |                                                    |                                                                                     |
 | {{{c( 2)}}} ~return.~                                           | ret                  | C3               |                | ~C3~                                               | return                                                                              |
-
 {{{wtable_end}}}
 
 {{{wtable_begin(10)}}}
@@ -1346,62 +1394,30 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | ~return.~                           | ret            | C3         | ~C3~                            | return                 |
 {{{wtable_end}}}
 
-*** Subroutine ~[~                                                 :noexport:
-
-#+CAPTION: Subroutine ~'['~ changes Forth's ~STATE~ to interpreting (x86-64).
-#+LABEL: tbl:forth:lbracket:x
-#+ATTR_LATEX: :align l|ll|lH
-| *Pseudocode*                      | *Instruction* | *Opcode* | *Machine code*                                                                    | *Intention*          |
-|-----------------------------------+---------------+----------+-----------------------------------------------------------------------------------+----------------------|
-| /# Define immediate:/ _~[~_       | ---           | ---      | {{{define(81,5B)}}}                                                               | define [             |
-| /# In/Out:/ ~( -​- )~              |               |          |                                                                                   |                      |
-| /#/                               |               |          |                                                                                   |                      |
-| /# Switch to interpreting state./ |               |          |                                                                                   |                      |
-|                                   |               |          |                                                                                   |                      |
-| /# Set ~STATE~ to 0./             |               |          |                                                                                   |                      |
-| ~push 0;~                         | PUSH /imm8/   | 6A /ib/  | ~6A~ /~00~/                                                                       | push 0(Interpreting) |
-| ~[STATE] ← pop;~                  | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]          |
-| ~return.~                         | RET           | C3       | ~C3~                                                                              | return               |
-
-*** Subroutine ~]~                                                 :noexport:
-
-#+CAPTION: Subroutine ~']'~ changes Forth's ~STATE~ to compiling (x86-64).
-#+LABEL: tbl:forth:rbracket:x
-#+ATTR_LATEX: :align l|ll|lH
-| *Pseudocode*                   | *Instruction* | *Opcode* | *Machine code*                                                                    | *Intention*       |
-|--------------------------------+---------------+----------+-----------------------------------------------------------------------------------+-------------------|
-| /# Define:/ _~]~_              | ---           | ---      | {{{define(01,5D)}}}                                                               | define ]          |
-| /# In/Out:/ ~( -​- )~           |               |          |                                                                                   |                   |
-| /#/                            |               |          |                                                                                   |                   |
-| /# Switch to compiling state./ |               |          |                                                                                   |                   |
-|                                |               |          |                                                                                   |                   |
-| /# Set ~STATE~ to 1./          |               |          |                                                                                   |                   |
-| ~push 1;~                      | PUSH /imm8/   | 6A /ib/  | ~6A~ /~01~/                                                                       | push 1(Compiling) |
-| ~[STATE] ← pop;~               | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]       |
-| ~return.~                      | RET           | C3       | ~C3~                                                                              | return            |
-
-*** Subroutine ~\~                                                 :noexport:
-
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~'\'~ implements line comments (x86-64).
 #+LABEL: tbl:forth:backslash:x
-#+ATTR_LATEX: :align l|ll|lH
-| *Pseudocode*                    | *Instruction*  | *Opcode*    | *Machine code*                                                                       | *Intention* |
-|---------------------------------+----------------+-------------+--------------------------------------------------------------------------------------+-------------|
-| /# Define immediate:/ _~\~_     | ---            | ---         | {{{define(81,5C)}}}                                                                  | define \    |
-| /# In/Out:/ ~( "ccc<eol>" -​- )~ |                |             |                                                                                      |             |
-| /#/                             |                |             |                                                                                      |             |
-| /# Consumes all characters/     |                |             |                                                                                      |             |
-| /# left on the current line./   |                |             |                                                                                      |             |
-|                                 |                |             |                                                                                      |             |
-| ~RAX ← [#IN];~                  | MOV r64, r/m64 | REX.W 8B /r | ~48 8B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(00 00 00 10)}}} | rax = [#IN] |
-| ~[>IN] ← RAX;~                  | MOV r/m64, r64 | REX.W 89 /r | ~48 89~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(10 00 00 10)}}} | [>IN] = rax |
-| ~return.~                       | RET            | C3          | ~C3~                                                                                 | return      |
+#+ATTR_LATEX: :align l|ll|lH :float nil
+| *Pseudocode*                  | *Instruction*         | *Opcode*    | *Machine code*                                              | *Intention* |
+|-------------------------------+-----------------------+-------------+-------------------------------------------------------------+-------------|
+| /# Define immediate:/ _~\~_   | ---                   | ---         | {{{define(81,5C)}}}                                         | define \    |
+| /# In/Out:/ ~( "ccc<eol>"~    |                       |             |                                                             |             |
+| /#/{{{io--}}} ~-​- )~          |                       |             |                                                             |             |
+| /#/                           |                       |             |                                                             |             |
+| /# Consumes all characters/   |                       |             |                                                             |             |
+| /# left on the current line./ |                       |             |                                                             |             |
+|                               |                       |             |                                                             |             |
+| ~RAX ← [#IN];~                | mov rax, /0x10000000/ | REX.W 8B /r | ~48 8B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | rax = [#IN] |
+|                               |                       |             | \hookrightarrow {{{c(2)}}} {{{displ(00 00 00 10)}}}         |             |
+| ~[>IN] ← RAX;~                | mov /0x10000010/, rax | REX.W 89 /r | ~48 89~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | [>IN] = rax |
+|                               |                       |             | \hookrightarrow {{{c(2)}}} {{{displ(10 00 00 10)}}}         |             |
+| ~return.~                     | ret                   | C3          | ~C3~                                                        | return      |
+{{{wtable_end}}}
 
-*** Subroutine ~(~                                                 :noexport:
-
-#+CAPTION: Subroutine ~'('~ implements inline comments, ending with a corresponding ~')'~ (x86-64).
+{{{wtable_begin(10)}}}
+#+CAPTION: Subroutine ~'('~ implements inline comments (x86-64).
 #+LABEL: tbl:forth:lparen:x
-#+ATTR_LATEX: :align l|ll|lH
+#+ATTR_LATEX: :align l|ll|lH :float nil
 | *Pseudocode*                               | *Instruction*  | *Opcode*   | *Machine code*      | *Intention*                                                                 |
 |--------------------------------------------+----------------+------------+---------------------+-----------------------------------------------------------------------------|
 | /# Define immediate:/ _~(~_                | ---            | ---        | {{{define(81,28)}}} | define (                                                                    |
@@ -1409,17 +1425,25 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | /#/                                        |                |            |                     |                                                                             |
 | /# Consume characters until a ')' occurs./ |                |            |                     |                                                                             |
 |                                            |                |            |                     |                                                                             |
-| ~low@CL ← ')';~                            | MOV r8, /imm8/ | B0+rb /ib/ | ~B1~ /~29~/         |                                                                             |
-| ~high@DL ← ')' + 1;~                       | MOV r8, /imm8/ | B0+rb /ib/ | ~B2~ /~2A~/         | (cl, dl) = (RP, RP+1)                                                       |
+| ~low@CL ← ')';~                            | mov cl, /0x29/ | B0+rb /ib/ | ~B1~ /~29~/         |                                                                             |
+| ~high@DL ← ')' + 1;~                       | mov dl, /0x2A/ | B0+rb /ib/ | ~B2~ /~2A~/         | (cl, dl) = (RP, RP+1)                                                       |
 | ~call PARSE;~  /# Compiled./               | ---            | ---        | {{{compile(50,P)}}} | Call PARSE            Forth 2012 implies comment ends at rparen or newline. |
-| ~return.~                                  | RET            | C3         | ~C3~                | return                                                                      |
+| ~return.~                                  | ret            | C3         | ~C3~                | return                                                                      |
+{{{wtable_end}}}
+
+Note that comment-handling words ~'\'~ and ~'('~ appear in the
+original SmithForth source code after ~'['~ and ~']'~.  We preferred
+to present them here, directly after the other words related to
+parsing.
 
 
-*** Subroutine ~:~                                                 :noexport:
+\clearpage
+*** Defining New Forth Words: ~:~, ~;~, ~[~, ~]~, ~.~, ~LIT~       :noexport:
 
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~':'~ (colon) begins compiling a word after setting up its dictionary entry (x86-64).
 #+LABEL: tbl:forth:colon:x
-#+ATTR_LATEX: :align l|ll|lH
+#+ATTR_LATEX: :align l|ll|lH :float nil
 | *Pseudocode*                          | *Instruction*     | *Opcode*          | *Machine code*                            | *Intention*                            |
 |---------------------------------------+-------------------+-------------------+-------------------------------------------+----------------------------------------|
 | /# Define:/ _~':'~_                   | ---               | ---               | {{{define(01,3A)}}}                       | define :                               |
@@ -1448,12 +1472,12 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | /# Switch to compiling state./        |                   |                   |                                           |                                        |
 | ~call ];~  /# Compiled./              | ---               | ---               | {{{compile(5D,])}}}                       | Call ]                                 |
 | ~return.~                             | RET               | C3                | ~C3~                                      | return                                 |
+{{{wtable_end}}}
 
-*** Subroutine ~;~                                                 :noexport:
-
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting (x86-64).
 #+LABEL: tbl:forth:semicolon:x
-#+ATTR_LATEX: :align l|ll|lH
+#+ATTR_LATEX: :align l|ll|lH :float nil
 | *Pseudocode*                           | *Instruction*     | *Opcode*         | *Machine code*                                              | *Intention*          |
 |----------------------------------------+-------------------+------------------+-------------------------------------------------------------+----------------------|
 | /# Define immediate:/ _~;~_            | ---               | ---              | {{{define(81,3B)}}}                                         | define ;             |
@@ -1476,12 +1500,46 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | /# Switch to interpreting state./      |                   |                  |                                                             |                      |
 | ~call lbracket;~  /# Compiled./        |                   |                  | {{{compile(5B,[)}}}                                         | Call [               |
 | ~return.~                              | RET               | C3               | ~C3~                                                        | return               |
+{{{wtable_end}}}
 
-*** Subroutine ~.~                                                 :noexport:
+{{{wtable_begin(10)}}}
+#+CAPTION: Subroutine ~'['~ changes Forth's ~STATE~ to interpreting (x86-64).
+#+LABEL: tbl:forth:lbracket:x
+#+ATTR_LATEX: :align l|ll|lH :float nil
+| *Pseudocode*                      | *Instruction* | *Opcode* | *Machine code*                                                                    | *Intention*          |
+|-----------------------------------+---------------+----------+-----------------------------------------------------------------------------------+----------------------|
+| /# Define immediate:/ _~[~_       | ---           | ---      | {{{define(81,5B)}}}                                                               | define [             |
+| /# In/Out:/ ~( -​- )~              |               |          |                                                                                   |                      |
+| /#/                               |               |          |                                                                                   |                      |
+| /# Switch to interpreting state./ |               |          |                                                                                   |                      |
+|                                   |               |          |                                                                                   |                      |
+| /# Set ~STATE~ to 0./             |               |          |                                                                                   |                      |
+| ~push 0;~                         | PUSH /imm8/   | 6A /ib/  | ~6A~ /~00~/                                                                       | push 0(Interpreting) |
+| ~[STATE] ← pop;~                  | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]          |
+| ~return.~                         | RET           | C3       | ~C3~                                                                              | return               |
+{{{wtable_end}}}
 
+{{{wtable_begin(10)}}}
+#+CAPTION: Subroutine ~']'~ changes Forth's ~STATE~ to compiling (x86-64).
+#+LABEL: tbl:forth:rbracket:x
+#+ATTR_LATEX: :align l|ll|lH :float nil
+| *Pseudocode*                   | *Instruction* | *Opcode* | *Machine code*                                                                    | *Intention*       |
+|--------------------------------+---------------+----------+-----------------------------------------------------------------------------------+-------------------|
+| /# Define:/ _~]~_              | ---           | ---      | {{{define(01,5D)}}}                                                               | define ]          |
+| /# In/Out:/ ~( -​- )~           |               |          |                                                                                   |                   |
+| /#/                            |               |          |                                                                                   |                   |
+| /# Switch to compiling state./ |               |          |                                                                                   |                   |
+|                                |               |          |                                                                                   |                   |
+| /# Set ~STATE~ to 1./          |               |          |                                                                                   |                   |
+| ~push 1;~                      | PUSH /imm8/   | 6A /ib/  | ~6A~ /~01~/                                                                       | push 1(Compiling) |
+| ~[STATE] ← pop;~               | POP r/m64     | 8F /0    | ~8F~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} {{{displ(20 00 00 10)}}} | pop [STATE]       |
+| ~return.~                      | RET           | C3       | ~C3~                                                                              | return            |
+{{{wtable_end}}}
+
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~'.'~ compiles a byte from the stack to ~OUTPUT~ (x86-64).
 #+LABEL: tbl:forth:.:x
-#+ATTR_LATEX: :align l|ll|lH
+#+ATTR_LATEX: :align l|ll|lH :float nil
 | *Pseudocode*                     | *Instruction*     | *Opcode*         | *Machine code*                          | *Intention*  |
 |----------------------------------+-------------------+------------------+-----------------------------------------+--------------|
 | /# Define:/ _~.~_                | ---               | ---              | {{{define(01,2E)}}}                     | define .     |
@@ -1496,12 +1554,12 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | ~STACK@R15 += 8;~                | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~49 83~ {{{modrm(C7,11,000,111)}}} /08/ | r15 += 8     |
 | ~[OUTPUT@RDI++] ← byte@AL;~      | STOS m8           | AA               | ~AA~                                    | [rdi++] = al |
 | ~return.~                        | RET               | C3               | ~C3~                                    | return       |
+{{{wtable_end}}}
 
-*** Subroutine ~LIT~                                               :noexport:
-
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~LIT~ compiles a literal byte into a word definition (x86-64).
 #+LABEL: tbl:forth:lit:x
-#+ATTR_LATEX: :align l|ll|lH
+#+ATTR_LATEX: :align l|ll|lH :float nil
 | *Pseudocode*                                                | *Instruction*     | *Opcode*         | *Machine code*                          | *Intention*             |
 |-------------------------------------------------------------+-------------------+------------------+-----------------------------------------+-------------------------|
 | /# Define immediate:/ _~LIT~_                               | ---               | ---              | {{{define(83,4C 49 54)}}}               | define LIT              |
@@ -1554,13 +1612,16 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | /# Pop ~lit~ off the data stack./                           |                   |                  |                                         |                         |
 | ~STACK@R15 += 8;~                                           | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~49 83~ {{{modrm(C7,11,000,111)}}} /08/ | r15 += 8                |
 | ~return.~                                                   | RET               | C3               | ~C3~                                    | return                  |
+{{{wtable_end}}}
 
 
-*** Subroutine ~xt=~                                               :noexport:
+\clearpage
+*** Searching the Dictionary: ~xt=~, ~FIND~                        :noexport:
 
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~xt=~ compares an execution token's name with a given string (x86-64).
 #+LABEL: tbl:forth:xt=:x
-#+ATTR_LATEX: :align l|ll|l|lH
+#+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                                           | *Instruction*     | *Opcode*         | *&*            | *Machine code*                                     | *Intention*             |
 |--------------------------------------------------------+-------------------+------------------+----------------+----------------------------------------------------+-------------------------|
 | /# Define:/ _~xt=~_                                    | ---               | ---              |                | {{{define(03,78 74 3D)}}}                          | define xt=              |
@@ -1604,12 +1665,12 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | {{{c(10)}}}        ~addr@RDI,~                         |                   |                  |                |                                                    |                         |
 | {{{c(10)}}}        ~u@RCX);~  /# (Un)sets ~ZF~./       | REPE CMPS m8, m8  | F3 A6            |                | ~F3 A6~                                            | strings equal ?         |
 | {{{c(2)}}} ~return.~                                   | RET               | C3               |                | ~C3~                                               | return                  |
+{{{wtable_end}}}
 
-*** Subroutine ~FIND~                                              :noexport:
-
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~FIND~ searches the dictionary for a word matching a given name (x86-64).
 #+LABEL: tbl:forth:find:x
-#+ATTR_LATEX: :align l|ll|l|lH
+#+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                               | *Instruction*  | *Opcode*    | *&*            | *Machine code*                                              | *Intention*      |
 |--------------------------------------------+----------------+-------------+----------------+-------------------------------------------------------------+------------------|
 | /# Define:/ _~FIND~_                       | ---            | ---         |                | {{{define(04,46 49 4E 44)}}}                                | define FIND      |
@@ -1646,13 +1707,16 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | {{{c(2)}}} ~xt@RBX ← [xt@RBX + 8];~        | MOV r64, r/m64 | REX.W 8B /r | {{{addr(00)}}} | ~48 8B~ {{{modrm(5B,01,011,011)}}} {{{displ(08)}}}          | rbx = [rbx+8]    |
 | ~_end:~                                    |                |             | {{{addr(04)}}} |                                                             | # _end:          |
 | {{{c(2)}}} ~return.~                       | RET            | C3          |                | ~C3~                                                        | return           |
+{{{wtable_end}}}
 
 
-*** Subroutine ~Num~                                               :noexport:
+\clearpage
+*** Handling Numbers: ~Num~, ~miss~                                :noexport:
 
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~Num~ parses a character string as a number and pushes it on the stack (x86-64).
 #+LABEL: tbl:forth:num:x
-#+ATTR_LATEX: :align l|ll|l|lH
+#+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                             | *Instruction*     | *Opcode*         | *&*            | *Machine code*                            | *Intention*        |
 |------------------------------------------+-------------------+------------------+----------------+-------------------------------------------+--------------------|
 | /# Define:/ _~Num~_                      | ---               | ---              |                | {{{define(03,4E 75 6D)}}}                 | define Num         |
@@ -1691,12 +1755,12 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | {{{c(2)}}} ~[STACK@R15] <<= 4~;          | SAL r/m64, /imm8/ | REX.W C1 /​4 /ib/ |                | ~49 C1~ {{{modrm(27,00,100,111)}}} /~04~/ | [r15] <<= 4        |
 | {{{c(2)}}} ~[STACK@R15]~ \vert​~= digit@RAX;~ | OR r/m64, r64     | REX.W 09 /r      |                | ~49 09~ {{{modrm(07,00,000,111)}}}        | [r15] \vert= rax       |
 | {{{c(2)}}} ~return.~                     | RET               | C3               |                | ~C3~                                      | return             |
+{{{wtable_end}}}
 
-*** Subroutine ~miss~                                              :noexport:
-
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~miss~ attempts parsing a word as a number, optionally compiling it as a literal (x86-64).
 #+LABEL: tbl:forth:miss:x
-#+ATTR_LATEX: :align l|ll|l|lH
+#+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                           | *Instruction*     | *Opcode*    | *&*            | *Machine code*                                           | *Intention*           |
 |----------------------------------------+-------------------+-------------+----------------+----------------------------------------------------------+-----------------------|
 | /# Define:/ _~miss~_                   | ---               | ---         |                | {{{define(04,6D 69 73 73)}}}                             | define miss           |
@@ -1731,13 +1795,16 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | ~_lit:~                                |                   |             | {{{addr(01)}}} |                                                          | # _lit:               |
 | {{{c(2)}}} ~call LIT;~  /# Compiled./  | ---               | ---         |                | {{{compile(4C,L)}}}                                      | Call LIT              |
 | {{{c(2)}}} ~return.~                   | RET               | C3          |                | ~C3~                                                     | return                |
+{{{wtable_end}}}
 
 
-*** Subroutine ~EXEC~                                              :noexport:
+\clearpage
+*** Compile or Execute: ~EXEC~, ~exec~, ~compl~, ~hit~             :noexport:
 
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~EXEC~ executes a Forth word (x86-64).
 #+LABEL: tbl:forth:EXEC:x
-#+ATTR_LATEX: :align l|ll|lH
+#+ATTR_LATEX: :align l|ll|lH :float nil
 | *Pseudocode*                       | *Instruction*    | *Opcode*   | *Machine code*                  | *Intention*  |
 |------------------------------------+------------------+------------+---------------------------------+--------------|
 | /# Define:/ _~EXEC~_               | ---              | ---        | {{{define(04,45 58 45 43)}}}    | define EXEC  |
@@ -1765,12 +1832,12 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | ~pop OUTPUT@RDI;~                  | POP r64          | 58+rd      | ~5F~                            | pop rdi      |
 | ~call [RCX];~                      | CALL r/m64       | FF /2      | ~FF~ {{{modrm(D1,11,010,001)}}} | call rcx     |
 | ~return.~                          | RET              | C3         | ~C3~                            | return       |
+{{{wtable_end}}}
 
-*** Subroutine ~exec~                                              :noexport:
-
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~exec~ executes a word if it's immediate or if  (x86-64).
 #+LABEL: tbl:forth:exec:x
-#+ATTR_LATEX: :align l|ll|l|lH
+#+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                              | *Instruction*  | *Opcode* | *&*            | *Machine code*               | *Intention*        |
 |-------------------------------------------+----------------+----------+----------------+------------------------------+--------------------|
 | /# Define:/ _~exec~_                      | ---            | ---      |                | {{{define(04,65 78 65 63)}}} | define exec        |
@@ -1789,12 +1856,12 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | ~exec():~                                 |                |          | {{{addr(01)}}} |                              | (exec)             |
 | {{{c(2)}}} ~call EXEC;~  /# Compiled./    | ---            | ---      |                | {{{compile(45,E)}}}          | Call EXEC          |
 | {{{c(2)}}} ~return.~                      | RET            | C3       |                | ~C3~                         | return             |
+{{{wtable_end}}}
 
-*** Subroutine ~compl~                                             :noexport:
-
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~compl~ compiles a word in compiling state if it's not immediate (x86-64).
 #+LABEL: tbl:forth:compl:x
-#+ATTR_LATEX: :align l|ll|l|lH
+#+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                                | *Instruction*  | *Opcode*   | *&*            | *Machine code*                  | *Intention*         |
 |---------------------------------------------+----------------+------------+----------------+---------------------------------+---------------------|
 | /# Define:/ _~compl~_                       | ---            | ---        |                | {{{define(05,63 6F 6D 70 6C)}}} | define compl        |
@@ -1813,12 +1880,12 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | {{{c(2)}}} /# Restore AL after ~COMPL~./    |                |            |                |                                 |                     |
 | {{{c(2)}}} ~imm+state@AL ← 1;~              | MOV r8, /imm8/ | B0+rb /ib/ |                | ~B0~ /~01~/                     | al = 1              |
 | {{{c(2)}}} ~return.~                        | RET            | C3         |                | ~C3~                            | return              |
+{{{wtable_end}}}
 
-*** Subroutine ~hit~                                               :noexport:
-
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~hit~ either compiles or executes a word found in the dictionary (x86-64).
 #+LABEL: tbl:forth:hit:x
-#+ATTR_LATEX: :align l|ll|l|lH
+#+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                                      | *Instruction*   | *Opcode*    | *&*            | *Machine code*                                           | *Intention*         |
 |---------------------------------------------------+-----------------+-------------+----------------+----------------------------------------------------------+---------------------|
 | /# Define:/ _~hit~_                               | ---             | ---         |                | {{{define(03,68 69 74)}}}                                | define hit          |
@@ -1845,13 +1912,16 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | {{{c(2)}}} ~call compl;~  {{{c(0)}}}​/# Compiled./ | ---             | ---         |                | {{{compile(63,c)}}}                                      | Call compl          |
 | {{{c(2)}}} ~call exec;~   {{{c(1)}}}​/# Compiled./ | ---             | ---         |                | {{{compile(65,e)}}}                                      | Call exec           |
 | {{{c(2)}}} ~return.~                              | RET             | C3          |                | ~C3~                                                     | return              |
+{{{wtable_end}}}
 
 
-*** Subroutine ~SVAL~                                              :noexport:
+\clearpage
+*** Bringing Everything Together: ~SVAL~, ~ti~                     :noexport:
 
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~SVAL~ evaluates a line of Forth code (x86-64).
 #+LABEL: tbl:forth:SVAL:x
-#+ATTR_LATEX: :align l|ll|l|lH
+#+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                                      | *Instruction*  | *Opcode*    | *&*            | *Machine code*                                              | *Intention*     |
 |---------------------------------------------------+----------------+-------------+----------------+-------------------------------------------------------------+-----------------|
 | /# Define:/ _~SVAL~_                              | ---            | ---         |                | {{{define(04,53 56 41 4C)}}}                                | define SVAL     |
@@ -1880,12 +1950,12 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | {{{c(2)}}} ~compare >in@RAX and [#IN];~           | CMP r64, r/m64 | REX.W 3B /r |                | ~48 3B~ {{{modrm(04,00,000,100)}}} {{{sib(25,00,100,101)}}} | cmp rax, [#IN]  |
 |                                                   |                |             |                | \hookrightarrow {{{i(0)}}} {{{displ(00 00 00 10)}}}         |                 |
 | {{{c(2)}}} ~return.~                              | RET            | C3          |                | ~C3~                                                        | return          |
+{{{wtable_end}}}
 
-*** Subroutine ~ti~                                                :noexport:
-
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~ti~ brings everything together, reading and evaluating Forth in a loop (x86-64).
 #+LABEL: tbl:forth:ti:x
-#+ATTR_LATEX: :align l|ll|l|lH
+#+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                                       | *Instruction*      | *Opcode*         | *&*            | *Machine code*                                     | *Intention*           |
 |----------------------------------------------------+--------------------+------------------+----------------+----------------------------------------------------+-----------------------|
 | /# Define:/ _~ti~_                                 | ---                | ---              |                | {{{define(02,74 69)}}}                             | define ti             |
@@ -1905,9 +1975,15 @@ to printable characters.  We have successfully used ~xxd -u -g8 -o
 | {{{c(2)}}} ~call REFILL;~  {{{c(0)}}}​/# Compiled./ | ---                | ---              |                | {{{compile(52,R)}}}                                | Call REFILL           |
 | {{{c(2)}}} ~call SVAL;~    {{{c(2)}}}​/# Compiled./ | ---                | ---              |                | {{{compile(53,S)}}}                                | Call SVAL             |
 | {{{c(2)}}} ~return.~                               | RET                | C3               |                | ~C3~                                               | return                |
+{{{wtable_end}}}
+
+
+
+\clearpage
 
 
 * Porting SmithForth to RISC-V
+
 
 ** The ELF Header (RISC-V)                                         :noexport:
 
@@ -1915,6 +1991,7 @@ Adapting the executable preamble for the RISC-V architecture only
 required a few field modifications in the two ELF headers.  We believe
 this illustrates the benefits of standardization among hardware and
 software platforms.
+
 
 *** ELF File Header
 
@@ -1958,6 +2035,7 @@ same.
 | {{{addr(40)}}} |                                     |                                                                                    |
 {{{wtable_end}}}
 
+
 *** ELF Program Header
 
 In the program header we set the virtual address of the loaded segment
@@ -1984,6 +2062,8 @@ sets for x86-64 (field ~p_align~).
 | {{{addr(78)}}} |                                     |                                                                                                 |
 {{{wtable_end}}}
 
+
+\clearpage
 
 ** Global Variables (RISC-V)                                       :noexport:
 
@@ -2016,7 +2096,7 @@ more verbose due to RISC-V's splitting of immediate loads in 20-bit
 ``upper immediate'' loads and 12-bit immediate additions
 [cite:@riscv_spec_vol_i; @patterson2017].  We have chosen to represent
 the sub-byte encoding scheme used by RISC-V in the `Encoding' column,
-highlighting source & destination registers, immediates and offsets.
+highlighting source and destination registers, immediates and offsets.
 The encoding process of the first =lui= instruction is explained in
 detail.
 
@@ -2051,6 +2131,8 @@ detail.
 We initialized ~VARS~ here rather than in individual subroutines,
 since it spares several instructions.
 
+
+\clearpage
 
 ** Binary Interpreter (RISC-V)                                     :noexport:
 
@@ -2123,11 +2205,12 @@ on the same line as the instruction.
 |                                                   |                                      |                                                                                                        | {{{addr(F0)}}} |                |
 {{{wtable_end}}}
 
+
 *** Subroutine ~COMPL~
 
 The implementation of ~COMPL~, shown in Table [[tbl:forth:compl:rv]],
 proved to be quite subtle.  Whereas x86-64's ~CALL~ instruction
-implicitly pushes the return address on the stack, RISC-V mostly
+implicitly pushes the return address on the stack, RISC-V's mostly
 homologous ~jalr~ doesn't do such thing.  Instead, it only writes the
 return address to a specified destination register.  Thus in ~COMPL~
 we had to decide between two alternatives:
@@ -2198,10 +2281,11 @@ Forth word.
 |                                                                                                |                      |                                                                                                        | {{{addr(140)}}} |                                 |
 {{{wtable_end}}}
 
+
 *** Subroutine ~Head~
 
 Subroutine ~Head~, shown in Table [[tbl:forth:head:rv]], brings a
-complication due to RISC-V /reduced/ instruction offer.  Where in
+complication due to RISC-V's /reduced/ instruction offer.  While in
 x86-64 copying the word name into the dictionary's name field was done
 by a single combined ~rep movs [rdi], [rsi]~ instruction, in RISC-V we
 had to write our own loop for the same purpose.  The proponents of
@@ -2290,13 +2374,15 @@ an immediate add: ~addi t0, s1, 0~.  The third line in [[tbl:forth:head:rv][~Hea
 that we didn't learn this right away...
 
 
+\clearpage
+
 ** Interacting with the Outside World (RISC-V)                     :noexport:
 
 Subroutine ~BYE~ is straightforward to implement on RISC-V (see Table
 [[tbl:forth:BYE:rv]]).  The calling convention for RISC-V requires placing
 the syscall number in register ~a7~ and the first syscall argument in
 register ~a0~.  Note that, in contrast to x86-64, the same calling
-convention is used by kernel system calls and user-space function
+convention is used by both kernel system calls and user-space function
 calls.
 
 {{{wtable_begin(8)}}}
@@ -2319,7 +2405,7 @@ The translation of ~TYPE~ to RISC-V required only the addition of a
 subroutine prologue and epilogue that save and restore the return
 address and two working registers.
 
-In RISC-V both function calls and returns are through the ~jalr~
+In RISC-V both function calls and returns are done using the ~jalr~
 instruction. As already discussed in ~COMPL~, ~jalr~ does not
 implicitly push the return address on the stack.  It also does not
 restore the return address before or after a function return.  The
@@ -2340,7 +2426,7 @@ argument registers ~a0~ and ~a1~ to callee-saved registers ~s0~ and
 | /# Define:/ _~TYPE~_                                                  | ---                      | ---                                                                                                       |                      | {{{define(04,54 59 50 45)}}} |
 | /# In/Out:/ ~( addr@a0 u@a1~ -- )~                                    |                          |                                                                                                           |                      |                              |
 | /#/                                                                   |                          |                                                                                                           |                      |                              |
-| /# Print memory range ~[addr, addr+u)~./                          |                          |                                                                                                           |                      |                              |
+| /# Print memory range ~[addr, addr+u)~./                              |                          |                                                                                                           |                      |                              |
 |                                                                       |                          |                                                                                                           |                      |                              |
 | {{{i(1)}}} /# Use saved registers to preserve/                        |                          |                                                                                                           |                      |                              |
 | {{{i(1)}}} /# values of ~addr~ and ~a1~ across/                       |                          |                                                                                                           |                      |                              |
@@ -2381,13 +2467,15 @@ argument registers ~a0~ and ~a1~ to callee-saved registers ~s0~ and
 {{{wtable_end}}}
 
 
+\clearpage
+
 ** Debugging Utilities (RISC-V)                                    :noexport:
 
 Debugging utilities ~dbg~ and ~reg~ were ported to RISC-V in a
 straightforward manner.  Subroutine ~dbg~, shown in Table
 [[tbl:forth:dbg:rv]], only required the addition of a prologue and
 epilogue for saving and restoring the return address.  Since all
-functions that call other function require this modification in
+functions that call other functions require this modification in
 RISC-V, we will not mention it hereafter.
 
 {{{wtable_begin(8)}}}
@@ -2489,6 +2577,8 @@ is listed in Table [[tbl:forth:reg:rv]].
 {{{wtable_end}}}
 
 
+\clearpage
+
 ** Text Interpreter (RISC-V)
 
 # ============= TEXT INTERPRETER
@@ -2507,17 +2597,18 @@ is listed in Table [[tbl:forth:reg:rv]].
 
 
 
-*** Subroutine ~REFILL~                                            :noexport:
+*** Parsing Forth: ~REFILL~, ~seek~, ~PARSE~, ~pname~ (RISC-V)
 
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~REFILL~ replenishes the /parse area/ by advancing ~TIB~ and ~#IN~ (RISC-V).
 #+LABEL: tbl:forth:refill:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                     | *Instruction*       | *Encoding*                                                                                             | *&*            | *Machine code*                     |
 |--------------------------------------------------+---------------------+--------------------------------------------------------------------------------------------------------+----------------+------------------------------------|
 | /# Define:/ _~REFILL~_                           | ---                 | ---                                                                                                    |                | {{{define(06,52 45 46 49 4C 4C)}}} |
 | /# In/Out:/ ~( -​- )~                             |                     |                                                                                                        |                |                                    |
 | /#/                                              |                     |                                                                                                        |                |                                    |
-| /# Advance ~TIB~ and ~#IN~ so/                   |                     |                                                                                                        |                |                                    |
+| /# Advance ~TIB~ and set ~#IN~ so/               |                     |                                                                                                        |                |                                    |
 | /# that ~[TIB, TIB + #IN)~ contains/             |                     |                                                                                                        |                |                                    |
 | /# a new line to be parsed./                     |                     |                                                                                                        |                |                                    |
 |                                                  |                     |                                                                                                        |                |                                    |
@@ -2548,12 +2639,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{i(1)}}} /# Store the new ~#IN~./              |                     |                                                                                                        |                |                                    |
 | {{{i(1)}}} ~[#IN] ← #in@t0;~                     | sd t0, 0(s2)        | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                | ~23 30 59 00~                      |
 | {{{i(1)}}} ~return.~                             | jalr zero, 0(ra)    | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                      |
+{{{wtable_end}}}
 
-*** Subroutine ~seek~                                              :noexport:
-
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~seek~ parses characters until it finds one in a given range (RISC-V).
 #+LABEL: tbl:forth:seek:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                        | *Instruction*     | *Encoding*                                                                                             | *&*            | *Machine code*               |
 |-----------------------------------------------------+-------------------+--------------------------------------------------------------------------------------------------------+----------------+------------------------------|
 | /# Define:/ _~seek~_                                | ---               | ---                                                                                                    |                | {{{define(04,73 65 65 6B)}}} |
@@ -2594,12 +2685,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c(2)}}} ~[>IN] ← >in@t2;~                        | sd t2, 16(s2)     | {{{off(0000000)}}} {{{rs2(00111)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(10000)}}} {{{op(0100011)}}} |                | ~23 38 79 00~                |
 | {{{c(2)}}} ~eof@a0 ← eof@t5;~                       | addi a0, t5, 0    | {{{imm(0x000)}}}                    {{{rs1(11110)}}} {{{fn3(000)}}} {{{rd(01010)}}}  {{{op(0010011)}}} |                | ~13 05 0F 00~                |
 | {{{c(2)}}} ~return.~                                | jalr zero, 0(ra)  | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
+{{{wtable_end}}}
 
-*** Subroutine ~PARSE~                                             :noexport:
-
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~PARSE~ returns the address and size of a newly parsed string (RISC-V).
 #+LABEL: tbl:forth:parse:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                    | *Instruction*    | *Encoding*                                                                                             | *&*            | *Machine code*                  |
 |-------------------------------------------------+------------------+--------------------------------------------------------------------------------------------------------+----------------+---------------------------------|
 | /# Define:/ _~PARSE~_                           | ---              | ---                                                                                                    |                | {{{define(04,50 41 52 53 45)}}} |
@@ -2639,12 +2730,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c( 2)}}} ~pop ra;~                           | ld ra, 8(sp)     | {{{off(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |                | ~83 30 81 00~                   |
 | {{{c( 2)}}}                                     | addi sp, sp, 16  | {{{imm(0x010)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 01 01~                   |
 | {{{c( 2)}}} ~return.~                           | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                   |
+{{{wtable_end}}}
 
-*** Subroutine ~pname~                                             :noexport:
-
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~pname~ parses a token and returns it as a string (RISC-V).
 #+LABEL: tbl:forth:pname:rv
-#+ATTR_LATEX: :align l|ll|l
+#+ATTR_LATEX: :align l|ll|l :float nil
 | *Pseudocode*                       | *Instruction*        | *Encoding*                                                                                             | *Machine code*                  |
 |------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------+---------------------------------|
 | /# Define:/ _~pname~_              | ---                  | ---                                                                                                    | {{{define(05,70 6E 61 6D 65)}}} |
@@ -2669,46 +2760,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 | ~pop ra;~                          | ld ra, 0(sp)         | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} | ~83 30 01 00~                   |
 |                                    | addi sp, sp, 8       | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 00~                   |
 | ~return.~                          | jalr zero, 0(ra)     | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~                   |
+{{{wtable_end}}}
 
-
-*** Subroutine ~[~                                                 :noexport:
-
-#+CAPTION: Subroutine ~'['~ changes Forth's ~STATE~ to interpreting (RISC-V).
-#+LABEL: tbl:forth:lbracket:rv
-#+ATTR_LATEX: :align l|ll|l
-| *Pseudocode*                      | *Instruction*    | *Encoding*                                                                                             | *Machine code*      |
-|-----------------------------------+------------------+--------------------------------------------------------------------------------------------------------+---------------------|
-| /# Define immediate:/ _~[~_       | ---              | ---                                                                                                    | {{{define(81,5B)}}} |
-| /# In/Out:/ ~( -​- )~              |                  |                                                                                                        | {{{padding(00)}}}   |
-| /#/                               |                  |                                                                                                        |                     |
-| /# Switch to interpreting state./ |                  |                                                                                                        |                     |
-|                                   |                  |                                                                                                        |                     |
-| /# Set ~STATE~ to 0./             |                  |                                                                                                        |                     |
-| ~[STATE] ← 0;~                    | sd zero, 32(s2)  | {{{off(0000001)}}} {{{rs2(00000)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 30 09 02~       |
-| ~return.~                         | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
-
-*** Subroutine ~]~                                                 :noexport:
-
-#+CAPTION: Subroutine ~']'~ changes Forth's ~STATE~ to compiling (RISC-V).
-#+LABEL: tbl:forth:rbracket:rv
-#+ATTR_LATEX: :align l|ll|l
-| *Pseudocode*                   | *Instruction*    | *Encoding*                                                                                             | *Machine code*      |
-|--------------------------------+------------------+--------------------------------------------------------------------------------------------------------+---------------------|
-| /# Define:/ _~]~_              | ---              | ---                                                                                                    | {{{define(01,5D)}}} |
-| /# In/Out:/ ~( -​- )~           |                  |                                                                                                        | {{{padding(00)}}}   |
-| /#/                            |                  |                                                                                                        |                     |
-| /# Switch to compiling state./ |                  |                                                                                                        |                     |
-|                                |                  |                                                                                                        |                     |
-| /# Set ~STATE~ to 1./          |                  |                                                                                                        |                     |
-| ~[STATE] ← 1;~                 | addi t0, zero, 1 | {{{imm(0x001)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | ~93 02 10 00~       |
-|                                | sd t0, 32(s2)    | {{{off(0000001)}}} {{{rs2(00101)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 30 59 02~       |
-| ~return.~                      | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
-
-*** Subroutine ~\~                                                 :noexport:
-
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~'\'~ implements line comments (RISC-V).
 #+LABEL: tbl:forth:backslash:rv
-#+ATTR_LATEX: :align l|ll|l
+#+ATTR_LATEX: :align l|ll|l :float nil
 | *Pseudocode*                    | *Instruction*    | *Encoding*                                                                                             | *Machine code*      |
 |---------------------------------+------------------+--------------------------------------------------------------------------------------------------------+---------------------|
 | /# Define immediate:/ _~\~_     | ---              | ---                                                                                                    | {{{define(81,5C)}}} |
@@ -2720,12 +2777,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 | ~#in@t0 ← [#IN];~               | ld t0, 0(s2)     | {{{off(0x000)}}}                    {{{rs1(10010)}}} {{{fn3(011)}}} {{{rd(00101)}}}  {{{op(0000011)}}} | ~83 32 09 00~       |
 | ~[>IN] ← #in@t0;~               | sd t0, 16(s2)    | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(10000)}}} {{{op(0100011)}}} | ~23 38 59 00~       |
 | ~return.~                       | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
+{{{wtable_end}}}
 
-*** Subroutine ~(~                                                 :noexport:
-
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~'('~ implements inline comments, ending with a corresponding ~')'~ (RISC-V).
 #+LABEL: tbl:forth:lparen:rv
-#+ATTR_LATEX: :align l|ll|l
+#+ATTR_LATEX: :align l|ll|l :float nil
 | *Pseudocode*                               | *Instruction*     | *Encoding*                                                                                             |   | *Machine code*      |
 |--------------------------------------------+-------------------+--------------------------------------------------------------------------------------------------------+---+---------------------|
 | /# Define immediate:/ _~(~_                | ---               | ---                                                                                                    |   | {{{define(81,28)}}} |
@@ -2741,13 +2798,15 @@ is listed in Table [[tbl:forth:reg:rv]].
 | ~pop ra;~                                  | ld ra, 0(sp)      | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |   | ~83 30 01 00~       |
 |                                            | addi sp, sp, 8    | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |   | ~13 01 81 00~       |
 | ~return.~                                  | jalr zero, 0(ra)  | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |   | ~67 80 00 00~       |
+{{{wtable_end}}}
 
 
-*** Subroutine ~:~                                                 :noexport:
+*** Defining New Forth Words: ~:~, ~;~, ~[~, ~]~, ~.~, ~LIT~
 
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~':'~ (colon) begins compiling a word after setting up its dictionary entry (RISC-V).
 #+LABEL: tbl:forth:colon:rv
-#+ATTR_LATEX: :align l|ll|l
+#+ATTR_LATEX: :align l|ll|l :float nil
 | *Pseudocode*                                                                          | *Instruction*      | *Encoding*                                                                                             | *Machine code*      |
 |---------------------------------------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+---------------------|
 | /# Define:/ _~':'~_                                                                   | ---                | ---                                                                                                    | {{{define(01,3A)}}} |
@@ -2811,80 +2870,113 @@ is listed in Table [[tbl:forth:reg:rv]].
 | ~pop ra;~                                                                             | ld ra, 0(sp)       | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} | ~83 30 01 00~       |
 |                                                                                       | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 00~       |
 | ~return.~                                                                             | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
+{{{wtable_end}}}
 
-*** Subroutine ~;~                                                 :noexport:
-
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting (RISC-V).
 #+LABEL: tbl:forth:semicolon:rv
-#+ATTR_LATEX: :align l|ll|l
-| *Pseudocode*                                                                          | *Instruction*      | *Encoding*                                                                                             |   | *Machine code*      |
-|---------------------------------------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+---+---------------------|
-| /# Define immediate:/ _~;~_                                                           | ---                | ---                                                                                                    |   | {{{define(81,3B)}}} |
-| /# In/Out:/ ~( C: -​- )~                                                               |                    |                                                                                                        |   | {{{padding(00)}}}   |
-| /#/                                                                                   |                    |                                                                                                        |   |                     |
-| /# Finalize a colon definition and/                                                   |                    |                                                                                                        |   |                     |
-| /# switch back to interpreting state./                                                |                    |                                                                                                        |   |                     |
-| /#/                                                                                   |                    |                                                                                                        |   |                     |
-| /# RISC-V only: similar to the/                                                       |                    |                                                                                                        |   |                     |
-| /# prologue in ~`:`~, we need to/                                                     |                    |                                                                                                        |   |                     |
-| /# compile an epilogue that pops/                                                     |                    |                                                                                                        |   |                     |
-| /# the return address off the stack./                                                 |                    |                                                                                                        |   |                     |
-|                                                                                       |                    |                                                                                                        |   |                     |
-| /# Generate an epilogue as follows:/                                                  |                    |                                                                                                        |   |                     |
-| /# 1. Restore return address register:/                                               |                    |                                                                                                        |   |                     |
-| /# – instruction:/ ~ld ra, 0(sp)~                                                     |                    |                                                                                                        |   |                     |
-| /# – enc.:/ {{{off(0x000)}}} {{{rs1(00010)}}}                                         |                    |                                                                                                        |   |                     |
-| /#/{{{i(3.5)}}} \(\hookrightarrow\) {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |                    |                                                                                                        |   |                     |
-| /# 2. Deallocate stack space:/                                                        |                    |                                                                                                        |   |                     |
-| /# – instruction:/ ~addi sp, sp, 8~                                                   |                    |                                                                                                        |   |                     |
-| /# – enc.:/ {{{imm(0x008)}}} {{{rs1(00010)}}}                                         |                    |                                                                                                        |   |                     |
-| /#/{{{i(3.5)}}} \(\hookrightarrow\) {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                    |                                                                                                        |   |                     |
-| /# 3. Return to calling word:/                                                        |                    |                                                                                                        |   |                     |
-| /# – instruction:/ ~jalr zero, 0(ra)~                                                 |                    |                                                                                                        |   |                     |
-| /# – enc.:/ {{{off(0x000)}}} {{{rs1(00001)}}}                                         |                    |                                                                                                        |   |                     |
-| /#/{{{i(3.5)}}} \(\hookrightarrow\) {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                    |                                                                                                        |   |                     |
-| /#/                                                                                   |                    |                                                                                                        |   |                     |
-| /# Thus we generate code as follows:/                                                 |                    |                                                                                                        |   |                     |
-| /#/{{{c(2)}}}​~83·30·01·00~                                                            |                    |                                                                                                        |   |                     |
-| /#/{{{c(2)}}}​~13·01·81·00~                                                            |                    |                                                                                                        |   |                     |
-| /#/{{{c(2)}}}​~67·80·00·00~                                                            |                    |                                                                                                        |   |                     |
-|                                                                                       |                    |                                                                                                        |   |                     |
-| ~push ra;~                                                                            | addi sp, sp, -8    | {{{imm(0xFF8)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |   | ~13 01 81 FF~       |
-|                                                                                       | sd ra, 0(sp)       | {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |   | ~23 30 11 00~       |
-| /# 1. Assemble and write ~ld~./                                                       |                    |                                                                                                        |   |                     |
-| ~t0 ← 0x00013083;~                                                                    | lui t0, 0x00013    | {{{imm(0x00013)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} |   | ~B7 32 01 00~       |
-|                                                                                       | addi t0, t0, 0x083 | {{{imm(0x083)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |   | ~93 82 32 08~       |
-| ~[OUTPUT@s1] ← t0;~                                                                   | sw t0, 0(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(00000)}}} {{{op(0100011)}}} |   | ~23 A0 54 00~       |
-|                                                                                       |                    |                                                                                                        |   |                     |
-| /# 2. Assemble and write ~addi~./                                                     |                    |                                                                                                        |   |                     |
-| ~t0 ← 0x00810113;~                                                                    | lui t0, 0x00810    | {{{imm(0x00810)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} |   | ~B7 02 81 00~       |
-|                                                                                       | addi t0, t0, 0x113 | {{{imm(0x113)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |   | ~93 82 32 11~       |
-| ~[OUTPUT@s1 + 4] ← t0;~                                                               | sw t0, 4(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(00100)}}} {{{op(0100011)}}} |   | ~23 A2 54 00~       |
-|                                                                                       |                    |                                                                                                        |   |                     |
-| /# 3. Assemble and write ~jalr~./                                                     |                    |                                                                                                        |   |                     |
-| ~t0 ← 0x00008067;~                                                                    | lui t0, 0x00008    | {{{imm(0x00008)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} |   | ~B7 82 00 00~       |
-|                                                                                       | addi t0, t0, 0x067 | {{{imm(0x067)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |   | ~93 82 72 06~       |
-| ~[OUTPUT@s1 + 8] ← t0;~                                                               | sw t0, 8(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(01000)}}} {{{op(0100011)}}} |   | ~23 A4 54 00~       |
-| ~OUTPUT@s1 += 12;~                                                                    | addi s1, s1, 12    | {{{imm(0x00C)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |   | ~93 84 C4 00~       |
-|                                                                                       |                    |                                                                                                        |   |                     |
-| /# Clear the ~HIDDEN~ bit (~0x40~) on/                                                |                    |                                                                                                        |   |                     |
-| /# the dictionary entry's flag./                                                      |                    |                                                                                                        |   |                     |
-| ~xt@t0 ← [LATEST];~                                                                   | ld t0, 40(s2)      | {{{off(0x028)}}}                    {{{rs1(10010)}}} {{{fn3(011)}}} {{{rd(00101)}}}  {{{op(0000011)}}} |   | ~83 32 89 02~       |
-| ~flag@t1 ← [xt@t0 + 16];~                                                             | lbu t1, 16(t0)     | {{{off(0x010)}}}                    {{{rs1(00101)}}} {{{fn3(100)}}} {{{rd(00110)}}}  {{{op(0000011)}}} |   | ~03 C3 02 01~       |
-| ~flag@t1 &= 0b10111111;~                                                              | andi t1, t1, 0xBF  | {{{imm(0x0BF)}}}                    {{{rs1(00110)}}} {{{fn3(111)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |   | ~13 73 F3 0B~       |
-| ~[xt@t0 + 16] ← flag@t1;~                                                             | sb t1, 16(t0)      | {{{off(0000000)}}} {{{rs2(00110)}}} {{{rs1(00101)}}} {{{fn3(000)}}} {{{off(10000)}}} {{{op(0100011)}}} |   | ~23 88 62 00~       |
-|                                                                                       |                    |                                                                                                        |   |                     |
-| /# Switch to interpreting state./                                                     |                    |                                                                                                        |   |                     |
-| ~call [;~  /# Compiled./                                                              | ---                | ---                                                                                                    |   | {{{compile(5B,[)}}} |
-| ~pop ra;~                                                                             | ld ra, 0(sp)       | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |   | ~83 30 01 00~       |
-|                                                                                       | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |   | ~13 01 81 00~       |
-| ~return.~                                                                             | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |   | ~67 80 00 00~       |
+#+ATTR_LATEX: :align l|ll|l :float nil
+| *Pseudocode*                                                                          | *Instruction*      | *Encoding*                                                                                             | *Machine code*      |
+|---------------------------------------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+---------------------|
+| /# Define immediate:/ _~;~_                                                           | ---                | ---                                                                                                    | {{{define(81,3B)}}} |
+| /# In/Out:/ ~( C: -​- )~                                                               |                    |                                                                                                        | {{{padding(00)}}}   |
+| /#/                                                                                   |                    |                                                                                                        |                     |
+| /# Finalize a colon definition and/                                                   |                    |                                                                                                        |                     |
+| /# switch back to interpreting state./                                                |                    |                                                                                                        |                     |
+| /#/                                                                                   |                    |                                                                                                        |                     |
+| /# RISC-V only: similar to the/                                                       |                    |                                                                                                        |                     |
+| /# prologue in ~`:`~, we need to/                                                     |                    |                                                                                                        |                     |
+| /# compile an epilogue that pops/                                                     |                    |                                                                                                        |                     |
+| /# the return address off the stack./                                                 |                    |                                                                                                        |                     |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# Generate an epilogue as follows:/                                                  |                    |                                                                                                        |                     |
+| /# 1. Restore return address register:/                                               |                    |                                                                                                        |                     |
+| /# – instruction:/ ~ld ra, 0(sp)~                                                     |                    |                                                                                                        |                     |
+| /# – enc.:/ {{{off(0x000)}}} {{{rs1(00010)}}}                                         |                    |                                                                                                        |                     |
+| /#/{{{i(3.5)}}} \(\hookrightarrow\) {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |                    |                                                                                                        |                     |
+| /# 2. Deallocate stack space:/                                                        |                    |                                                                                                        |                     |
+| /# – instruction:/ ~addi sp, sp, 8~                                                   |                    |                                                                                                        |                     |
+| /# – enc.:/ {{{imm(0x008)}}} {{{rs1(00010)}}}                                         |                    |                                                                                                        |                     |
+| /#/{{{i(3.5)}}} \(\hookrightarrow\) {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                    |                                                                                                        |                     |
+| /# 3. Return to calling word:/                                                        |                    |                                                                                                        |                     |
+| /# – instruction:/ ~jalr zero, 0(ra)~                                                 |                    |                                                                                                        |                     |
+| /# – enc.:/ {{{off(0x000)}}} {{{rs1(00001)}}}                                         |                    |                                                                                                        |                     |
+| /#/{{{i(3.5)}}} \(\hookrightarrow\) {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                    |                                                                                                        |                     |
+| /#/                                                                                   |                    |                                                                                                        |                     |
+| /# Thus we generate code as follows:/                                                 |                    |                                                                                                        |                     |
+| /#/{{{c(2)}}}​~83·30·01·00~                                                            |                    |                                                                                                        |                     |
+| /#/{{{c(2)}}}​~13·01·81·00~                                                            |                    |                                                                                                        |                     |
+| /#/{{{c(2)}}}​~67·80·00·00~                                                            |                    |                                                                                                        |                     |
+|                                                                                       |                    |                                                                                                        |                     |
+| ~push ra;~                                                                            | addi sp, sp, -8    | {{{imm(0xFF8)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 FF~       |
+|                                                                                       | sd ra, 0(sp)       | {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 30 11 00~       |
+| /# 1. Assemble and write ~ld~./                                                       |                    |                                                                                                        |                     |
+| ~t0 ← 0x00013083;~                                                                    | lui t0, 0x00013    | {{{imm(0x00013)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} | ~B7 32 01 00~       |
+|                                                                                       | addi t0, t0, 0x083 | {{{imm(0x083)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | ~93 82 32 08~       |
+| ~[OUTPUT@s1] ← t0;~                                                                   | sw t0, 0(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 A0 54 00~       |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# 2. Assemble and write ~addi~./                                                     |                    |                                                                                                        |                     |
+| ~t0 ← 0x00810113;~                                                                    | lui t0, 0x00810    | {{{imm(0x00810)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} | ~B7 02 81 00~       |
+|                                                                                       | addi t0, t0, 0x113 | {{{imm(0x113)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | ~93 82 32 11~       |
+| ~[OUTPUT@s1 + 4] ← t0;~                                                               | sw t0, 4(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(00100)}}} {{{op(0100011)}}} | ~23 A2 54 00~       |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# 3. Assemble and write ~jalr~./                                                     |                    |                                                                                                        |                     |
+| ~t0 ← 0x00008067;~                                                                    | lui t0, 0x00008    | {{{imm(0x00008)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} | ~B7 82 00 00~       |
+|                                                                                       | addi t0, t0, 0x067 | {{{imm(0x067)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | ~93 82 72 06~       |
+| ~[OUTPUT@s1 + 8] ← t0;~                                                               | sw t0, 8(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(01000)}}} {{{op(0100011)}}} | ~23 A4 54 00~       |
+| ~OUTPUT@s1 += 12;~                                                                    | addi s1, s1, 12    | {{{imm(0x00C)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | ~93 84 C4 00~       |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# Clear the ~HIDDEN~ bit (~0x40~) on/                                                |                    |                                                                                                        |                     |
+| /# the dictionary entry's flag./                                                      |                    |                                                                                                        |                     |
+| ~xt@t0 ← [LATEST];~                                                                   | ld t0, 40(s2)      | {{{off(0x028)}}}                    {{{rs1(10010)}}} {{{fn3(011)}}} {{{rd(00101)}}}  {{{op(0000011)}}} | ~83 32 89 02~       |
+| ~flag@t1 ← [xt@t0 + 16];~                                                             | lbu t1, 16(t0)     | {{{off(0x010)}}}                    {{{rs1(00101)}}} {{{fn3(100)}}} {{{rd(00110)}}}  {{{op(0000011)}}} | ~03 C3 02 01~       |
+| ~flag@t1 &= 0b10111111;~                                                              | andi t1, t1, 0xBF  | {{{imm(0x0BF)}}}                    {{{rs1(00110)}}} {{{fn3(111)}}} {{{rd(00110)}}}  {{{op(0010011)}}} | ~13 73 F3 0B~       |
+| ~[xt@t0 + 16] ← flag@t1;~                                                             | sb t1, 16(t0)      | {{{off(0000000)}}} {{{rs2(00110)}}} {{{rs1(00101)}}} {{{fn3(000)}}} {{{off(10000)}}} {{{op(0100011)}}} | ~23 88 62 00~       |
+|                                                                                       |                    |                                                                                                        |                     |
+| /# Switch to interpreting state./                                                     |                    |                                                                                                        |                     |
+| ~call [;~  /# Compiled./                                                              | ---                | ---                                                                                                    | {{{compile(5B,[)}}} |
+| ~pop ra;~                                                                             | ld ra, 0(sp)       | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} | ~83 30 01 00~       |
+|                                                                                       | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 00~       |
+| ~return.~                                                                             | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
+{{{wtable_end}}}
 
-*** Subroutine ~.~                                                 :noexport:
+{{{wtable_begin(8)}}}
+#+CAPTION: Subroutine ~'['~ changes Forth's ~STATE~ to interpreting (RISC-V).
+#+LABEL: tbl:forth:lbracket:rv
+#+ATTR_LATEX: :align l|ll|l :float nil
+| *Pseudocode*                      | *Instruction*    | *Encoding*                                                                                             | *Machine code*      |
+|-----------------------------------+------------------+--------------------------------------------------------------------------------------------------------+---------------------|
+| /# Define immediate:/ _~[~_       | ---              | ---                                                                                                    | {{{define(81,5B)}}} |
+| /# In/Out:/ ~( -​- )~              |                  |                                                                                                        | {{{padding(00)}}}   |
+| /#/                               |                  |                                                                                                        |                     |
+| /# Switch to interpreting state./ |                  |                                                                                                        |                     |
+|                                   |                  |                                                                                                        |                     |
+| /# Set ~STATE~ to 0./             |                  |                                                                                                        |                     |
+| ~[STATE] ← 0;~                    | sd zero, 32(s2)  | {{{off(0000001)}}} {{{rs2(00000)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 30 09 02~       |
+| ~return.~                         | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
+{{{wtable_end}}}
 
+{{{wtable_begin(8)}}}
+#+CAPTION: Subroutine ~']'~ changes Forth's ~STATE~ to compiling (RISC-V).
+#+LABEL: tbl:forth:rbracket:rv
+#+ATTR_LATEX: :align l|ll|l :float nil
+| *Pseudocode*                   | *Instruction*    | *Encoding*                                                                                             | *Machine code*      |
+|--------------------------------+------------------+--------------------------------------------------------------------------------------------------------+---------------------|
+| /# Define:/ _~]~_              | ---              | ---                                                                                                    | {{{define(01,5D)}}} |
+| /# In/Out:/ ~( -​- )~           |                  |                                                                                                        | {{{padding(00)}}}   |
+| /#/                            |                  |                                                                                                        |                     |
+| /# Switch to compiling state./ |                  |                                                                                                        |                     |
+|                                |                  |                                                                                                        |                     |
+| /# Set ~STATE~ to 1./          |                  |                                                                                                        |                     |
+| ~[STATE] ← 1;~                 | addi t0, zero, 1 | {{{imm(0x001)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(00101)}}}  {{{op(0010011)}}} | ~93 02 10 00~       |
+|                                | sd t0, 32(s2)    | {{{off(0000001)}}} {{{rs2(00101)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 30 59 02~       |
+| ~return.~                      | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
+{{{wtable_end}}}
+
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~'.'~ compiles a byte from the stack to ~OUTPUT~ (RISC-V).
 #+LABEL: tbl:forth:.:rv
-#+ATTR_LATEX: :align l|ll|l
+#+ATTR_LATEX: :align l|ll|l :float nil
 | *Pseudocode*                     | *Instruction*    | *Encoding*                                                                                             | *Machine code*      |
 |----------------------------------+------------------+--------------------------------------------------------------------------------------------------------+---------------------|
 | /# Define:/ _~.~_                | ---              | ---                                                                                                    | {{{define(01,2E)}}} |
@@ -2900,29 +2992,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 | ~[OUTPUT@s1++] ← byte@t0;~       | sb t0, 0(s1)     | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(000)}}} {{{off(00000)}}} {{{op(0100011)}}} | ~23 80 54 00~       |
 |                                  | addi s1, s1, 1   | {{{imm(0x001)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | ~93 84 14 00~       |
 | ~return.~                        | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~       |
+{{{wtable_end}}}
 
-#+CAPTION: Subroutine ~'....'~ compiles a 32-bit instruction from the stack to ~OUTPUT~ (RISC-V).
-#+LABEL: tbl:forth:....:rv
-#+ATTR_LATEX: :align l|ll|l
-| *Pseudocode*                         | *Instruction*    | *Encoding*                                                                                             |   | *Machine code*      |
-|--------------------------------------+------------------+--------------------------------------------------------------------------------------------------------+---+---------------------|
-| /# Define:/ _~....~_                 | ---              | ---                                                                                                    |   | {{{define(01,2E)}}} |
-| /# In/Out:/ ~( instr -​- )~           |                  |                                                                                                        |   | {{{padding(00)}}}   |
-| /#/                                  |                  |                                                                                                        |   |                     |
-| /# Pop an instruction off the stack/ |                  |                                                                                                        |   |                     |
-| /# and write it to ~OUTPUT~./        |                  |                                                                                                        |   |                     |
-|                                      |                  |                                                                                                        |   |                     |
-| ~instr@t0 ← [STACK@s3]~              | lwu t0, 0(s3)    | {{{off(0x000)}}}                    {{{rs1(10011)}}} {{{fn3(110)}}} {{{rd(00101)}}}  {{{op(0000011)}}} |   | ~83 E2 09 00~       |
-| ~STACK@s3 += 8;~                     | addi s3, s3, 8   | {{{imm(0x008)}}}                    {{{rs1(10011)}}} {{{fn3(000)}}} {{{rd(10011)}}}  {{{op(0010011)}}} |   | ~93 89 89 00~       |
-| ~[OUTPUT@s1++4] ← instr@t0;~         | sw t0, 0(s1)     | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(00000)}}} {{{op(0100011)}}} |   | ~23 A0 54 00~       |
-|                                      | addi s1, s1, 4   | {{{imm(0x004)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |   | ~93 84 44 00~       |
-| ~return.~                            | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |   | ~67 80 00 00~       |
-
-*** Subroutine ~LIT~                                               :noexport:
-
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~LIT~ compiles a literal byte into a word definition (RISC-V).
 #+LABEL: tbl:forth:lit:rv
-#+ATTR_LATEX: :align l|ll|l
+#+ATTR_LATEX: :align l|ll|l :float nil
 | *Pseudocode*                                                                                      | *Instruction*      | *Encoding*                                                                                             | *Machine code*            |
 |---------------------------------------------------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+---------------------------|
 | /# Define immediate:/ _~LIT~_                                                                     | ---                | ---                                                                                                    | {{{define(83,4C 49 54)}}} |
@@ -2971,13 +3046,15 @@ is listed in Table [[tbl:forth:reg:rv]].
 | ~[OUTPUT@s1 + 8] ← t0;~                                                                           | sw t0, 8(s1)       | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(01000)}}} {{{op(0100011)}}} | ~23 A4 54 00~             |
 | ~OUTPUT@s1 += 12;~                                                                                | addi s1, s1, 12    | {{{imm(0x00C)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | ~93 84 C4 00~             |
 | ~return.~                                                                                         | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~             |
+{{{wtable_end}}}
 
 
-*** Subroutine ~xt=~                                               :noexport:
+*** Searching the Dictionary: ~xt=~, ~FIND~                        :noexport:
 
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~xt=~ compares an execution token's name with a given string (RISC-V).
 #+LABEL: tbl:forth:xt=:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                     | *Instruction*      | *Encoding*                                                                                             | *&*            | *Machine code*            |
 |--------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+----------------+---------------------------|
 | /# Define:/ _~xt=~_                              | ---                | ---                                                                                                    |                | {{{define(03,78 74 3D)}}} |
@@ -3023,12 +3100,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 | ~_equal:~                                        |                    |                                                                                                        | {{{addr(44)}}} |                           |
 | {{{c(2)}}} ~equal@a0 ← 1;~                       | addi a0, zero, 1   | {{{imm(0x001)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(01010)}}}  {{{op(0010011)}}} |                | ~13 05 10 00~             |
 | {{{c(2)}}} ~return.~                             | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~             |
+{{{wtable_end}}}
 
-*** Subroutine ~FIND~                                              :noexport:
-
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~FIND~ searches the dictionary for a word matching a given name (RISC-V).
 #+LABEL: tbl:forth:find:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                               | *Instruction*      | *Encoding*                                                                                             | *&*            | *Machine code*               |
 |--------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+----------------+------------------------------|
 | /# Define:/ _~FIND~_                       | ---                | ---                                                                                                    |                | {{{define(04,46 49 4E 44)}}} |
@@ -3066,13 +3143,15 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c(2)}}} ~pop ra;~                       | ld ra, 16(sp)      | {{{off(0x010)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |                | ~83 30 01 01~                |
 | {{{c(2)}}}                                 | addi sp, sp, 24    | {{{imm(0x018)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 01~                |
 | {{{c(2)}}} ~return.~                       | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
+{{{wtable_end}}}
 
 
-*** Subroutine ~Num~                                               :noexport:
+*** Handling Numbers: ~Num~, ~miss~                                :noexport:
 
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~Num~ parses a character string as a number and pushes it on the stack (RISC-V).
 #+LABEL: tbl:forth:num:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                             | *Instruction*       | *Encoding*                                                                                             | *&*            | *Machine code*            |
 |------------------------------------------+---------------------+--------------------------------------------------------------------------------------------------------+----------------+---------------------------|
 | /# Define:/ _~Num~_                      | ---                 | ---                                                                                                    |                | {{{define(03,4E 75 6D)}}} |
@@ -3108,12 +3187,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c(2)}}} ~STACK@s3 -= 8;~              | addi s3, s3, -8     | {{{imm(0xFF8)}}}                    {{{rs1(10011)}}} {{{fn3(000)}}} {{{rd(10011)}}}  {{{op(0010011)}}} |                | ~93 89 89 FF~             |
 | {{{c(2)}}} ~[STACK@s3] ← num@t0;~        | sd t0, 0(s3)        | {{{off(0000000)}}} {{{rs2(00101)}}} {{{rs1(10011)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                | ~23 B0 59 00~             |
 | {{{c(2)}}} ~return.~                     | jalr zero, 0(ra)    | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~             |
+{{{wtable_end}}}
 
-*** Subroutine ~miss~                                              :noexport:
-
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~miss~ attempts parsing a word as a number, optionally compiling it as a literal (RISC-V).
 #+LABEL: tbl:forth:miss:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                           | *Instruction*      | *Encoding*                                                                                             | *&*            | *Machine code*               |
 |----------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+----------------+------------------------------|
 | /# Define:/ _~miss~_                   | ---                | ---                                                                                                    |                | {{{define(04,6D 69 73 73)}}} |
@@ -3148,13 +3227,15 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c(2)}}} ~pop ra;~                   | ld ra, 0(sp)       | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |                | ~83 30 01 00~                |
 | {{{c(2)}}}                             | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 00~                |
 | {{{c(2)}}} ~return.~                   | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
+{{{wtable_end}}}
 
 
-*** Subroutine ~EXEC~                                              :noexport:
+*** Compile or Execute: ~EXEC~, ~exec~, ~compl~, ~hit~             :noexport:
 
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~EXEC~ executes a Forth word (RISC-V).
 #+LABEL: tbl:forth:EXEC:rv
-#+ATTR_LATEX: :align l|ll|l
+#+ATTR_LATEX: :align l|ll|l :float nil
 | *Pseudocode*                    | *Instruction*    | *Encoding*                                                                                             | *Machine code*               |
 |---------------------------------+------------------+--------------------------------------------------------------------------------------------------------+------------------------------|
 | /# Define:/ _~EXEC~_            | ---              | ---                                                                                                    | {{{define(04,45 58 45 43)}}} |
@@ -3174,12 +3255,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 | ~pop ra;~                       | ld ra, 0(sp)     | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} | ~83 30 01 00~                |
 |                                 | addi sp, sp, 8   | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} | ~13 01 81 00~                |
 | ~return.~                       | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~                |
+{{{wtable_end}}}
 
-*** Subroutine ~exec~                                              :noexport:
-
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~exec~ executes a word if interpreting or if it's immediate (RISC-V).
 #+LABEL: tbl:forth:exec:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                              | *Instruction*    | *Encoding*                                                                                             | *&*            | *Machine code*               |
 |-------------------------------------------+------------------+--------------------------------------------------------------------------------------------------------+----------------+------------------------------|
 | /# Define:/ _~exec~_                      | ---              | ---                                                                                                    |                | {{{define(04,65 78 65 63)}}} |
@@ -3202,12 +3283,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c(2)}}}                                | addi sp, sp, 8   | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 00~                |
 | ~_end:~                                   |                  |                                                                                                        | {{{addr(1C)}}} |                              |
 | {{{c(2)}}} ~return.~                      | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
+{{{wtable_end}}}
 
-*** Subroutine ~compl~                                             :noexport:
-
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~compl~ compiles a word in compiling state if it's not immediate (RISC-V).
 #+LABEL: tbl:forth:compl:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                | *Instruction*    | *Encoding*                                                                                             | *&*            | *Machine code*                  |
 |---------------------------------------------+------------------+--------------------------------------------------------------------------------------------------------+----------------+---------------------------------|
 | /# Define:/ _~compl~_                       | ---              | ---                                                                                                    |                | {{{define(05,63 6F 6D 70 6C)}}} |
@@ -3230,12 +3311,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c(2)}}} ~imm+state@a1 ← 1;~              | addi a1, zero, 1 | {{{imm(0x001)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(01011)}}}  {{{op(0010011)}}} |                | ~93 05 10 00~                   |
 | ~_end:~                                     |                  |                                                                                                        | {{{addr(20)}}} |                                 |
 | {{{c(2)}}} ~return.~                        | jalr zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                   |
+{{{wtable_end}}}
 
-*** Subroutine ~hit~                                               :noexport:
-
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~hit~ either compiles or executes a word found in the dictionary (RISC-V).
 #+LABEL: tbl:forth:hit:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                      | *Instruction*      | *Opcode*                                                                                               | *&*            | *Machine code*            |
 |---------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+----------------+---------------------------|
 | /# Define:/ _~hit~_                               | ---                | ---                                                                                                    |                | {{{define(03,68 69 74)}}} |
@@ -3265,13 +3346,15 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c(2)}}}                                        | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 00~             |
 | ~_end:~                                           |                    |                                                                                                        | {{{addr(34)}}} |                           |
 | {{{c(2)}}} ~return.~                              | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~             |
+{{{wtable_end}}}
 
 
-*** Subroutine ~SVAL~                                              :noexport:
+*** Bringing Everything Together: ~SVAL~, ~ti~                     :noexport:
 
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~SVAL~ evaluates a line of Forth code (RISC-V).
 #+LABEL: tbl:forth:SVAL:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                      | *Instruction*      | *Encoding*                                                                                             | *&*            | *Machine code*               |
 |---------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+----------------+------------------------------|
 | /# Define:/ _~SVAL~_                              | ---                | ---                                                                                                    |                | {{{define(04,53 56 41 4C)}}} |
@@ -3298,12 +3381,12 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c(2)}}} ~pop ra;~                              | ld ra, 0(sp)       | {{{off(0x000)}}}                    {{{rs1(00010)}}} {{{fn3(011)}}} {{{rd(00001)}}}  {{{op(0000011)}}} |                | ~83 30 01 00~                |
 | {{{c(2)}}}                                        | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 00~                |
 | {{{c(2)}}} ~return.~                              | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
+{{{wtable_end}}}
 
-*** Subroutine ~ti~                                                :noexport:
-
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~ti~ brings everything together, reading and evaluating Forth in a loop (RISC-V).
 #+LABEL: tbl:forth:ti:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                       | *Instruction*      | *Encoding*                                                                                             | *&*            | *Machine code*         |
 |----------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+----------------+------------------------|
 | /# Define:/ _~ti~_                                 | ---                | ---                                                                                                    |                | {{{define(02,74 69)}}} |
@@ -3320,8 +3403,7 @@ is listed in Table [[tbl:forth:reg:rv]].
 | {{{c(2)}}} ~call REFILL;~  {{{c(0)}}}​/# Compiled./ | ---                | ---                                                                                                    |                | {{{compile(52,R)}}}    |
 | {{{c(2)}}} ~call SVAL;~    {{{c(2)}}}​/# Compiled./ | ---                | ---                                                                                                    |                | {{{compile(53,S)}}}    |
 | {{{c(2)}}} ~goto _begin.~                          | jal zero, -0x10    | {{{off(11111111000111111111)}}}                                     {{{rd(00000)}}}  {{{op(1101111)}}} | {{{addr(10)}}} | ~6F F0 1F FF~          |
-
-
+{{{wtable_end}}}
 
 
 * Forth in Forth
