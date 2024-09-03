@@ -57,7 +57,7 @@
 #+MACRO: table_begin   \small
 #+MACRO: table_end     \normalsize
 # TODO: remove?
-#+MACRO: wtable_begin   (eval (format "\\vspace{1.5em} \\begin{table}[htbp] \\begin{adjustwidth}{-1cm}{-1cm} \\fontsize{%s}{%f}\\selectfont" $1 (* 1.2 (string-to-number $1))))
+#+MACRO: wtable_begin   (eval (format "\\begin{table}[!htbp] \\begin{adjustwidth}{-1cm}{-1cm} \\fontsize{%s}{%f}\\selectfont" $1 (* 1.2 (string-to-number $1))))
 #+MACRO: wtable_end     \normalsize \end{adjustwidth} \end{table} \vspace{-0.5em}
 
 # --- Indentation macros.
@@ -1009,6 +1009,7 @@ described above.
 | ~[code@RCX] ← OUTPUT@RDI;~             | mov [rcx], rdi              | REX.W 89 /r      |                | ~48 89~ {{{modrm(39,00,111,001)}}}      | [rcx] = rdi   |
 | ~return.~  /# To interpreter loop./    | ret                         | C3               |                | ~C3~                                    | return        |
 {{{wtable_end}}}
+
 
 ** A Way Out
 
@@ -1978,7 +1979,7 @@ highlighting source & destination registers, immediates and offsets.
 The encoding process of the first =lui= instruction is explained in
 detail.
 
-{{{wtable_begin(10)}}}
+{{{wtable_begin(9)}}}
 #+CAPTION: RISC-V: Initialize global variables =INPUT= and =OUTPUT=.
 #+LABEL: tbl:forth:init-io:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
@@ -2009,13 +2010,22 @@ detail.
 We initialized ~VARS~ here rather than in individual subroutines,
 since it spares several instructions.
 
+
 ** Binary Interpreter
 
-*** The Binary Interpreter Loop                                    :noexport:
+Adapting the binary interpreter loop to RISC-V was mostly
+straightforward.  A notable difference between the two architectures
+is the way relative offsets for calls, jumps and branches are
+calculated.  While in x86-64 the offset is calculated relative to the
+PC /after/ the jump instruction, in RISC-V it's the address of the
+jump instruction itself that matters.  This simplifies calculations
+and is reflected in the *&* column by placing the address of each jump
+on the same line as the instruction.
 
+{{{wtable_begin(8)}}}
 #+CAPTION: The binary interpreter routine and loop (RISC-V).
 #+LABEL: tbl:forth:bi:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                      | *Instruction*                        | *Encoding*                                                                                             | *&*            | *Machine code* |
 |---------------------------------------------------+--------------------------------------+--------------------------------------------------------------------------------------------------------+----------------+----------------|
 | ~_bi:~                                            |                                      |                                                                                                        | {{{addr(90)}}} |                |
@@ -2052,7 +2062,7 @@ since it spares several instructions.
 | {{{i(1)}}} ~if arg@a1~ ~&~ ~0b01100000~ ~=~ ~0:~  | *andi* t0, a1, 0x060                 | {{{imm(0x060)}}}                    {{{rs1(01011)}}} {{{fn3(111)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |                | ~93 F2 05 06~  |
 | {{{i(2)}}}     /# _Define_ a new word./           |                                      |                                                                                                        |                |                |
 | {{{i(2)}}}     ~goto Head.~                       | *beq* t0, zero, _0x07E_              | {{{off(0000011)}}} {{{rs2(00101)}}} {{{rs1(00000)}}} {{{fn3(000)}}} {{{off(11110)}}} {{{op(1100011)}}} | {{{addr(C8)}}} | ~63 0F 50 06~  |
-| ~_find1:~                                         | TODO: andi below can go above _find1 |                                                                                                        | {{{addr(CC)}}} |                |
+| ~_find1:~                                         |                                      |                                                                                                        | {{{addr(CC)}}} |                |
 | {{{i(1)}}} ~chr@t0~ ~←~ ~arg@a1~ ~&~ ~0b0111111;~ | *andi* t0, a1, 0x07F                 | {{{imm(0x07F)}}}                    {{{rs1(01011)}}} {{{fn3(111)}}} {{{rd(00101)}}}  {{{op(0010011)}}} |                | ~93 F2 F5 07~  |
 | {{{i(1)}}} ~if chr@t0 = [xt@a0 + 17]:~            | *lbu* t1, 0x011(a0)                  | {{{off(0x011)}}}                    {{{rs1(01010)}}} {{{fn3(100)}}} {{{rd(00110)}}}  {{{op(0000011)}}} |                | ~03 43 15 01~  |
 | {{{i(2)}}}     /# We found a word whose/          |                                      |                                                                                                        |                |                |
@@ -2070,126 +2080,173 @@ since it spares several instructions.
 | {{{i(1)}}} ~goto [xt@a0].~                        | *ld* t0, 0(a0)                       | {{{off(0x000)}}}                    {{{rs1(01010)}}} {{{fn3(011)}}} {{{rd(00101)}}}  {{{op(0000011)}}} | {{{addr(E8)}}} | ~83 32 05 00~  |
 | {{{i(1)}}}                                        | *jalr* zero, 0(t0)                   | {{{off(0x000)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 02 00~  |
 |                                                   |                                      |                                                                                                        | {{{addr(F0)}}} |                |
+{{{wtable_end}}}
 
-*** Subroutine ~COMPL~                                             :noexport:
+*** Subroutine ~COMPL~
 
-Discuss:
-- Differences between the compiled ~CALL~​s in x86-64 and two
-  instruction calls in RISC-V.  Explain the consequence of implicit
-  vs. explicit pushing of the return address on the stack. Refer to
-  the definitions of ~:~ and ~;~ which need to compile prologues and
-  epilogues to Forth secondary words.
+The implementation of ~COMPL~, shown in Table [[tbl:forth:compl:rv]],
+proved to be quite subtle.  Whereas x86-64's ~CALL~ instruction
+implicitly pushes the return address on the stack, RISC-V mostly
+homologous ~jalr~ doesn't do such thing.  Instead, it only writes the
+return address to a specified destination register.  Thus in ~COMPL~
+we had to decide between two alternatives:
+- generate more code to save the return address onto the stack and
+  retrieve it after the call;
+- handle the saving of the return address in the /callee/ word
+  instead.
 
+Because the calling sequence had already increased in length from one
+instruction (7 bytes) in x86-64 to two instructions (~lui~ and ~jalr~,
+giving 8 bytes), we decided for the latter option.  We will see in the
+definitions of ~:~ and ~;~ how we compile prologues and epilogues that
+save and restore the return address at the beginning and end of each
+Forth word.
+
+{{{wtable_begin(7)}}}
 #+CAPTION: =COMPL=, the FORTH compiler.
 #+LABEL: tbl:forth:compl:rv
-#+ATTR_LATEX: :align l|ll|l|l
-| *Pseudocode*                                                                                   | *Instruction*      | *Encoding*                                                                                             | *&*             | *Machine code*                  |
-|------------------------------------------------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------+-----------------+---------------------------------|
-| /# Define:/ _~COMPL~_                                                                          | ---                | ---                                                                                                    | {{{addr(F0)}}}  | {{{define(05,43 4F 4D 50 4C)}}} |
-| /# In/Out:/ ~( xt@a0 -- xt@a0 )~                                                               |                    |                                                                                                        |                 | {{{padding(00)}}}               |
-|                                                                                                |                    |                                                                                                        |                 |                                 |
-| /# Generate two instructions which,/                                                           |                    |                                                                                                        |                 |                                 |
-| /# combined, set the PC to ~[xt]~:/                                                            |                    |                                                                                                        |                 |                                 |
-| /# 1. Prepare 20 highest bits of ~[xt]~:/                                                      |                    |                                                                                                        |                 |                                 |
-| /# – instruction:/ ~lui t6, 0xhhhhh~                                                           |                    |                                                                                                        |                 |                                 |
-| /# – encoded:/ {{{imm(0xhhhhh)}}} {{{rd(11111)}}} {{{op(0110111)}}}                            |                    |                                                                                                        |                 |                                 |
-| /# 2. Add lowest 12 bits of ~[xt]~ and jump:/                                                  |                    |                                                                                                        |                 |                                 |
-| /# – instr.:/ ~jalr ra, 0xhhh(t6)~                                                             |                    |                                                                                                        |                 |                                 |
-| /# – enc.:/ {{{off(0xhhh)}}} {{{rs1(11111)}}} {{{fn3(000)}}} {{{rd(00001)}}} {{{op(1101111)}}} |                    |                                                                                                        |                 |                                 |
-| /#/                                                                                            |                    |                                                                                                        |                 |                                 |
-| /# Thus we generate code as follows:/                                                          |                    |                                                                                                        |                 |                                 |
-| /#/{{{c(2)}}}​~bbbbbbbb·bbbbbbbb·bbbb1111·10110111~                                             |                    |                                                                                                        |                 |                                 |
-| /#/{{{c(2)}}}​~bbbbbbbb·bbbb1111·10000000·11100111~                                             |                    |                                                                                                        |                 |                                 |
-| /#/                                                                                            |                    |                                                                                                        |                 |                                 |
-| /# Care is required to compensate for the potential/                                           |                    |                                                                                                        |                 |                                 |
-| /# sign-extension of ~jalr~​'s immediate operand./                                              |                    |                                                                                                        |                 |                                 |
-|                                                                                                |                    |                                                                                                        |                 |                                 |
-| /# A useful bit mask./                                                                         |                    |                                                                                                        |                 |                                 |
-| ~mask@t1 ← 0x00000FFF;~                                                                        | lui t1, 1          | {{{imm(0x00001)}}}                                                  {{{rd(00110)}}}  {{{op(0110111)}}} | {{{addr(F8)}}}  | ~37 13 00 00~                   |
-|                                                                                                | addi t1, t1, -1    | {{{imm(0xFFF)}}}                    {{{rs1(00110)}}} {{{fn3(000)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                 | ~13 03 F3 FF~                   |
-| /# 1. Load code address from ~xt~ and extract low & high bits./                                |                    |                                                                                                        |                 |                                 |
-| ~addr@t0 ← [xt@a0];~                                                                           | *lwu* t0, 0(a0)    | {{{off(0x000)}}}                    {{{rs1(01010)}}} {{{fn3(110)}}} {{{rd(00101)}}}  {{{op(0000011)}}} |                 | ~83 62 05 00~                   |
-| ~high@t2 ← addr@t0 >> 12;~                                                                     | srli t2, t0, 12    | ~000000~​{{{shamt(001100)}}}         {{{rs1(00101)}}} {{{fn3(101)}}} {{{rd(00111)}}}  {{{op(0010011)}}} |                 | ~93 D3 C2 00~                   |
-| ~low@t3 ← addr@t0 & 0x00000FFF;~                                                               | and t3, t0, t1     | {{{fn7(0000000)}}} {{{rs2(00110)}}} {{{rs1(00101)}}} {{{fn3(111)}}} {{{rd(11100)}}}  {{{op(0110011)}}} |                 | ~33 FE 62 00~                   |
-|                                                                                                |                    |                                                                                                        |                 |                                 |
-| /# 2. Assemble and write ~lui~ instr./                                                         |                    |                                                                                                        |                 |                                 |
-| ~sign@t4 ← low@t3 >> 11;~                                                                      | srli t4, t3, 11    | ~000000~​{{{shamt(001011)}}}         {{{rs1(11100)}}} {{{fn3(101)}}} {{{rd(11101)}}}  {{{op(0010011)}}} |                 | ~93 5E BE 00~                   |
-| ~high@t2 ← high@t2 + sign@t4;~                                                                 | add t2, t2, t4     | {{{fn7(0000000)}}} {{{rs2(11101)}}} {{{rs1(00111)}}} {{{fn3(000)}}} {{{rd(00111)}}}  {{{op(0110011)}}} |                 | ~B3 83 D3 01~                   |
-| ~instr@t2 ← (high@t2 << 12) + 0x00000FB7;~                                                         | slli t2, t2, 12    | ~000000~​{{{shamt(001100)}}}         {{{rs1(00111)}}} {{{fn3(001)}}} {{{rd(00111)}}}  {{{op(0010011)}}} |                 | ~93 93 C3 00~                   |
-|                                                                                                | andi t4, t1, 0xFB7 | {{{imm(0xFB7)}}}                    {{{rs1(00110)}}} {{{fn3(111)}}} {{{rd(11101)}}}  {{{op(0010011)}}} |                 | ~93 7E 73 FB~                   |
-|                                                                                                | add t2, t2, t4     | {{{fn7(0000000)}}} {{{rs2(11101)}}} {{{rs1(00111)}}} {{{fn3(000)}}} {{{rd(00111)}}}  {{{op(0110011)}}} |                 | ~B3 83 D3 01~                   |
-| ~[OUTPUT@s1] ← instr@t2;~                                                                      | sw t2, 0(s1)       | {{{off(0000000)}}} {{{rs2(00111)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(00000)}}} {{{op(0100011)}}} |                 | ~23 A0 74 00~                   |
-|                                                                                                |                    |                                                                                                        |                 |                                 |
-| /# 3. Assemble and write ~jalr~ instruction./                                                  |                    |                                                                                                        |                 |                                 |
-| ~instr@t3 = (low@t3 << 20) \vert 0x000F80E7;~                                                      | slli t3, t3, 20    | ~000000~​{{{shamt(010100)}}}         {{{rs1(11100)}}} {{{fn3(001)}}} {{{rd(11100)}}}  {{{op(0010011)}}} |                 | ~13 1E 4E 01~                   |
-|                                                                                                | lui t4, 0xF8       | {{{imm(0x000F8)}}}                                                  {{{rd(11101)}}}  {{{op(0110111)}}} |                 | ~B7 8E 0F 00~                   |
-|                                                                                                | addi t4, t4, 0x0E7 | {{{imm(0x0E7)}}}                    {{{rs1(11101)}}} {{{fn3(000)}}} {{{rd(11101)}}}  {{{op(0010011)}}} |                 | ~93 8E 7E 0E~                   |
-|                                                                                                | or t3, t3, t4      | {{{fn7(0000000)}}} {{{rs2(11101)}}} {{{rs1(11100)}}} {{{fn3(110)}}} {{{rd(11100)}}}  {{{op(0110011)}}} |                 | ~33 6E DE 01~                   |
-| ~[OUTPUT@s1 + 4] ← instr@t3;~                                                                  | sw t3, 4(s1)       | {{{off(0000000)}}} {{{rs2(11100)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(00100)}}} {{{op(0100011)}}} |                 | ~23 A2 C4 01~                   |
-|                                                                                                |                    |                                                                                                        |                 |                                 |
-| ~OUTPUT@s1 += 8;~                                                                              | *addi* s1, s1, 8   | {{{imm(0x008)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |                 | ~93 84 84 00~                   |
-| ~return.~  /# To interpreter loop./                                                            | *jalr* zero, 0(ra) | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                 | ~67 80 00 00~                   |
-|                                                                                                |                    |                                                                                                        | {{{addr(140)}}} |                                 |
+#+ATTR_LATEX: :align l|ll|l|l :float nil
+| *Pseudocode*                                                                                   | *Instruction*        | *Encoding*                                                                                             | *&*             | *Machine code*                  |
+|------------------------------------------------------------------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------+-----------------+---------------------------------|
+| /# Define:/ _~COMPL~_                                                                          | ---                  | ---                                                                                                    | {{{addr(F0)}}}  | {{{define(05,43 4F 4D 50 4C)}}} |
+| /# In/Out:/ ~( xt@a0 -- xt@a0 )~                                                               |                      |                                                                                                        |                 | {{{padding(00)}}}               |
+|                                                                                                |                      |                                                                                                        |                 |                                 |
+| /# Generate two instructions which,/                                                           |                      |                                                                                                        |                 |                                 |
+| /# combined, set the PC to ~[xt]~:/                                                            |                      |                                                                                                        |                 |                                 |
+| /# 1. Prepare 20 highest bits of ~[xt]~:/                                                      |                      |                                                                                                        |                 |                                 |
+| /# – instruction:/ ~lui t6, 0xhhhhh~                                                           |                      |                                                                                                        |                 |                                 |
+| /# – encoded:/ {{{imm(0xhhhhh)}}} {{{rd(11111)}}} {{{op(0110111)}}}                            |                      |                                                                                                        |                 |                                 |
+| /# 2. Add lowest 12 bits of ~[xt]~ and jump:/                                                  |                      |                                                                                                        |                 |                                 |
+| /# – instr.:/ ~jalr ra, 0xhhh(t6)~                                                             |                      |                                                                                                        |                 |                                 |
+| /# – enc.:/ {{{off(0xhhh)}}} {{{rs1(11111)}}} {{{fn3(000)}}} {{{rd(00001)}}} {{{op(1101111)}}} |                      |                                                                                                        |                 |                                 |
+| /#/                                                                                            |                      |                                                                                                        |                 |                                 |
+| /# Thus we generate code as follows:/                                                          |                      |                                                                                                        |                 |                                 |
+| /#/{{{c(2)}}}​~bbbbbbbb·bbbbbbbb·bbbb1111·10110111~                                             |                      |                                                                                                        |                 |                                 |
+| /#/{{{c(2)}}}​~bbbbbbbb·bbbb1111·10000000·11100111~                                             |                      |                                                                                                        |                 |                                 |
+| /#/                                                                                            |                      |                                                                                                        |                 |                                 |
+| /# Care is required to compensate for the/                                                     |                      |                                                                                                        |                 |                                 |
+| /# potential sign-extension of ~jalr~​'s/                                                       |                      |                                                                                                        |                 |                                 |
+| /# immediate operand./                                                                         |                      |                                                                                                        |                 |                                 |
+|                                                                                                |                      |                                                                                                        |                 |                                 |
+| /# A useful bit mask./                                                                         |                      |                                                                                                        |                 |                                 |
+| ~mask@t1 ← 0x00000FFF;~                                                                        | *lui* t1, 1          | {{{imm(0x00001)}}}                                                  {{{rd(00110)}}}  {{{op(0110111)}}} | {{{addr(F8)}}}  | ~37 13 00 00~                   |
+|                                                                                                | *addi* t1, t1, -1    | {{{imm(0xFFF)}}}                    {{{rs1(00110)}}} {{{fn3(000)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                 | ~13 03 F3 FF~                   |
+| /# Load code address from ~xt~/                                                                |                      |                                                                                                        |                 |                                 |
+| /# and extract low & high bits./                                                               |                      |                                                                                                        |                 |                                 |
+| ~addr@t0 ← [xt@a0];~                                                                           | *lwu* t0, 0(a0)      | {{{off(0x000)}}}                    {{{rs1(01010)}}} {{{fn3(110)}}} {{{rd(00101)}}}  {{{op(0000011)}}} |                 | ~83 62 05 00~                   |
+| ~high@t2 ← addr@t0 >> 12;~                                                                     | *srli* t2, t0, 12    | ~000000~​{{{shamt(001100)}}}         {{{rs1(00101)}}} {{{fn3(101)}}} {{{rd(00111)}}}  {{{op(0010011)}}} |                 | ~93 D3 C2 00~                   |
+| ~low@t3 ← addr@t0 & 0x00000FFF;~                                                               | *and* t3, t0, t1     | {{{fn7(0000000)}}} {{{rs2(00110)}}} {{{rs1(00101)}}} {{{fn3(111)}}} {{{rd(11100)}}}  {{{op(0110011)}}} |                 | ~33 FE 62 00~                   |
+|                                                                                                |                      |                                                                                                        |                 |                                 |
+| /# 1. Assemble and write ~lui~ instr./                                                         |                      |                                                                                                        |                 |                                 |
+| ~sign@t4 ← low@t3 >> 11;~                                                                      | *srli* t4, t3, 11    | ~000000~​{{{shamt(001011)}}}         {{{rs1(11100)}}} {{{fn3(101)}}} {{{rd(11101)}}}  {{{op(0010011)}}} |                 | ~93 5E BE 00~                   |
+| ~high@t2 ← high@t2 + sign@t4;~                                                                 | *add* t2, t2, t4     | {{{fn7(0000000)}}} {{{rs2(11101)}}} {{{rs1(00111)}}} {{{fn3(000)}}} {{{rd(00111)}}}  {{{op(0110011)}}} |                 | ~B3 83 D3 01~                   |
+| ~instr@t2 ← (high@t2 << 12) + 0x00000FB7;~                                                     | *slli* t2, t2, 12    | ~000000~​{{{shamt(001100)}}}         {{{rs1(00111)}}} {{{fn3(001)}}} {{{rd(00111)}}}  {{{op(0010011)}}} |                 | ~93 93 C3 00~                   |
+|                                                                                                | *andi* t4, t1, 0xFB7 | {{{imm(0xFB7)}}}                    {{{rs1(00110)}}} {{{fn3(111)}}} {{{rd(11101)}}}  {{{op(0010011)}}} |                 | ~93 7E 73 FB~                   |
+|                                                                                                | *add* t2, t2, t4     | {{{fn7(0000000)}}} {{{rs2(11101)}}} {{{rs1(00111)}}} {{{fn3(000)}}} {{{rd(00111)}}}  {{{op(0110011)}}} |                 | ~B3 83 D3 01~                   |
+| ~[OUTPUT@s1] ← instr@t2;~                                                                      | *sw* t2, 0(s1)       | {{{off(0000000)}}} {{{rs2(00111)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(00000)}}} {{{op(0100011)}}} |                 | ~23 A0 74 00~                   |
+|                                                                                                |                      |                                                                                                        |                 |                                 |
+| /# 2. Assemble and write ~jalr~ instr./                                                        |                      |                                                                                                        |                 |                                 |
+| ~instr@t3 = (low@t3 << 20)~ \vert ~0x000F80E7;~                                                    | *slli* t3, t3, 20    | ~000000~​{{{shamt(010100)}}}         {{{rs1(11100)}}} {{{fn3(001)}}} {{{rd(11100)}}}  {{{op(0010011)}}} |                 | ~13 1E 4E 01~                   |
+|                                                                                                | *lui* t4, 0xF8       | {{{imm(0x000F8)}}}                                                  {{{rd(11101)}}}  {{{op(0110111)}}} |                 | ~B7 8E 0F 00~                   |
+|                                                                                                | *addi* t4, t4, 0x0E7 | {{{imm(0x0E7)}}}                    {{{rs1(11101)}}} {{{fn3(000)}}} {{{rd(11101)}}}  {{{op(0010011)}}} |                 | ~93 8E 7E 0E~                   |
+|                                                                                                | *or* t3, t3, t4      | {{{fn7(0000000)}}} {{{rs2(11101)}}} {{{rs1(11100)}}} {{{fn3(110)}}} {{{rd(11100)}}}  {{{op(0110011)}}} |                 | ~33 6E DE 01~                   |
+| ~[OUTPUT@s1 + 4] ← instr@t3;~                                                                  | *sw* t3, 4(s1)       | {{{off(0000000)}}} {{{rs2(11100)}}} {{{rs1(01001)}}} {{{fn3(010)}}} {{{off(00100)}}} {{{op(0100011)}}} |                 | ~23 A2 C4 01~                   |
+|                                                                                                |                      |                                                                                                        |                 |                                 |
+| ~OUTPUT@s1 += 8;~                                                                              | *addi* s1, s1, 8     | {{{imm(0x008)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |                 | ~93 84 84 00~                   |
+| ~return.~  /# To interpreter loop./                                                            | *jalr* zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                 | ~67 80 00 00~                   |
+|                                                                                                |                      |                                                                                                        | {{{addr(140)}}} |                                 |
+{{{wtable_end}}}
 
-*** Subroutine ~Head~                                              :noexport:
+*** Subroutine ~Head~
 
+Subroutine ~Head~, shown in Table [[tbl:forth:head:rv]], brings a
+complication due to RISC-V /reduced/ instruction offer.  Where in
+x86-64 copying the word name into the dictionary's name field was done
+by a single combined ~rep movs [rdi], [rsi]~ instruction, in RISC-V we
+had to write our own loop for the same purpose.  The proponents of
+RISC ISAs argue that this simplifies hardware design enough to justify
+the increased complexity of compilers (and code size)
+[cite:@patterson2017].
+
+Another, more interesting, complication occurs because of RISC-V's
+mandatory instruction alignment to even addresses
+[cite:@riscv_spec_vol_i].  Since the binary interpreter copies all
+bytes ``around'' commands to ~OUTPUT~, odd word names in definition
+commands can lead to misaligned RISC-V instructions in defined Forth
+words.  Actually, even without considering code copied by the binary
+interpreter, the simple presence of odd-length commands shifts all
+instructions following them to misaligned positions, leading to the
+dreaded ~Illegal instruction~ trap message that we have so often had
+the pleasure to encounter.  The solution is simple:
+- insert a padding byte after odd-length definition commands;
+- perform additional aligning of both ~INPUT~ and ~OUTPUT~ after
+  copying word names into the dictionary.
+
+{{{wtable_begin(7)}}}
 #+CAPTION: Subroutine =Head= defines new words in the dictionary (RISC-V).
 #+LABEL: tbl:forth:head:rv
-#+ATTR_LATEX: :align l|ll|l|l
-| *Pseudocode*                                                           | *Instruction*                          | *Encoding*                                                                                             | *&*             | *Machine code*               |
-|------------------------------------------------------------------------+----------------------------------------+--------------------------------------------------------------------------------------------------------+-----------------+------------------------------|
-| /# Define:/ _~Head~_                                                   | ---                                    | ---                                                                                                    | {{{addr(140)}}} | {{{define(04,48 65 61 64)}}} |
-| /# In/Out:/ ~( latest@a0~                                              |                                        |                                                                                                        |                 |                              |
-| /#/{{{io}}}   ~flag@a1 -​- )~                                           |                                        |                                                                                                        |                 |                              |
-|                                                                        |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# 16-bit align ~OUTPUT~./                                   |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​~OUTPUT@s1 += 0x00F;~  /# TODO: Necessary?!                  | *addi* s1, s1, /0x00F/                 | {{{imm(0x00F)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | {{{addr(146)}}} | ~93 84 F4 00~                |
-| {{{c(2)}}}​~OUTPUT@s1 &= 0xFF0;~                                        | *andi* s1, s1, /0xFF0/                 | {{{imm(0xFF0)}}}                    {{{rs1(01001)}}} {{{fn3(111)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |                 | ~93 F4 04 FF~                |
-|                                                                        |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# New word starts here./                                    | /# TODO: convert to ~addi t0, s1, 0~:/ |                                                                                                        |                 |                              |
-| {{{c(2)}}}​~xt@t0 ← OUTPUT@s1;~                                         | *or* t0, s1, s1                        | {{{fn7(0000000)}}} {{{rs2(01001)}}} {{{rs1(01001)}}} {{{fn3(110)}}} {{{rd(00101)}}}  {{{op(0110011)}}} |                 | ~B3 E2 94 00~                |
-|                                                                        | /# ... because it's more intuitive./   |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# Fill the new dictionary entry:/                           |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/#/                                                          |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# 1. Set the _link_ field, then point/                      |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# ~LATEST~ (~VARS+40~) to new word./                        |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​~[xt@t0 + 8] ← latest@a0;~                                   | *sd* a0, _8_​(t0)                       | {{{off(0000000)}}} {{{rs2(01010)}}} {{{rs1(00101)}}} {{{fn3(011)}}} {{{off(01000)}}} {{{op(0100011)}}} |                 | ~23 B4 A2 00~                |
-| {{{c(2)}}}​~[LATEST] ← xt@t0;~                                          | *sd* t0, _40_​(s2)                      | {{{off(0000001)}}} {{{rs2(00101)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(01000)}}} {{{op(0100011)}}} |                 | ~23 34 59 02~                |
-|                                                                        |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# 2. Set the _flag+length_ field./                          |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​~[xt@t0 + 16] ← flag@a1;~                                    | *sb* a1, _16_​(t0)                      | {{{off(0000000)}}} {{{rs2(01011)}}} {{{rs1(00101)}}} {{{fn3(000)}}} {{{off(10000)}}} {{{op(0100011)}}} |                 | ~23 88 B2 00~                |
-|                                                                        |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# 3. Extract name length from/                              |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# ~flag~ and fill the _name_ field./                        |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​~length@t1 ← flag@a1 & 0x1F;~                                | *andi* t1, a1, /0x01F/                 | {{{imm(0x01F)}}}                    {{{rs1(01011)}}} {{{fn3(111)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                 | ~13 F3 F5 01~                |
-| {{{c(2)}}}​~OUTPUT@s1 ← xt@t0 + 17;~                                    | *addi* s1, t0, /0x011/                 | {{{imm(0x011)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |                 | ~93 84 12 01~                |
-| ~_begin:~                                                              |                                        |                                                                                                        | {{{addr(00)}}}  |                              |
-| {{{c(2)}}}​~chr@t2 ← [INPUT@s0++];~                                     | *lbu* t2, _0_​(s0)                      | {{{off(0x000)}}}                    {{{rs1(01000)}}} {{{fn3(100)}}} {{{rd(00111)}}}  {{{op(0000011)}}} |                 | ~83 43 04 00~                |
-|                                                                        | *addi* s0, s0, /1/                     | {{{imm(0x001)}}}                    {{{rs1(01000)}}} {{{fn3(000)}}} {{{rd(01000)}}}  {{{op(0010011)}}} |                 | ~13 04 14 00~                |
-| {{{c(2)}}}​~[OUTPUT@s1] ← chr@t2;~                                      | *sb* t2, _0_​(s1)                       | {{{off(0000000)}}} {{{rs2(00111)}}} {{{rs1(01001)}}} {{{fn3(000)}}} {{{off(00000)}}} {{{op(0100011)}}} |                 | ~23 80 74 00~                |
-|                                                                        | *addi* s1, s1, /1/                     | {{{imm(0x001)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |                 | ~93 84 14 00~                |
-| {{{c(2)}}}​~length@t1--;~                                               | *addi* t1, t1, /-1/                    | {{{imm(0xFFF)}}}                    {{{rs1(00110)}}} {{{fn3(000)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                 | ~13 03 F3 FF~                |
-| {{{c(2)}}}​~if length@t1 != 0:~                                         |                                        |                                                                                                        |                 |                              |
-| {{{c(4)}}}​  ~goto _begin;~                                             | *bne* t1, zero, _0xFEC_                | {{{off(1111111)}}} {{{rs2(00000)}}} {{{rs1(00110)}}} {{{fn3(001)}}} {{{off(01101)}}} {{{op(1100011)}}} | {{{addr(14)}}}  | ~E3 16 03 FE~                |
-|                                                                        |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# One padding byte might follow/                            |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# the word's name to abide by/                              |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# RISC-V's requirement to align/                            |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# instructions to even addresses [cite:@riscv_spec_vol_i]./ |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# Both ~INPUT~ and ~OUTPUT~ need to/                        |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# be 1-bit aligned: the former to keep/                     |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# instructions in the executable/                           |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# aligned and former to make sure/                          |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# that compiled code is also aligned./                      |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​~INPUT@s0 += 0x001;~                                         | *addi* s0, s0, /0x001/                 | {{{imm(0x001)}}}                    {{{rs1(01000)}}} {{{fn3(000)}}} {{{rd(01000)}}}  {{{op(0010011)}}} |                 | ~13 04 14 00~                |
-| {{{c(2)}}}​~INPUT@s0 &= 0xFFE;~                                         | *andi* s0, s0, /0xFFE/                 | {{{imm(0xFFE)}}}                    {{{rs1(01000)}}} {{{fn3(111)}}} {{{rd(01000)}}}  {{{op(0010011)}}} |                 | ~13 74 E4 FF~                |
-| {{{c(2)}}}​~OUTPUT@s1 += 0x001;~                                        | *addi* s1, s1, /0x001/                 | {{{imm(0x001)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |                 | ~93 84 14 00~                |
-| {{{c(2)}}}​~OUTPUT@s1 &= 0xFFE;~                                        | *andi* s1, s1, /0xFFE/                 | {{{imm(0xFFE)}}}                    {{{rs1(01001)}}} {{{fn3(111)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |                 | ~93 F4 E4 FF~                |
-|                                                                        |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# 4b. Point _code_ field to the code/                       |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​/# about to be generated at ~OUTPUT~./                       |                                        |                                                                                                        |                 |                              |
-| {{{c(2)}}}​~[xt@t0 + 0] ← OUTPUT@s1;~                                   | *sd* s1, _0_​(t0)                       | {{{off(0000000)}}} {{{rs2(01001)}}} {{{rs1(00101)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                 | ~23 B0 92 00~                |
-| {{{c(2)}}}​~return.~  /# To interpreter loop./                          | *jalr* zero, _0_​(ra)                   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                 | ~67 80 00 00~                |
+#+ATTR_LATEX: :align l|ll|l|l :float nil
+| *Pseudocode*                                                           | *Instruction*           | *Encoding*                                                                                             | *&*             | *Machine code*               |
+|------------------------------------------------------------------------+-------------------------+--------------------------------------------------------------------------------------------------------+-----------------+------------------------------|
+| /# Define:/ _~Head~_                                                   | ---                     | ---                                                                                                    | {{{addr(140)}}} | {{{define(04,48 65 61 64)}}} |
+| /# In/Out:/ ~( latest@a0~                                              |                         |                                                                                                        |                 |                              |
+| /#/{{{io}}}   ~flag@a1 -​- )~                                           |                         |                                                                                                        |                 |                              |
+|                                                                        |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# 16-bit align ~OUTPUT~./                                   |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​~OUTPUT@s1 += 0x00F;~                                        | *addi* s1, s1, /0x00F/  | {{{imm(0x00F)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} | {{{addr(146)}}} | ~93 84 F4 00~                |
+| {{{c(2)}}}​~OUTPUT@s1 &= 0xFF0;~                                        | *andi* s1, s1, /0xFF0/  | {{{imm(0xFF0)}}}                    {{{rs1(01001)}}} {{{fn3(111)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |                 | ~93 F4 04 FF~                |
+|                                                                        |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# New word starts here./                                    |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​~xt@t0 ← OUTPUT@s1;~                                         | *or* t0, s1, s1         | {{{fn7(0000000)}}} {{{rs2(01001)}}} {{{rs1(01001)}}} {{{fn3(110)}}} {{{rd(00101)}}}  {{{op(0110011)}}} |                 | ~B3 E2 94 00~                |
+|                                                                        |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# Fill the new dictionary entry:/                           |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/#/                                                          |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# 1. Set the _link_ field, then point/                      |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# ~LATEST~ (~VARS+40~) to new word./                        |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​~[xt@t0 + 8] ← latest@a0;~                                   | *sd* a0, _8_​(t0)        | {{{off(0000000)}}} {{{rs2(01010)}}} {{{rs1(00101)}}} {{{fn3(011)}}} {{{off(01000)}}} {{{op(0100011)}}} |                 | ~23 B4 A2 00~                |
+| {{{c(2)}}}​~[LATEST] ← xt@t0;~                                          | *sd* t0, _40_​(s2)       | {{{off(0000001)}}} {{{rs2(00101)}}} {{{rs1(10010)}}} {{{fn3(011)}}} {{{off(01000)}}} {{{op(0100011)}}} |                 | ~23 34 59 02~                |
+|                                                                        |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# 2. Set the _flag+length_ field./                          |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​~[xt@t0 + 16] ← flag@a1;~                                    | *sb* a1, _16_​(t0)       | {{{off(0000000)}}} {{{rs2(01011)}}} {{{rs1(00101)}}} {{{fn3(000)}}} {{{off(10000)}}} {{{op(0100011)}}} |                 | ~23 88 B2 00~                |
+|                                                                        |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# 3. Extract name length from/                              |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# ~flag~ and fill the _name_ field./                        |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​~length@t1 ← flag@a1 & 0x1F;~                                | *andi* t1, a1, /0x01F/  | {{{imm(0x01F)}}}                    {{{rs1(01011)}}} {{{fn3(111)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                 | ~13 F3 F5 01~                |
+| {{{c(2)}}}​~OUTPUT@s1 ← xt@t0 + 17;~                                    | *addi* s1, t0, /0x011/  | {{{imm(0x011)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |                 | ~93 84 12 01~                |
+| ~_begin:~                                                              |                         |                                                                                                        | {{{addr(00)}}}  |                              |
+| {{{c(2)}}}​~chr@t2 ← [INPUT@s0++];~                                     | *lbu* t2, _0_​(s0)       | {{{off(0x000)}}}                    {{{rs1(01000)}}} {{{fn3(100)}}} {{{rd(00111)}}}  {{{op(0000011)}}} |                 | ~83 43 04 00~                |
+|                                                                        | *addi* s0, s0, /1/      | {{{imm(0x001)}}}                    {{{rs1(01000)}}} {{{fn3(000)}}} {{{rd(01000)}}}  {{{op(0010011)}}} |                 | ~13 04 14 00~                |
+| {{{c(2)}}}​~[OUTPUT@s1] ← chr@t2;~                                      | *sb* t2, _0_​(s1)        | {{{off(0000000)}}} {{{rs2(00111)}}} {{{rs1(01001)}}} {{{fn3(000)}}} {{{off(00000)}}} {{{op(0100011)}}} |                 | ~23 80 74 00~                |
+|                                                                        | *addi* s1, s1, /1/      | {{{imm(0x001)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |                 | ~93 84 14 00~                |
+| {{{c(2)}}}​~length@t1--;~                                               | *addi* t1, t1, /-1/     | {{{imm(0xFFF)}}}                    {{{rs1(00110)}}} {{{fn3(000)}}} {{{rd(00110)}}}  {{{op(0010011)}}} |                 | ~13 03 F3 FF~                |
+| {{{c(2)}}}​~if length@t1 != 0:~                                         |                         |                                                                                                        |                 |                              |
+| {{{c(4)}}}​  ~goto _begin;~                                             | *bne* t1, zero, _0xFEC_ | {{{off(1111111)}}} {{{rs2(00000)}}} {{{rs1(00110)}}} {{{fn3(001)}}} {{{off(01101)}}} {{{op(1100011)}}} | {{{addr(14)}}}  | ~E3 16 03 FE~                |
+|                                                                        |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# One padding byte might follow/                            |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# the word's name to abide by/                              |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# RISC-V's requirement to align/                            |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# instructions to even addresses [cite:@riscv_spec_vol_i]./ |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# Both ~INPUT~ and ~OUTPUT~ need to be/                     |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# 1-bit aligned: the former to keep/                        |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# instructions in the executable/                           |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# aligned and former to make sure/                          |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# that compiled code is also aligned./                      |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​~INPUT@s0 += 0x001;~                                         | *addi* s0, s0, /0x001/  | {{{imm(0x001)}}}                    {{{rs1(01000)}}} {{{fn3(000)}}} {{{rd(01000)}}}  {{{op(0010011)}}} |                 | ~13 04 14 00~                |
+| {{{c(2)}}}​~INPUT@s0 &= 0xFFE;~                                         | *andi* s0, s0, /0xFFE/  | {{{imm(0xFFE)}}}                    {{{rs1(01000)}}} {{{fn3(111)}}} {{{rd(01000)}}}  {{{op(0010011)}}} |                 | ~13 74 E4 FF~                |
+| {{{c(2)}}}​~OUTPUT@s1 += 0x001;~                                        | *addi* s1, s1, /0x001/  | {{{imm(0x001)}}}                    {{{rs1(01001)}}} {{{fn3(000)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |                 | ~93 84 14 00~                |
+| {{{c(2)}}}​~OUTPUT@s1 &= 0xFFE;~                                        | *andi* s1, s1, /0xFFE/  | {{{imm(0xFFE)}}}                    {{{rs1(01001)}}} {{{fn3(111)}}} {{{rd(01001)}}}  {{{op(0010011)}}} |                 | ~93 F4 E4 FF~                |
+|                                                                        |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# 4b. Point _code_ field to the code/                       |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​/# about to be generated at ~OUTPUT~./                       |                         |                                                                                                        |                 |                              |
+| {{{c(2)}}}​~[xt@t0 + 0] ← OUTPUT@s1;~                                   | *sd* s1, _0_​(t0)        | {{{off(0000000)}}} {{{rs2(01001)}}} {{{rs1(00101)}}} {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                 | ~23 B0 92 00~                |
+| {{{c(2)}}}​~return.~  /# To interpreter loop./                          | *jalr* zero, _0_​(ra)    | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                 | ~67 80 00 00~                |
+{{{wtable_end}}}
+
+As all programming environments do, low-level RISC-V programming tends
+to favor certain idiomatic ways of achieving certain ends.  For
+example, copying register ~s1~ to register ~t0~ is typically done by
+an immediate add: ~addi t0, s1, 0~.  The third line in [[tbl:forth:head:rv][~Head~]] proves
+that we didn't learn this right away...
 
 
 ** A Way Out
