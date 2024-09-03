@@ -712,12 +712,49 @@ systems, is also specified by field ~p_align~.
 | {{{addr(78)}}} |                                     |                                                                                                    |
 {{{wtable_end}}}
 
+We are now ready to examine the first x86-64 instructions that
+SmithForth runs once it is loaded.
 
-** Global Variables                                                :noexport:
 
+** Global Variables
+
+SmithForth could have been implemented purely in machine code, word by
+word.  That would have led, however, to much code repetition, since no
+built-in programming facilities exist at this level to help avoid it.
+Forth implementations written in assembly, like JONESFORTH, make
+extensive use of assembler macros to reduce boilerplate
+[cite:@jonesforth].  Since SmithForth is written in machine code, it
+doesn't have that luxury.
+
+Instead of operating entirely at one level of abstraction, SmithForth
+is built in stages, with each stage using the facilities provided by
+the stage bellow.  The implementation begins with setting up a
+``binary interpreter'', a minimal meta-programming mechanism using a
+simple binary convention to allow for the easy definition, compilation
+and execution of Forth words.  This mechanism will be detailed in the
+next [[*Binary Interpreter][section]].
+
+This first stage is used by the next, which builds primitives for
+[[*A Way Out][exiting]], [[*Debugging Utilities][debugging]] and [[*Text Interpreter][text interpretation]].  Together, these two
+stages construct a basic Forth system able to compile and execute
+the Forth code at the next stage, defined in ~system.fs~.
+
+The different components of the system described above communicate
+mainly through three mechanisms:
+- passing and returning data through the machine registers or stack;
+- reading and writing of several global variables;
+- using the Forth data stack, once it is bootstrapped at the end of
+  the second stage.
+
+In this section we review the global variables used by the machine
+code foundation of SmithForth.  Table [[tbl:globals:x]] describes each
+variable and indicates the register or memory address where each
+variable is stored.
+
+{{{wtable_begin(10)}}}
 #+CAPTION: Global variables in SmithForth, referenced directly by machine code (x86-64).
 #+LABEL: tbl:globals:x
-#+ATTR_LATEX: :align l|l|l
+#+ATTR_LATEX: :align l|l|l :float nil
 | *Variable* | *Register*​/​*Address*   | *Contents*                                                    |
 |------------+------------------------+---------------------------------------------------------------|
 | ~INPUT~    | ~RSI~                  | Source address of binary interpreter data and commands.       |
@@ -730,22 +767,66 @@ systems, is also specified by field ~p_align~.
 | ~>IN~      | ~0x10000010 (VARS+16)~ | The number of /parsed/ characters in the current line.        |
 | ~STATE~    | ~0x10000020 (VARS+32)~ | Either ~0~ (/interpreting/ state) or ~1~ (/compiling/ state). |
 | ~LATEST~   | ~0x10000028 (VARS+40)~ | The execution token (/xt/) of the latest defined Forth word.  |
+{{{wtable_end}}}
 
-Beyond ~0x10000030~ lies uninitialized memory. This is where the
-binary interpreter is going to start writing, so this is the initial
-value we will [[tbl:forth:init-io:x][give]] to global variable ~OUTPUT~.
+Variables ~INPUT~ and ~OUTPUT~ are used by the binary interpreter as
+its binary source and destination, respectively.  Intepreter
+/commands/ and data are issued by the programmer, sequentially, at
+~INPUT~; the interpreter acts based on these commands and produces
+sometimes complicated data structures at ~OUTPUT~, relieving the
+programmer from the effort of creating these repetitive structures
+manually.
 
+Variable ~VARS~, held in a register, is used to indirectly address the
+five variables held stored in memory, listed in the second half of the
+table. These variables, in turn, are used by the text interpreter for
+reading Forth code from input (~#IN~, ~TIB~ and ~>IN~), for
+distinguishing between compilation mode and interpretation mode
+(~STATE~) and for referring to the Forth dictionary (~LATEST~).
+
+Finally, the last variable in a register, ~STACK~, points to the top
+of the Forth data stack, once it is set up.
+
+The first two SmithForth machine instructions, shown in Table
+[[tbl:forth:init-io:x]], initialize variables ~INPUT~ and ~OUTPUT~, used
+further by the binary interpreter.  Note the typographic conventions
+used in this table, as they will be used all along our analysis of the
+SmithForth x86-64 codebase.  In the first column we wrote our
+annotations, in the form of pseudocode interspersed with comments;
+this will be the most important resource during the RISC-V port in the
+next chapter.  The following two columns show the x86-64 instructions
+in assembly and ``opcode'' format; the mnemonic of the former can be
+used to search the Intel manuals for generic instructions, while the
+latter specifies the concrete hardware instruction that was chosen for
+encoding.  The last column contains the encoded binary instructions as
+annotated hexadecimal bytes.  The *&* column, when present, is used to
+track addresses for calculating relative offsets calls, jumps and
+branches.  Note the address of the first instruction, =0x78=, the same
+that we saw used as the entry point in the ELF header.
+
+{{{wtable_begin(10)}}}
 #+CAPTION: x86-64: Initialize global variables =INPUT= and =OUTPUT=.
 #+LABEL: tbl:forth:init-io:x
-#+ATTR_LATEX: :align l|ll|l|l
-| *Pseudocode*                  | *Instruction*    | *Opcode*   | *&*            | *Machine code*       |
-|-------------------------------+------------------+------------+----------------+----------------------|
-| /# Global variable ~INPUT~./  |                  |            |                |                      |
-| ~INPUT@RSI ← 0x004000B2;~     | MOV r32, /imm32/ | B8+rd /id/ | {{{addr(78)}}} | ~BE~ /~B2 00 40 00~/ |
-| /# Global variable ~OUTPUT~./ |                  |            |                |                      |
-| ~OUTPUT@RDI ← 0x10000030;~    | MOV r32, /imm32/ | B8+rd /id/ |                | ~BF~ /~30 00 00 10~/ |
-|                               |                  |            | {{{addr(82)}}} |                      |
+#+ATTR_LATEX: :align l|ll|l|l :float nil
+| *Pseudocode*                  | *Instruction*         | *Opcode*   | *&*            | *Machine code*       |
+|-------------------------------+-----------------------+------------+----------------+----------------------|
+| /# Global variable ~INPUT~./  |                       |            |                |                      |
+| ~INPUT@RSI ← 0x004000B2;~     | mov esi, 0x4000B2     | B8+rd /id/ | {{{addr(78)}}} | ~BE~ /~B2 00 40 00~/ |
+| /# Global variable ~OUTPUT~./ |                       |            |                |                      |
+| ~OUTPUT@RDI ← 0x10000030;~    | mov edi, 0x10000030   | B8+rd /id/ |                | ~BF~ /~30 00 00 10~/ |
+|                               |                       |            | {{{addr(82)}}} |                      |
+{{{wtable_end}}}
 
+Variable ~INPUT~ is initialized to the memory address directly
+following the definition of the binary interpreter loop described in
+the next section.  This enables the binary interpreter to ``consume''
+commands and binary data, all the while constructing the Forth
+dictionary at ~OUTPUT~.
+
+Note that beyond ~0x10000030~ (just after the memory location of
+variable ~LATEST~) lies unused memory. This is where the binary
+interpreter is going to start writing, so this is the initial value
+that global variable ~OUTPUT~ receives.
 
 ** Binary Interpreter
 
