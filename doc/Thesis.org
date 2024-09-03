@@ -2111,14 +2111,49 @@ system in Forth instead of machine code.  A victory in bootstrapping!
 | {{{c(2)}}} ~call SVAL;~    {{{c(2)}}}​/# Compiled./ | ---                | ---              |                | {{{compile(53,S)}}}                                | Call SVAL             |
 | {{{c(2)}}} ~return.~                               | RET                | C3               |                | ~C3~                                               | return                |
 {{{wtable_end}}}
-\clearpage
 
+In the next chapter we will present our port of SmithForth to the
+RISC-V architecture.
+
+\clearpage
 
 
 * Porting SmithForth to RISC-V
 
-TODO.
+This chapter will closely follow the structure of Chapter
+[[*Understanding and Annotating SmithForth]].  We will keep the same
+sections headings, with ``(RISC-V)'' appended: hopefully, this will
+aid the reader interested in comparing the x86-64 and the RISC-V
+implementations.
 
+After closely annotating SmithForth as seen in the previous chapter,
+we slightly adapted the interfaces at the edges of the various
+components to better fit the architectural differences between x86-64
+and RISC-V:
+
+- We removed any reliance on the x86-64 ~FLAGS~ register. Instead, we
+  chose appropriate general purpose registers to hold the relevant
+  flags.
+
+- All calls were modified to follow the RISC-V software calling
+  convention, using registers ~a0, a1, s2...~ for function arguments
+  and return values.
+
+- Local variables were assigned temporary registers where possible.
+  We tried ``allocating'' and ``releasing'' registers in an orderly
+  fashion, to make errors less likely.
+
+We did not in fact, predict all consequences of some differences: in
+particular, we struggled with compiling calls in word definitions at
+first, before devising the ~':'~-prologues and ~';'~-epilogues
+described below.  Another particularity of RISC-V that has led to many
+errors, some difficult to track down, is how immediates are always
+sign-extended: some ~addi~ instructions, for example, looked innocent,
+but behaved less so in practice.
+
+The first concrete step necessary to run machine code on RISC-V is
+creating a suitable ELF executable.  This is the topic of the next
+section.
 
 ** The ELF Header (RISC-V)
 
