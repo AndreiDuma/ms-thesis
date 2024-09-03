@@ -601,6 +601,7 @@ SmithForth to RISC-V]] for porting SmithForth to RISC-V.
 \clearpage
 
 
+
 * Understanding and Annotating SmithForth
 
 In this chapter we will delve into the machine code implementation of
@@ -619,6 +620,7 @@ encoding for x86-64 processors.
 We explained how the Linux kernel loads an executable into memory if
 it respects the ELF file format.  In this chapter's first section,
 SmithForth's minimal ELF header is explored and explained.
+
 
 ** The ELF Header                                                  :noexport:
 
@@ -714,8 +716,6 @@ systems, is also specified by field ~p_align~.
 
 We are now ready to examine the first x86-64 instructions that
 SmithForth runs once it is loaded.
-
-
 \clearpage
 
 
@@ -831,9 +831,8 @@ Note that beyond ~0x10000030~ (just after the memory location of
 variable ~LATEST~) lies unused memory. This is where the binary
 interpreter is going to start writing, so this is the initial value
 that global variable ~OUTPUT~ receives.
-
-
 \clearpage
+
 
 ** Binary Interpreter
 
@@ -1016,9 +1015,8 @@ described above.
 | ~[code@RCX] ← OUTPUT@RDI;~             | mov [rcx], rdi              | REX.W 89 /r      |                | ~48 89~ {{{modrm(39,00,111,001)}}}      | [rcx] = rdi   |
 | ~return.~  /# To interpreter loop./    | ret                         | C3               |                | ~C3~                                    | return        |
 {{{wtable_end}}}
-
-
 \clearpage
+
 
 ** Interacting with the World
 
@@ -1089,8 +1087,6 @@ descriptor/, starting at address ~addr~.  Since the syscall is not
 guaranteed to write all data, multiple calls might be required.  A
 loop that maintains the remaining byte count and current source
 address is implemented to this effect.
-
-
 \clearpage
 
 
@@ -1191,9 +1187,8 @@ printable characters.  We have successfully used ~xxd -u -g8 -o
 | ~restore INPUT@RSI;~                     | pop rsi         | 58+rd            | ~5E~                                    | pop rsi                 |
 | ~return.~                                | ret             | C3               | ~C3~                                    | return                  |
 {{{wtable_end}}}
-
-
 \clearpage
+
 
 ** Text Interpreter
 
@@ -1222,8 +1217,8 @@ under six functionality categories:
   extension of the system in Forth itself.
 
 We will look at the six word categories in turn.
-
 \clearpage
+
 *** Parsing Forth: ~REFILL~, ~seek~, ~PARSE~, ~pname~, ~'('~, ~'\'~
 
 The next six words defined by SmithForth work together to parse Forth
@@ -1435,10 +1430,23 @@ Note that comment-handling words ~'\'~ and ~'('~ appear in the
 original SmithForth source code after ~'['~ and ~']'~.  We preferred
 to present them here, directly after the other words related to
 parsing.
-
-
 \clearpage
-*** Defining New Forth Words: ~:~, ~;~, ~[~, ~]~, ~.~, ~LIT~       :noexport:
+
+
+*** Defining New Forth Words: ~:~, ~;~, ~[~, ~]~, ~.~, ~LIT~
+
+The next six Forth words are probably the most interesting in
+SmithForth.  They enable defining new words with convenient syntax,
+but unexpected power.  In particular, the ability to enter and exit
+interpretation mode with ~'['~ and ~']'~ allows mixing compile-time
+and run-time effects.  This will be used extensively in the last
+chapter, where we extend the basic Forth system in Forth itself.
+
+Subroutine ~':'~ (colon), shown in Table [[tbl:forth:colon:x]], parses the
+next word available at input and calls ~Head~ to create a new
+dictionary entry.  It takes care to ``hide'' it for the duration of
+the definition by enabling the ~HIDDEN~ flag on the entry.  Finally,
+colon switches to compilation mode by calling ~']'~.
 
 {{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~':'~ (colon) begins compiling a word after setting up its dictionary entry (x86-64).
@@ -1474,8 +1482,14 @@ parsing.
 | ~return.~                             | RET               | C3                | ~C3~                                      | return                                 |
 {{{wtable_end}}}
 
+The ~';'~ (semicolon) Forth word, displayed in Table
+[[tbl:forth:semicolon:x]], finalizes a word definiton by compiling a
+return instruction.  It then ``unhides'' the word by flipping its
+~HIDDEN~ field in the dictionary entry and switches back to
+interpreting mode.
+
 {{{wtable_begin(10)}}}
-#+CAPTION: Subroutine ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting (x86-64).
+#+CAPTION: ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting (x86-64).
 #+LABEL: tbl:forth:semicolon:x
 #+ATTR_LATEX: :align l|ll|lH :float nil
 | *Pseudocode*                           | *Instruction*     | *Opcode*         | *Machine code*                                              | *Intention*          |
@@ -1501,6 +1515,13 @@ parsing.
 | ~call lbracket;~  /# Compiled./        |                   |                  | {{{compile(5B,[)}}}                                         | Call [               |
 | ~return.~                              | RET               | C3               | ~C3~                                                        | return               |
 {{{wtable_end}}}
+
+As already mentioned in the explanations of ~':'~ and ~';'~, two words
+can be used in the middle of definitions (but not only) to switch in
+and out of interpreting state.  This enables many tricks by allows the
+mixing of compilation-time and run-time code execution.  The two
+subroutines, listed in tables [[tbl:forth:lbracket:x]] and
+[[tbl:forth:rbracket:x]], have surprisingly simple implementations.
 
 {{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~'['~ changes Forth's ~STATE~ to interpreting (x86-64).
@@ -1536,6 +1557,18 @@ parsing.
 | ~return.~                      | RET           | C3       | ~C3~                                                                              | return            |
 {{{wtable_end}}}
 
+Note that both ~'['~ and ~']'~ are /immediate/ words, which means, as
+we will see later, that they are executed right away when encountered
+in definitions instead of being compiled as a call sequence as
+non-immediate words are.
+
+The following word, shown in Table [[tbl:forth:.:x]], is equivalent in
+functionality to standard Forth word ~'C,'~​, pops a byte off the data
+stack and writes it, literally, to ~OUTPUT~.  This word is used
+extensively by SmithForth in ~system.fs~ to (sometimes dynamically!)
+generate machine code in Forth.  We will use it as well in our
+Forth-in-Forth stage to write ... an assembler!
+
 {{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~'.'~ compiles a byte from the stack to ~OUTPUT~ (x86-64).
 #+LABEL: tbl:forth:.:x
@@ -1555,6 +1588,16 @@ parsing.
 | ~[OUTPUT@RDI++] ← byte@AL;~      | STOS m8           | AA               | ~AA~                                    | [rdi++] = al |
 | ~return.~                        | RET               | C3               | ~C3~                                    | return       |
 {{{wtable_end}}}
+
+Displayed in Table [[tbl:forth:lit:x]] is Forth word ~LIT~, which is used
+to compile a number literally in a colon definition.  This allows
+Forth to achieve the same interpretation semantics of numbers (they're
+pushed on the stack) inside and outside colon definitions
+[cite:@forth_2012_standard].  In SmithForth's x86-64 implementation
+~LIT~ compiles a number into the current definition as a sequence of
+instructions that first allocates a slot on the data stack (a ~SUB~
+instruction) and then copies the number into the slot (a pair of
+~PUSH~ and ~POP~ instructions).
 
 {{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~LIT~ compiles a literal byte into a word definition (x86-64).
@@ -1613,9 +1656,9 @@ parsing.
 | ~STACK@R15 += 8;~                                           | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~49 83~ {{{modrm(C7,11,000,111)}}} /08/ | r15 += 8                |
 | ~return.~                                                   | RET               | C3               | ~C3~                                    | return                  |
 {{{wtable_end}}}
-
-
 \clearpage
+
+
 *** Searching the Dictionary: ~xt=~, ~FIND~                        :noexport:
 
 {{{wtable_begin(10)}}}
@@ -1708,9 +1751,9 @@ parsing.
 | ~_end:~                                    |                |             | {{{addr(04)}}} |                                                             | # _end:          |
 | {{{c(2)}}} ~return.~                       | RET            | C3          |                | ~C3~                                                        | return           |
 {{{wtable_end}}}
-
-
 \clearpage
+
+
 *** Handling Numbers: ~Num~, ~miss~                                :noexport:
 
 {{{wtable_begin(10)}}}
@@ -1796,9 +1839,9 @@ parsing.
 | {{{c(2)}}} ~call LIT;~  /# Compiled./  | ---               | ---         |                | {{{compile(4C,L)}}}                                      | Call LIT              |
 | {{{c(2)}}} ~return.~                   | RET               | C3          |                | ~C3~                                                     | return                |
 {{{wtable_end}}}
-
-
 \clearpage
+
+
 *** Compile or Execute: ~EXEC~, ~exec~, ~compl~, ~hit~             :noexport:
 
 {{{wtable_begin(10)}}}
@@ -1913,9 +1956,9 @@ parsing.
 | {{{c(2)}}} ~call exec;~   {{{c(1)}}}​/# Compiled./ | ---             | ---         |                | {{{compile(65,e)}}}                                      | Call exec           |
 | {{{c(2)}}} ~return.~                              | RET             | C3          |                | ~C3~                                                     | return              |
 {{{wtable_end}}}
-
-
 \clearpage
+
+
 *** Bringing Everything Together: ~SVAL~, ~ti~                     :noexport:
 
 {{{wtable_begin(10)}}}
@@ -1976,10 +2019,8 @@ parsing.
 | {{{c(2)}}} ~call SVAL;~    {{{c(2)}}}​/# Compiled./ | ---                | ---              |                | {{{compile(53,S)}}}                                | Call SVAL             |
 | {{{c(2)}}} ~return.~                               | RET                | C3               |                | ~C3~                                               | return                |
 {{{wtable_end}}}
-
-
-
 \clearpage
+
 
 
 * Porting SmithForth to RISC-V
@@ -2035,7 +2076,6 @@ same.
 | {{{addr(40)}}} |                                     |                                                                                    |
 {{{wtable_end}}}
 
-
 *** ELF Program Header
 
 In the program header we set the virtual address of the loaded segment
@@ -2061,9 +2101,8 @@ sets for x86-64 (field ~p_align~).
 |----------------+-------------------------------------+-------------------------------------------------------------------------------------------------|
 | {{{addr(78)}}} |                                     |                                                                                                 |
 {{{wtable_end}}}
-
-
 \clearpage
+
 
 ** Global Variables (RISC-V)                                       :noexport:
 
@@ -2130,9 +2169,8 @@ detail.
 
 We initialized ~VARS~ here rather than in individual subroutines,
 since it spares several instructions.
-
-
 \clearpage
+
 
 ** Binary Interpreter (RISC-V)                                     :noexport:
 
@@ -2204,7 +2242,6 @@ on the same line as the instruction.
 | {{{i(1)}}}                                        | *jalr* zero, 0(t0)                   | {{{off(0x000)}}}                    {{{rs1(00101)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 02 00~  |
 |                                                   |                                      |                                                                                                        | {{{addr(F0)}}} |                |
 {{{wtable_end}}}
-
 
 *** Subroutine ~COMPL~
 
@@ -2280,7 +2317,6 @@ Forth word.
 | ~return.~  /# To interpreter loop./                                                            | *jalr* zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                 | ~67 80 00 00~                   |
 |                                                                                                |                      |                                                                                                        | {{{addr(140)}}} |                                 |
 {{{wtable_end}}}
-
 
 *** Subroutine ~Head~
 
@@ -2372,9 +2408,8 @@ to favor certain idiomatic ways of achieving certain ends.  For
 example, copying register ~s1~ to register ~t0~ is typically done by
 an immediate add: ~addi t0, s1, 0~.  The third line in [[tbl:forth:head:rv][~Head~]] proves
 that we didn't learn this right away...
-
-
 \clearpage
+
 
 ** Interacting with the Outside World (RISC-V)                     :noexport:
 
@@ -2465,9 +2500,8 @@ argument registers ~a0~ and ~a1~ to callee-saved registers ~s0~ and
 |                                                                       | *addi* sp, sp, 24        | {{{imm(0x01.8)}}}                    {{{rs1(0001.0)}}} {{{fn3(000)}}} {{{rd(0001.0)}}}  {{{op(0010011)}}} |                      | ~13 01 81 01~                |
 | {{{i(1)}}} ~return.~                                                  | *jalr* zero, 0(ra)       | {{{off(0x00.0)}}}                    {{{rs1(0000.1)}}} {{{fn3(000)}}} {{{rd(0000.0)}}}  {{{op(1100111)}}} |                      | ~67 80 00 00~                |
 {{{wtable_end}}}
-
-
 \clearpage
+
 
 ** Debugging Utilities (RISC-V)                                    :noexport:
 
@@ -2575,9 +2609,8 @@ is listed in Table [[tbl:forth:reg:rv]].
 |                                        | *addi* sp, sp, 264   | {{{imm(0x10.8)}}}                    {{{rs1(0001.0)}}} {{{fn3(000)}}} {{{rd(0001.0)}}}  {{{op(0010011)}}} | ~13 01 81 10~             |
 | ~return.~                              | *jalr* zero, 0(ra)   | {{{off(0x00.0)}}}                    {{{rs1(0000.1)}}} {{{fn3(000)}}} {{{rd(0000.0)}}}  {{{op(1100111)}}} | ~67 80 00 00~             |
 {{{wtable_end}}}
-
-
 \clearpage
+
 
 ** Text Interpreter (RISC-V)
 
