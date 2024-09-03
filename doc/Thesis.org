@@ -116,9 +116,9 @@ high-quality Forth system for the x86-64 architecture.  After
 understanding its principles, we port it to RISC-V, adapting it to our
 purposes.  Finally, we extend this Forth system in Forth itself: we
 write a RISC-V assembler, we provide useful arithmetic and logic
-operators plus conditional and looping constructs.  We complete out
+operators plus conditional and looping constructs.  We complete our
 demonstration with a Forth implementation of FizzBuzz, showing the
-usability of our system.
+usability of the system.
 #+end_abstract
 
 \clearpage
@@ -770,7 +770,7 @@ variable and indicates the register or memory address where each
 variable is stored.
 
 {{{wtable_begin(10)}}}
-#+CAPTION: Global variables in SmithForth, referenced directly by machine code (x86-64).
+#+CAPTION: Global variables in SmithForth (x86-64).
 #+LABEL: tbl:globals:x
 #+ATTR_LATEX: :align l|l|l :float nil
 | *Variable* | *Register*​/​*Address*   | *Contents*                                                    |
@@ -824,7 +824,7 @@ the first instruction, =0x78=, the same that we saw used as the entry
 point in the ELF header.
 
 {{{wtable_begin(10)}}}
-#+CAPTION: x86-64: Initialize global variables =INPUT= and =OUTPUT=.
+#+CAPTION: Initialize global variables =INPUT= and =OUTPUT= (x86-64).
 #+LABEL: tbl:forth:init-io:x
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                  | *Instruction*         | *Opcode*   | *&*            | *Machine code*       |
@@ -939,7 +939,7 @@ word, embedding this code address as four immediate bytes.  It is one
 of the more subtle parts of SmithForth.
 
 {{{wtable_begin(10)}}}
-#+CAPTION: =COMPL=, the FORTH compiler.
+#+CAPTION: =COMPL= compiles a call to the given execution token (x86-64).
 #+LABEL: tbl:forth:COMPL:x
 #+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                                                                                | *Instruction*   | *Opcode*   | *&*            | *Machine code*                  | *Intention*                                        |
@@ -1234,7 +1234,7 @@ under six functionality categories:
 We will look at the six word categories in turn.
 \clearpage
 
-*** Parsing Forth: ~REFILL~, ~seek~, ~PARSE~, ~pname~, ~'('~, ~'\'~
+*** Parsing Forth: ~REFILL~, ~seek~, ~PARSE~, ~pname~, ~(~, ~\~
 
 The next six words defined by SmithForth work together to parse Forth
 code from ~INPUT~.  ~REFILL~ brings a new line from input to the
@@ -2283,7 +2283,7 @@ The encoding process of the first =lui= instruction is explained in
 detail.
 
 {{{wtable_begin(9)}}}
-#+CAPTION: RISC-V: Initialize global variables =INPUT= and =OUTPUT=.
+#+CAPTION: Initialize global variables =INPUT=, =OUTPUT= and =VARS= (RISC-V).
 #+LABEL: tbl:forth:init-io:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                     | *Instruction*      | *Encoding*                                                                                             | *&*            | *Mach. code*  |
@@ -2413,7 +2413,7 @@ save and restore the return address at the beginning and end of each
 Forth word.
 
 {{{wtable_begin(7)}}}
-#+CAPTION: =COMPL=, the FORTH compiler.
+#+CAPTION: =COMPL= compiles a call to the given execution token (RISC-V).
 #+LABEL: tbl:forth:COMPL:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                                                                   | *Instruction*        | *Encoding*                                                                                             | *&*             | *Machine code*                  |
@@ -2602,7 +2602,7 @@ argument registers ~a0~ and ~a1~ to callee-saved registers ~s0~ and
 [cite:@system_v_psabi_riscv].
 
 {{{wtable_begin(7)}}}
-#+CAPTION: Subroutine ~TYPE~ prints a memory range to ~STDOUT~ (RISC-V).
+#+CAPTION: Subroutine ~TYPE~ dumps a memory range to ~STDOUT~ (RISC-V).
 #+LABEL: tbl:forth:type:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                                          | *Instruction*            | *Encoding*                                                                                                | *&*                  | *Machine code*               |
@@ -2778,7 +2778,7 @@ global state is accessed independently from different routines, is
 made easy by RISC-V large number of callee-saved registers.
 
 {{{wtable_begin(7)}}}
-#+CAPTION: Subroutine ~REFILL~ replenishes the /parse area/ by advancing ~TIB~ and ~#IN~ (RISC-V).
+#+CAPTION: ~REFILL~ replenishes the /parse area/ by advancing ~TIB~ and ~#IN~ (RISC-V).
 #+LABEL: tbl:forth:refill:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                     | *Instruction*       | *Encoding*                                                                                             | *&*            | *Machine code*                     |
@@ -2820,7 +2820,7 @@ made easy by RISC-V large number of callee-saved registers.
 {{{wtable_end}}}
 
 {{{wtable_begin(8)}}}
-#+CAPTION: Subroutine ~seek~ parses characters until it finds one in a given range (RISC-V).
+#+CAPTION: ~seek~ parses characters until it finds one in a given range (RISC-V).
 #+LABEL: tbl:forth:seek:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                        | *Instruction*     | *Encoding*                                                                                             | *&*            | *Machine code*               |
@@ -2872,7 +2872,7 @@ Tables [[tbl:forth:parse:rv]] and [[tbl:forth:seek:rv]]) to pass information
 explicitly through registers.
 
 {{{wtable_begin(8)}}}
-#+CAPTION: Subroutine ~PARSE~ returns the address and size of a newly parsed string (RISC-V).
+#+CAPTION: ~PARSE~ returns the address and size of a newly parsed string (RISC-V).
 #+LABEL: tbl:forth:parse:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                    | *Instruction*    | *Encoding*                                                                                             | *&*            | *Machine code*                  |
@@ -2964,7 +2964,7 @@ explicitly through registers.
 {{{wtable_end}}}
 
 {{{wtable_begin(8)}}}
-#+CAPTION: Subroutine ~'('~ implements inline comments, ending with a corresponding ~')'~ (RISC-V).
+#+CAPTION: Subroutine ~'('~ implements inline comments (RISC-V).
 #+LABEL: tbl:forth:lparen:rv
 #+ATTR_LATEX: :align l|ll|l :float nil
 | *Pseudocode*                       | *Instruction*     | *Encoding*                                                                                             | *Machine code*      |
@@ -3081,7 +3081,7 @@ that loads the return address from the stack back into the register
 Finally, it also compiles a return operation as a ~jalr~ instruction.
 
 {{{wtable_begin(8)}}}
-#+CAPTION: Subroutine ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting (RISC-V).
+#+CAPTION: ~';'~ wraps up a colon definition and goes back to interpreting (RISC-V).
 #+LABEL: tbl:forth:semicolon:rv
 #+ATTR_LATEX: :align l|ll|l :float nil
 | *Pseudocode*                                                                          | *Instruction*      | *Encoding*                                                                                             | *Machine code*      |
@@ -3280,7 +3280,7 @@ Additionally, it needs to implement an explicit loop where SmithForth
 simply used the ~REPE CMPS~ repeated comparison instruction sequence.
 
 {{{wtable_begin(8)}}}
-#+CAPTION: Subroutine ~xt=~ compares an execution token's name with a given string (RISC-V).
+#+CAPTION: ~xt=~ compares an execution token's name with a given string (RISC-V).
 #+LABEL: tbl:forth:xt=:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                     | *Instruction*      | *Encoding*                                                                                             | *&*            | *Machine code*            |
@@ -3336,7 +3336,7 @@ the same as done for ~xt=~, that is, explicitly receiving return
 information instead of using the ~FLAGS~ register.
 
 {{{wtable_begin(8)}}}
-#+CAPTION: Subroutine ~FIND~ searches the dictionary for a word matching a given name (RISC-V).
+#+CAPTION: ~FIND~ searches the dictionary for a word matching a given name (RISC-V).
 #+LABEL: tbl:forth:find:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                               | *Instruction*      | *Encoding*                                                                                             | *&*            | *Machine code*               |
@@ -3385,7 +3385,7 @@ The porting of words ~Num~ and ~miss~, shown in Tables
 line-by-line.
 
 {{{wtable_begin(8)}}}
-#+CAPTION: Subroutine ~Num~ parses a character string as a number and pushes it on the stack (RISC-V).
+#+CAPTION: ~Num~ parses a character string as a number and pushes it on the stack (RISC-V).
 #+LABEL: tbl:forth:num:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                             | *Instruction*       | *Encoding*                                                                                             | *&*            | *Machine code*            |
@@ -3426,7 +3426,7 @@ line-by-line.
 {{{wtable_end}}}
 
 {{{wtable_begin(8)}}}
-#+CAPTION: Subroutine ~miss~ attempts parsing a word as a number, optionally compiling it as a literal (RISC-V).
+#+CAPTION: ~miss~ treats a token as a number, possible compiling it as a literal (RISC-V).
 #+LABEL: tbl:forth:miss:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                           | *Instruction*      | *Encoding*                                                                                             | *&*            | *Machine code*               |
@@ -3498,7 +3498,7 @@ more direct manner in x86-64 as well.
 {{{wtable_end}}}
 
 {{{wtable_begin(8)}}}
-#+CAPTION: Subroutine ~exec~ executes a word if interpreting or if it's immediate (RISC-V).
+#+CAPTION: ~exec~ executes a word if if it's immediate or if we're interpreting (RISC-V).
 #+LABEL: tbl:forth:exec:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                              | *Instruction*    | *Encoding*                                                                                             | *&*            | *Machine code*               |
@@ -3526,7 +3526,7 @@ more direct manner in x86-64 as well.
 {{{wtable_end}}}
 
 {{{wtable_begin(8)}}}
-#+CAPTION: Subroutine ~compl~ compiles a word in compiling state if it's not immediate (RISC-V).
+#+CAPTION: ~compl~ compiles a word in compiling state if it's not immediate (RISC-V).
 #+LABEL: tbl:forth:compl:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                | *Instruction*    | *Encoding*                                                                                             | *&*            | *Machine code*                  |
@@ -3554,7 +3554,7 @@ more direct manner in x86-64 as well.
 {{{wtable_end}}}
 
 {{{wtable_begin(8)}}}
-#+CAPTION: Subroutine ~hit~ either compiles or executes a word found in the dictionary (RISC-V).
+#+CAPTION: ~hit~ compiles or executes a word found in the dictionary (RISC-V).
 #+LABEL: tbl:forth:hit:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                      | *Instruction*      | *Opcode*                                                                                               | *&*            | *Machine code*            |
@@ -3635,7 +3635,7 @@ possible way to continue extending our Forth in Forth itself.
 {{{wtable_end}}}
 
 {{{wtable_begin(8)}}}
-#+CAPTION: Subroutine ~ti~ brings everything together, reading and evaluating Forth in a loop (RISC-V).
+#+CAPTION: Finally, subroutine ~ti~ reads and evaluates Forth in a loop (RISC-V).
 #+LABEL: tbl:forth:ti:rv
 #+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                       | *Instruction*      | *Encoding*                                                                                             | *&*            | *Machine code*         |
