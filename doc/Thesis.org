@@ -828,6 +828,7 @@ variable ~LATEST~) lies unused memory. This is where the binary
 interpreter is going to start writing, so this is the initial value
 that global variable ~OUTPUT~ receives.
 
+
 ** Binary Interpreter
 
 The binary interpreter implements a simple meta-programming device for
@@ -1013,19 +1014,23 @@ described above.
 
 ** A Way Out
 
+
+
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~BYE~ terminates the program by performing an ~exit~ syscall (x86-64).
 #+LABEL: tbl:forth:bye:x
-#+ATTR_LATEX: :align l|ll|lH
-| *Pseudocode*                       | *Instruction*  | *Opcode* | *&*             | *Machine code*                  | *Intention*            |
-|------------------------------------+----------------+----------+-----------------+---------------------------------+------------------------|
-| /# Define:/ _~BYE~_                | ---            | ---      | {{{addr(172)}}} | {{{define(03,42 59 45)}}}       | define BYE             |
-| /# In/Out:/ ~( -​- )~               |                |          |                 |                                 |                        |
-|                                    |                |          |                 |                                 |                        |
-| /# Goodbye, world (exit syscall)./ |                |          |                 |                                 |                        |
-| ~nr@RAX ← 0x3C;~  /# ~__NR_exit~./ | PUSH /imm8/    | 6A /ib/  |                 | ~6A~ /~3C~/                     | rax = exit (no return) |
-|                                    | POP            | 58+rd    |                 | ~58~                            |                        |
-| ~status@RDI ← 0;~                  | XOR r/m32, r32 | 31 /r    |                 | ~31~ {{{modrm(FF,11,111,111)}}} | rdi = stat             |
-| ~syscall exit(status@RDI).~        | SYSCALL        | 0F 05    |                 | ~0F 05~                         | syscall                |
+#+ATTR_LATEX: :align l|ll|lH :float nil
+| *Pseudocode*                       | *Instruction* | *Opcode* | *&*             | *Machine code*                  | *Intention*            |
+|------------------------------------+---------------+----------+-----------------+---------------------------------+------------------------|
+| /# Define:/ _~BYE~_                | ---           | ---      | {{{addr(172)}}} | {{{define(03,42 59 45)}}}       | define BYE             |
+| /# In/Out:/ ~( -​- )~               |               |          |                 |                                 |                        |
+|                                    |               |          |                 |                                 |                        |
+| /# Goodbye, world (exit syscall)./ |               |          |                 |                                 |                        |
+| ~nr@RAX ← 0x3C;~  /# ~__NR_exit~./ | push /0x3C/   | 6A /ib/  |                 | ~6A~ /~3C~/                     | rax = exit (no return) |
+|                                    | pop rax       | 58+rd    |                 | ~58~                            |                        |
+| ~status@RDI ← 0;~                  | xor edi, edi  | 31 /r    |                 | ~31~ {{{modrm(FF,11,111,111)}}} | rdi = stat             |
+| ~syscall exit(status@RDI).~        | syscall       | 0F 05    |                 | ~0F 05~                         | syscall                |
+{{{wtable_end}}}
 
 
 ** Debugging Utilities
@@ -1036,37 +1041,39 @@ Citations:
 - Section "3.2 Calling convention" from [cite:@patterson2017]:
   function prologue & epilogue.
 
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~TYPE~ dumps a memory range to ~STDOUT~ (x86-64).
 #+LABEL: tbl:forth:type:x
-#+ATTR_LATEX: :align l|ll|l|lH
-| *Pseudocode*                                     | *Instruction*   | *Opcode*    | *&*                  | *Machine code*                     | *Intention*           |
-|--------------------------------------------------+-----------------+-------------+----------------------+------------------------------------+-----------------------|
-| /# Define:/ _~TYPE~_                             | ---             | ---         |                      | {{{define(04,54 59 50 45)}}}       | define TYPE           |
-| /# In/Out:/    ~( addr@RSI u@RDX~                |                 |             |                      |                                    |                       |
-| /#{{{io--}}}/ ~-​- ?@RSI ?@RDI )~                 |                 |             |                      |                                    |                       |
-| /#/                                              |                 |             |                      |                                    |                       |
-| /# Dump memory range ~[addr, addr+u)~./          |                 |             |                      |                                    |                       |
-|                                                  |                 |             |                      |                                    |                       |
-| {{{i(1)}}} ~fd@RDI ← 1;~  /# ~STDOUT_FILENO~./   | PUSH /imm8/     | 6A /ib/     |                      | ~6A~ /~01~/                        | rdi(fd) = stdout = 1  |
-|                                                  | POP             | 58+rd       |                      | ~5F~                               |                       |
-| ~_begin:~                                        |                 |             | {{{addr(00)}}}[fn:2] |                                    |                       |
-| {{{i(1)}}} /# ~__NR_write~ is also 1./           |                 |             |                      |                                    |                       |
-| {{{i(1)}}} ~nr@RAX ← fd@RDI;~                    | MOV r32, r/m32  | 8B /r       |                      | ~8B~ {{{modrm(C7,11,000,111)}}}    | rax = write = 1 = rdi |
-| {{{i(1)}}} ~syscall write(fd@RDI,~               |                 |             |                      |                                    |                       |
-| {{{i(1)}}}{{{c(14)}}}    ~addr@RSI,~             |                 |             |                      |                                    |                       |
-| {{{i(1)}}}{{{c(14)}}}    ~u@RDX);~               | SYSCALL         | 0F 05       |                      | ~0F 05~                            | syscall               |
-| {{{i(1)}}} ~if ret@RAX < 0:~                     | TEST r/m64, r64 | REX.W 85 /r |                      | ~48 85~ {{{modrm(C0,11,000,000)}}} | cmp rax, 0            |
-| {{{i(2)}}} /# An error occured./                 |                 |             |                      |                                    |                       |
-| {{{i(2)}}}     ~goto _end.~                      | JL _rel8_       | 7C _cb_     |                      | ~7C~ {{{offset(08,11-09)}}}        | +jump _end if <       |
-| {{{i(1)}}} /# Advance by ~ret~ (printed) bytes./ |                 |             | {{{addr(09)}}}       |                                    |                       |
-| {{{i(1)}}} ~addr@RSI += ret@RAX;~                | ADD r/m64, r64  | REX.W 01 /r |                      | ~48 01~ {{{modrm(C6,11,000,110)}}} | rsi(buf) += rax       |
-| {{{i(1)}}} /# Fewer bytes left to print./        |                 |             |                      |                                    |                       |
-| {{{i(1)}}} ~u@RDX -= ret@RAX;~                   | SUB r/m64, r64  | REX.W 29 /r |                      | ~48 29~ {{{modrm(C2,11,000,010)}}} | rdx(count) -= rax     |
-| {{{i(1)}}} ~if u > 0:~                           |                 |             |                      |                                    |                       |
-| {{{i(2)}}}     /# We still have bytes to print./ |                 |             |                      |                                    |                       |
-| {{{i(2)}}}     ~goto _begin.~                    | JG _rel8_       | 7F _cb_     |                      | ~7F~ {{{offset(EF,00-11)}}}        | -jump _beg if >       |
-| ~_end:~                                          |                 |             | {{{addr(11)}}}       |                                    |                       |
-| {{{i(1)}}} ~return.~                             | RET             | C3          |                      | ~C3~                               | return                |
+#+ATTR_LATEX: :align l|ll|l|lH :float nil
+| *Pseudocode*                                     | *Instruction* | *Opcode*    | *&*                  | *Machine code*                     | *Intention*           |
+|--------------------------------------------------+---------------+-------------+----------------------+------------------------------------+-----------------------|
+| /# Define:/ _~TYPE~_                             | ---           | ---         |                      | {{{define(04,54 59 50 45)}}}       | define TYPE           |
+| /# In/Out:/    ~( addr@RSI u@RDX~                |               |             |                      |                                    |                       |
+| /#{{{io--}}}/ ~-​- ?@RSI ?@RDI )~                 |               |             |                      |                                    |                       |
+| /#/                                              |               |             |                      |                                    |                       |
+| /# Dump memory range ~[addr, addr+u)~./          |               |             |                      |                                    |                       |
+|                                                  |               |             |                      |                                    |                       |
+| {{{i(1)}}} ~fd@RDI ← 1;~  /# ~STDOUT_FILENO~./   | push /0x1/    | 6A /ib/     |                      | ~6A~ /~01~/                        | rdi(fd) = stdout = 1  |
+|                                                  | pop rdi       | 58+rd       |                      | ~5F~                               |                       |
+| ~_begin:~                                        |               |             | {{{addr(00)}}}[fn:2] |                                    |                       |
+| {{{i(1)}}} /# ~__NR_write~ is also 1./           |               |             |                      |                                    |                       |
+| {{{i(1)}}} ~nr@RAX ← fd@RDI;~                    | mov eax, edi  | 8B /r       |                      | ~8B~ {{{modrm(C7,11,000,111)}}}    | rax = write = 1 = rdi |
+| {{{i(1)}}} ~syscall write(fd@RDI,~               |               |             |                      |                                    |                       |
+| {{{i(1)}}}{{{c(14)}}}    ~addr@RSI,~             |               |             |                      |                                    |                       |
+| {{{i(1)}}}{{{c(14)}}}    ~u@RDX);~               | syscall       | 0F 05       |                      | ~0F 05~                            | syscall               |
+| {{{i(1)}}} ~if ret@RAX < 0:~                     | test rax, rax | REX.W 85 /r |                      | ~48 85~ {{{modrm(C0,11,000,000)}}} | cmp rax, 0            |
+| {{{i(2)}}} /# An error occured./                 |               |             |                      |                                    |                       |
+| {{{i(2)}}}     ~goto _end.~                      | jl __end_     | 7C _cb_     |                      | ~7C~ {{{offset(08,11-09)}}}        | +jump _end if <       |
+| {{{i(1)}}} /# Advance by ~ret~ (printed) bytes./ |               |             | {{{addr(09)}}}       |                                    |                       |
+| {{{i(1)}}} ~addr@RSI += ret@RAX;~                | add rsi, rax  | REX.W 01 /r |                      | ~48 01~ {{{modrm(C6,11,000,110)}}} | rsi(buf) += rax       |
+| {{{i(1)}}} /# Fewer bytes left to print./        |               |             |                      |                                    |                       |
+| {{{i(1)}}} ~u@RDX -= ret@RAX;~                   | sub rdx, rax  | REX.W 29 /r |                      | ~48 29~ {{{modrm(C2,11,000,010)}}} | rdx(count) -= rax     |
+| {{{i(1)}}} ~if u > 0:~                           |               |             |                      |                                    |                       |
+| {{{i(2)}}}     /# We still have bytes to print./ |               |             |                      |                                    |                       |
+| {{{i(2)}}}     ~goto _begin.~                    | jg __beg_     | 7F _cb_     |                      | ~7F~ {{{offset(EF,00-11)}}}        | -jump _beg if >       |
+| ~_end:~                                          |               |             | {{{addr(11)}}}       |                                    |                       |
+| {{{i(1)}}} ~return.~                             | ret           | C3          |                      | ~C3~                               | return                |
+{{{wtable_end}}}
 
 *** Subroutine ~dbg~                                               :noexport:
 
@@ -1075,72 +1082,74 @@ Explain:
   on the stack (whose top is at ~0x10000000~) are printed.
 - How to print readably using ~xxd -e -g8 -u -o 0x0FFFFFE0~.
 
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~dbg~ dumps the working memory to ~STDOUT~ (x86-64).
 #+LABEL: tbl:forth:dbg:x
-#+ATTR_LATEX: :align l|ll|lH
-| *Pseudocode*                           | *Instruction*    | *Opcode*   | *Machine code*            | *Intention* |
-|----------------------------------------+------------------+------------+---------------------------+-------------|
-| /# Define:/ _~dbg~_                    | ---              | ---        | {{{define(03,64 52 67)}}}​ | define dbg  |
-| /# In/Out:/ ~( -​- )~                   |                  |            |                           |             |
-| /#/                                    |                  |            |                           |             |
-| /# Dump working memory./               |                  |            |                           |             |
-|                                        |                  |            |                           |             |
-| ~save INPUT@RSI on the stack;~         | PUSH r64         | 50+rd      | ~56~                      | push rsi    |
-| ~save OUTPUT@RDI on the stack;~        | PUSH r64         | 50+rd      | ~57~                      | push rdi    |
-| /# Dump memory contents using/         |                  |            |                           |             |
-| /# subroutine ~TYPE~./                 |                  |            |                           |             |
-| ~addr@RSI ← 0x0FFFFFE0;~               | MOV r32, /imm32/ | B8+rd /id/ | ~BE~ /~E0 FF FF 0F~/      | rsi = addr  |
-| ~u@RDX ← 0x0A00;~                      | MOV r32, /imm32/ | B8+rd /id/ | ~BA~ /~00 0A 00 00~/      | rdx = u     |
-| /# Compile a CALL to ~TYPE(addr, u)~./ |                  |            |                           |             |
-| ~call TYPE;~  /# Compiled./            | ---              | ---        | {{{compile(54,T)}}}       | Call TYPE   |
-| /# Restore registers and return./      |                  |            |                           |             |
-| ~restore OUTPUT@RDI;~                  | POP r64          | 58+rd      | ~5F~                      | pop rdi     |
-| ~restore INPUT@RSI;~                   | POP r64          | 58+rd      | ~5E~                      | pop rsi     |
-| ~return.~                              | RET              | C3         | ~C3~                      | return      |
-|                                        |                  |            |                           |             |
+#+ATTR_LATEX: :align l|ll|lH :float nil
+| *Pseudocode*                           | *Instruction*        | *Opcode*   | *Machine code*            | *Intention* |
+|----------------------------------------+----------------------+------------+---------------------------+-------------|
+| /# Define:/ _~dbg~_                    | ---                  | ---        | {{{define(03,64 52 67)}}}​ | define dbg  |
+| /# In/Out:/ ~( -​- )~                   |                      |            |                           |             |
+| /#/                                    |                      |            |                           |             |
+| /# Dump working memory./               |                      |            |                           |             |
+|                                        |                      |            |                           |             |
+| ~save INPUT@RSI on the stack;~         | push rsi             | 50+rd      | ~56~                      | push rsi    |
+| ~save OUTPUT@RDI on the stack;~        | push rdi             | 50+rd      | ~57~                      | push rdi    |
+| /# Dump memory contents using/         |                      |            |                           |             |
+| /# subroutine ~TYPE~./                 |                      |            |                           |             |
+| ~addr@RSI ← 0x0FFFFFE0;~               | mov esi, /0xFFFFFE0/ | B8+rd /id/ | ~BE~ /~E0 FF FF 0F~/      | rsi = addr  |
+| ~u@RDX ← 0x0A00;~                      | mov edx, /0xA00/     | B8+rd /id/ | ~BA~ /~00 0A 00 00~/      | rdx = u     |
+| /# Compile a CALL to ~TYPE(addr, u)~./ |                      |            |                           |             |
+| ~call TYPE;~  /# Compiled./            | ---                  | ---        | {{{compile(54,T)}}}       | Call TYPE   |
+| /# Restore registers and return./      |                      |            |                           |             |
+| ~restore OUTPUT@RDI;~                  | pop rdi              | 58+rd      | ~5F~                      | pop rdi     |
+| ~restore INPUT@RSI;~                   | pop rsi              | 58+rd      | ~5E~                      | pop rsi     |
+| ~return.~                              | ret                  | C3         | ~C3~                      | return      |
+{{{wtable_end}}}
 
 *** Subroutine ~reg~                                               :noexport:
 
+{{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~reg~ dumps the registers to ~STDOUT~ (x86-64).
 #+LABEL: tbl:forth:reg:x
-#+ATTR_LATEX: :align l|ll|lH
-| *Pseudocode*                             | *Instruction*     | *Opcode*         | *Machine code*                        | *Intention*             |
-|------------------------------------------+-------------------+------------------+---------------------------------------+-------------------------|
-| /# Define:/ _~reg~_                      | ---               | ---              | {{{define(03,72 65 67)}}}             | define reg              |
-| /# In/Out:/ ~( -​- )~                     |                   |                  |                                       |                         |
-| /#/                                      |                   |                  |                                       |                         |
-| /# Dump the registers./                  |                   |                  |                                       |                         |
-|                                          |                   |                  |                                       |                         |
-| ~save INPUT@RSI;~                        | PUSH r64          | 50+rd            | ~56~                                  | push rsi                |
-| ~save OUTPUT@RDI;~                       | PUSH r64          | 50+rd            | ~57~                                  | push rdi                |
-|                                          |                   |                  |                                       |                         |
-| /# Push the 16 registers on the/         | PUSH r64          | REX 50+rd        | ~41 57~                               | push r15, rdi, r14, rsi |
-| /# stack so that when printed/           | PUSH r64          | 50+rd            | ~57~                                  | push r13, rbp, r12, rsp |
-| /# they're displayed like this:/         | PUSH r64          | REX 50+rd        | ~41 56~                               | push r11, rbx, r10, rdx |
-| /#/                                      | PUSH r64          | 50+rd            | ~56~                                  | push r9 , rcx, r8 , rax |
-| /#/{{{c(4)}}} ~·-----------·~            | PUSH r64          | REX 50+rd        | ~41 55~                               |                         |
-| /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~R15 ¦ RDI ¦~ | PUSH r64          | 50+rd            | ~55~                                  |                         |
-| /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~R14 ¦ RSI ¦~ | PUSH r64          | REX 50+rd        | ~41 54~                               |                         |
-| /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~··· ¦ ··· ¦~ | PUSH r64          | 50+rd            | ~54~                                  |                         |
-| /#/{{{c(4)}}} ~¦~​{{{c(2)}}}​~R8  ¦ RAX ¦~ | PUSH r64          | REX 50+rd        | ~41 53~                               |                         |
-| /#/{{{c(4)}}} ~·-----------·~            | PUSH r64          | 50+rd            | ~53~                                  |                         |
-|                                          | PUSH r64          | REX 50+rd        | ~41 52~                               |                         |
-|                                          | PUSH r64          | 50+rd            | ~52~                                  |                         |
-|                                          | PUSH r64          | REX 50+rd        | ~41 51~                               |                         |
-|                                          | PUSH r64          | 50+rd            | ~51~                                  |                         |
-|                                          | PUSH r64          | REX 50+rd        | ~41 50~                               |                         |
-|                                          | PUSH r64          | 50+rd            | ~50~                                  |                         |
-| /# Print top 128 stack bytes using/      |                   |                  |                                       |                         |
-| /# subroutine ~TYPE(addr, u)~./          |                   |                  |                                       |                         |
-| ~addr@RSI ← RSP;~                        | MOV r64, r/m64    | REX.W 8B /r      | ~48 8B~ {{{modrm(F4,11,110,100)}}}    | rsi = rsp               |
-| ~u@RDX ← 0x80;~                          | MOV r32, /imm32/  | B8+rd /id/       | ~BA~ /~80 00 00 00~/                  | rdx = u                 |
-| ~call TYPE;~  /# Compiled./              | ---               | ---              | {{{compile(54,T)}}}                   | Call TYPE               |
-| /# Clean the stack./                     |                   |                  |                                       |                         |
-| ~pop 16 quads;~                          | SUB r/m64, /imm8/ | REX.W 83 /5 /ib/ | ~48 83~ {{{modrm(EC,11,101,100)}}} 80 | rsp -= -80              |
-| ~restore OUTPUT@RDI;~                    | POP r64           | 58+rd            | ~5F~                                  | pop rdi                 |
-| ~restore INPUT@RSI;~                     | POP r64           | 58+rd            | ~5E~                                  | pop rsi                 |
-| ~return.~                                | RET               | C3               | ~C3~                                  | return                  |
-|                                          |                   |                  |                                       |                         |
+#+ATTR_LATEX: :align l|ll|lH :float nil
+| *Pseudocode*                             | *Instruction*   | *Opcode*         | *Machine code*                          | *Intention*             |
+|------------------------------------------+-----------------+------------------+-----------------------------------------+-------------------------|
+| /# Define:/ _~reg~_                      | ---             | ---              | {{{define(03,72 65 67)}}}               | define reg              |
+| /# In/Out:/ ~( -​- )~                     |                 |                  |                                         |                         |
+| /#/                                      |                 |                  |                                         |                         |
+| /# Dump the registers./                  |                 |                  |                                         |                         |
+|                                          |                 |                  |                                         |                         |
+| ~save INPUT@RSI;~                        | push rsi        | 50+rd            | ~56~                                    | push rsi                |
+| ~save OUTPUT@RDI;~                       | push rdi        | 50+rd            | ~57~                                    | push rdi                |
+|                                          |                 |                  |                                         |                         |
+| /# Push the 16 registers on the/         | push r15        | REX 50+rd        | ~41 57~                                 | push r15, rdi, r14, rsi |
+| /# stack so that when printed/           | push rdi        | 50+rd            | ~57~                                    | push r13, rbp, r12, rsp |
+| /# they're displayed like this:/         | push r14        | REX 50+rd        | ~41 56~                                 | push r11, rbx, r10, rdx |
+| /#/                                      | push rsi        | 50+rd            | ~56~                                    | push r9 , rcx, r8 , rax |
+| /#/{{{c(4)}}} ~·-----------·~            | push r13        | REX 50+rd        | ~41 55~                                 |                         |
+| /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~R15 ¦ RDI ¦~ | push rbp        | 50+rd            | ~55~                                    |                         |
+| /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~R14 ¦ RSI ¦~ | push r12        | REX 50+rd        | ~41 54~                                 |                         |
+| /#/{{{c(4)}}} ~¦~​{{{c(1)}}}​~··· ¦ ··· ¦~ | push rsp        | 50+rd            | ~54~                                    |                         |
+| /#/{{{c(4)}}} ~¦~​{{{c(2)}}}​~R8  ¦ RAX ¦~ | push r11        | REX 50+rd        | ~41 53~                                 |                         |
+| /#/{{{c(4)}}} ~·-----------·~            | push rbx        | 50+rd            | ~53~                                    |                         |
+|                                          | push r10        | REX 50+rd        | ~41 52~                                 |                         |
+|                                          | push rdx        | 50+rd            | ~52~                                    |                         |
+|                                          | push r9         | REX 50+rd        | ~41 51~                                 |                         |
+|                                          | push rcx        | 50+rd            | ~51~                                    |                         |
+|                                          | push r8         | REX 50+rd        | ~41 50~                                 |                         |
+|                                          | push rax        | 50+rd            | ~50~                                    |                         |
+| /# Print top 128 stack bytes using/      |                 |                  |                                         |                         |
+| /# subroutine ~TYPE(addr, u)~./          |                 |                  |                                         |                         |
+| ~addr@RSI ← RSP;~                        | mov rsi, rsp    | REX.W 8B /r      | ~48 8B~ {{{modrm(F4,11,110,100)}}}      | rsi = rsp               |
+| ~u@RDX ← 0x80;~                          | mov edx, /0x80/ | B8+rd /id/       | ~BA~ /~80 00 00 00~/                    | rdx = u                 |
+| ~call TYPE;~  /# Compiled./              | ---             | ---              | {{{compile(54,T)}}}                     | Call TYPE               |
+| /# Clean the stack./                     |                 |                  |                                         |                         |
+| ~pop 16 quads;~                          | sub rsp, /0x80/ | REX.W 83 /5 /ib/ | ~48 83~ {{{modrm(EC,11,101,100)}}} /80/ | rsp -= -80              |
+| ~restore OUTPUT@RDI;~                    | pop rdi         | 58+rd            | ~5F~                                    | pop rdi                 |
+| ~restore INPUT@RSI;~                     | pop rsi         | 58+rd            | ~5E~                                    | pop rsi                 |
+| ~return.~                                | ret             | C3               | ~C3~                                    | return                  |
+{{{wtable_end}}}
 
 
 ** Text Interpreter
