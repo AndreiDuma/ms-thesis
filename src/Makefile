@@ -11,7 +11,7 @@ dbg: SForth
 	./SForth | xxd -u -g8 -o 0x0fffffe0 -R always
 
 reg: SForth
-	./SForth | xxd -u -g8 -e
+	./SForth | xxd -u -g8 -e -R always
 
 clean:
 	rm SForth SForth0

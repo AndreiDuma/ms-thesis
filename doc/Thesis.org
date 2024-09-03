@@ -58,7 +58,7 @@
 #+MACRO: table_end     \normalsize
 # TODO: remove?
 #+MACRO: wtable_begin   (eval (format "\\begin{table}[!htbp] \\begin{adjustwidth}{-1cm}{-1cm} \\fontsize{%s}{%f}\\selectfont" $1 (* 1.2 (string-to-number $1))))
-#+MACRO: wtable_end     \normalsize \end{adjustwidth} \end{table} \vspace{-0.5em}
+#+MACRO: wtable_end     \normalsize \end{adjustwidth} \end{table} \vspace{0}
 
 # --- Indentation macros.
 #+MACRO: t      \hspace{1em}  # TODO: rewrite this one to use {{{c(x)}}}.
@@ -620,7 +620,7 @@ We explained how the Linux kernel loads an executable into memory if
 it respects the ELF file format.  In this chapter's first section,
 SmithForth's minimal ELF header is explored and explained.
 
-** The ELF Header
+** The ELF Header                                                  :noexport:
 
 A valid ELF executable respects a certain file layout, allowing the
 Linux kernel and other tools to understand its structure.  It begins
@@ -716,7 +716,7 @@ We are now ready to examine the first x86-64 instructions that
 SmithForth runs once it is loaded.
 
 
-** Global Variables
+** Global Variables                                                :noexport:
 
 SmithForth could have been implemented purely in machine code, word by
 word.  That would have led, however, to much code repetition, since no
@@ -829,7 +829,7 @@ interpreter is going to start writing, so this is the initial value
 that global variable ~OUTPUT~ receives.
 
 
-** Binary Interpreter
+** Binary Interpreter                                              :noexport:
 
 The binary interpreter implements a simple meta-programming device for
 easily defining, compiling and executing Forth words in machine code.
@@ -1012,34 +1012,35 @@ described above.
 {{{wtable_end}}}
 
 
-** A Way Out
+** Interacting with the World                                      :noexport:
 
-
+The first user-level, non-infrastructural, word defined by SmithForth
+is ~BYE~, used for terminating the program.  Its definition is shown
+in Table [[tbl:forth:bye:x]].  The syscall number for ~exit~ is loaded in
+register ~RAX~ and the status code is loaded in ~RDI~, as expected by
+the Linux calling convention for system calls on x86-64 machines.
+Note that the ~exit~ syscall does not return, so no ~ret~ instruction
+is required at the end of this subroutine.
 
 {{{wtable_begin(10)}}}
-#+CAPTION: Subroutine ~BYE~ terminates the program by performing an ~exit~ syscall (x86-64).
+#+CAPTION: ~BYE~ terminates the program by performing an ~exit~ syscall (x86-64).
 #+LABEL: tbl:forth:bye:x
 #+ATTR_LATEX: :align l|ll|lH :float nil
-| *Pseudocode*                       | *Instruction* | *Opcode* | *&*             | *Machine code*                  | *Intention*            |
-|------------------------------------+---------------+----------+-----------------+---------------------------------+------------------------|
-| /# Define:/ _~BYE~_                | ---           | ---      | {{{addr(172)}}} | {{{define(03,42 59 45)}}}       | define BYE             |
-| /# In/Out:/ ~( -​- )~               |               |          |                 |                                 |                        |
-|                                    |               |          |                 |                                 |                        |
-| /# Goodbye, world (exit syscall)./ |               |          |                 |                                 |                        |
-| ~nr@RAX ← 0x3C;~  /# ~__NR_exit~./ | push /0x3C/   | 6A /ib/  |                 | ~6A~ /~3C~/                     | rax = exit (no return) |
-|                                    | pop rax       | 58+rd    |                 | ~58~                            |                        |
-| ~status@RDI ← 0;~                  | xor edi, edi  | 31 /r    |                 | ~31~ {{{modrm(FF,11,111,111)}}} | rdi = stat             |
-| ~syscall exit(status@RDI).~        | syscall       | 0F 05    |                 | ~0F 05~                         | syscall                |
+| *Pseudocode*                       | *Instruction* | *Opcode* | *Machine code*                  | *Intention*            |
+|------------------------------------+---------------+----------+---------------------------------+------------------------|
+| /# Define:/ _~BYE~_                | ---           | ---      | {{{define(03,42 59 45)}}}       | define BYE             |
+| /# In/Out:/ ~( -​- )~               |               |          |                                 |                        |
+|                                    |               |          |                                 |                        |
+| /# Goodbye, world (exit syscall)./ |               |          |                                 |                        |
+| ~nr@RAX ← 0x3C;~  /# ~__NR_exit~./ | push /0x3C/   | 6A /ib/  | ~6A~ /~3C~/                     | rax = exit (no return) |
+|                                    | pop rax       | 58+rd    | ~58~                            |                        |
+| ~status@RDI ← 0;~                  | xor edi, edi  | 31 /r    | ~31~ {{{modrm(FF,11,111,111)}}} | rdi = stat             |
+| ~syscall exit(status@RDI).~        | syscall       | 0F 05    | ~0F 05~                         | syscall                |
 {{{wtable_end}}}
 
-
-** Debugging Utilities
-
-*** Subroutine ~TYPE~                                              :noexport:
-
-Citations:
-- Section "3.2 Calling convention" from [cite:@patterson2017]:
-  function prologue & epilogue.
+Exiting is one of the two ways SmithForth interacts with the Linux
+kernel in its machine code part.  The other is printing to /standard
+output/, implemented in ~TYPE~ and shown in Table [[tbl:forth:type:x]].
 
 {{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~TYPE~ dumps a memory range to ~STDOUT~ (x86-64).
@@ -1075,12 +1076,26 @@ Citations:
 | {{{i(1)}}} ~return.~                             | ret           | C3          |                      | ~C3~                               | return                |
 {{{wtable_end}}}
 
-*** Subroutine ~dbg~                                               :noexport:
+System call ~write~ is used to print ~u~ bytes to the ~STDOUT~ /file
+descriptor/, starting at address ~addr~.  Since the syscall is not
+guaranteed to write all data, multiple calls might be required.  A
+loop that maintains the remaining byte count and current source
+address is implemented to this effect.
 
-Explain:
-- ~addr~ value of ~0x0FFFFFE0~ is chosen so that the first four words
-  on the stack (whose top is at ~0x10000000~) are printed.
-- How to print readably using ~xxd -e -g8 -u -o 0x0FFFFFE0~.
+
+** Debugging Utilities                                             :noexport:
+
+Low-level programming often requires debugging utilities for
+inspecting the registers and the memory at particular source
+locations.  SmithForth defines two Forth words for exactly this
+purpose.
+
+Subroutine ~dbg~, shown in Table [[tbl:forth:dbg:x]], prints enough memory
+to cover the first four slots on Forth's data stack, the global
+variables, and all Forth words defined in machine code.  It becomes
+clear that David Smith purposely chose the locations of the data
+stack, of the global variables and the initial ~OUTPUT~ address to
+make everything inspectable with one memory dump.
 
 {{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~dbg~ dumps the working memory to ~STDOUT~ (x86-64).
@@ -1099,7 +1114,7 @@ Explain:
 | /# subroutine ~TYPE~./                 |                      |            |                           |             |
 | ~addr@RSI ← 0x0FFFFFE0;~               | mov esi, /0xFFFFFE0/ | B8+rd /id/ | ~BE~ /~E0 FF FF 0F~/      | rsi = addr  |
 | ~u@RDX ← 0x0A00;~                      | mov edx, /0xA00/     | B8+rd /id/ | ~BA~ /~00 0A 00 00~/      | rdx = u     |
-| /# Compile a CALL to ~TYPE(addr, u)~./ |                      |            |                           |             |
+| /# Compile a CALL to ~TYPE~./          |                      |            |                           |             |
 | ~call TYPE;~  /# Compiled./            | ---                  | ---        | {{{compile(54,T)}}}       | Call TYPE   |
 | /# Restore registers and return./      |                      |            |                           |             |
 | ~restore OUTPUT@RDI;~                  | pop rdi              | 58+rd      | ~5F~                      | pop rdi     |
@@ -1107,7 +1122,22 @@ Explain:
 | ~return.~                              | ret                  | C3         | ~C3~                      | return      |
 {{{wtable_end}}}
 
-*** Subroutine ~reg~                                               :noexport:
+The memory printed at ~STDOUT~ will surely contain mainly unprintable
+characters.  Directly reading ~dbg~'s output at the Linux terminal is
+therefore not recommended.  We suggest a modified version of the
+command recommended by David Smith:
+
+#+begin_src shell
+  $ ./SForth | xxd -u -g8 -e -R always
+#+end_src
+
+Debugging utility ~reg~, displayed in Table [[tbl:forth:reg:x]], prints
+all 16 general-purpose registers of a x86-64 processor.  It first
+pushes the registers, carefully ordered, on the stack and then it
+calls ~TYPE~ for printing that section of the stack.  Similarly to
+~dbg~, reading the output at the Linux terminal requires a conversion
+to printable characters.  We have successfully used ~xxd -u -g8 -o
+0x0fffffe0 -R always~.
 
 {{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~reg~ dumps the registers to ~STDOUT~ (x86-64).
@@ -1167,6 +1197,8 @@ Explain:
 #     10000028 Latest   cell contains the execution token (xt) of the latest defined Forth word.
 # In Forth, to parse is to remove from the input stream. As a line is parsed, [>IN] increases from 0 to [#IN].
 # Forth's "parse area" is the part of the line not yet parsed.
+
+
 
 *** Subroutine ~REFILL~                                            :noexport:
 
@@ -1877,7 +1909,7 @@ Explain:
 
 * Porting SmithForth to RISC-V
 
-** The ELF Header
+** The ELF Header (RISC-V)                                         :noexport:
 
 Adapting the executable preamble for the RISC-V architecture only
 required a few field modifications in the two ELF headers.  We believe
@@ -1953,7 +1985,7 @@ sets for x86-64 (field ~p_align~).
 {{{wtable_end}}}
 
 
-** Global Variables
+** Global Variables (RISC-V)                                       :noexport:
 
 In RISC-V the allocation of registers and memory locations for global
 variables, shown in Table [[tbl:globals:rv]], is similar to SmithForth's.
@@ -2020,7 +2052,7 @@ We initialized ~VARS~ here rather than in individual subroutines,
 since it spares several instructions.
 
 
-** Binary Interpreter
+** Binary Interpreter (RISC-V)                                     :noexport:
 
 Adapting the binary interpreter loop to RISC-V was mostly
 straightforward.  A notable difference between the two architectures
@@ -2258,13 +2290,19 @@ an immediate add: ~addi t0, s1, 0~.  The third line in [[tbl:forth:head:rv][~Hea
 that we didn't learn this right away...
 
 
-** A Way Out
+** Interacting with the Outside World (RISC-V)                     :noexport:
 
-*** Subroutine ~BYE~                                               :noexport:
+Subroutine ~BYE~ is straightforward to implement on RISC-V (see Table
+[[tbl:forth:BYE:rv]]).  The calling convention for RISC-V requires placing
+the syscall number in register ~a7~ and the first syscall argument in
+register ~a0~.  Note that, in contrast to x86-64, the same calling
+convention is used by kernel system calls and user-space function
+calls.
 
-#+CAPTION: Subroutine ~BYE~ terminates the program by performing an ~exit~ syscall (RISC-V).
+{{{wtable_begin(8)}}}
+#+CAPTION: ~BYE~ terminates the program by performing an ~exit~ syscall (RISC-V).
 #+LABEL: tbl:forth:BYE:rv
-#+ATTR_LATEX: :align l|ll|l
+#+ATTR_LATEX: :align l|ll|l :float nil
 | *Pseudocode*                       | *Instruction*          | *Encoding*                                                                                             | *Machine code*            |
 |------------------------------------+------------------------+--------------------------------------------------------------------------------------------------------+---------------------------|
 | /# Define:/ _~BYE~_                | ---                    | ---                                                                                                    | {{{define(03,42 59 45)}}} |
@@ -2275,25 +2313,34 @@ that we didn't learn this right away...
 |                                    |                        |                                                                                                        |                           |
 | ~status@a0 ← 0;~                   | *addi* a0, zero, 0     | {{{imm(0x000)}}}                    {{{rs1(00000)}}} {{{fn3(000)}}} {{{rd(01010)}}}  {{{op(0010011)}}} | ~13 05 00 00~             |
 | ~syscall exit(status@a0).~         | *ecall*                | ~000000000000~     ~00000~                           {{{fn3(000)}}} ~00000~          {{{op(1110011)}}} | ~73 00 00 00~             |
+{{{wtable_end}}}
 
+The translation of ~TYPE~ to RISC-V required only the addition of a
+subroutine prologue and epilogue that save and restore the return
+address and two working registers.
 
-** Debugging Utilities
+In RISC-V both function calls and returns are through the ~jalr~
+instruction. As already discussed in ~COMPL~, ~jalr~ does not
+implicitly push the return address on the stack.  It also does not
+restore the return address before or after a function return.  The
+consequence is that functions need explicit prologues and epilogues
+for return address preservation [cite:@riscv_spec_vol_i].
 
-*** Subroutine ~TYPE~                                              :noexport:
+In contrast to the x86-64 implementation, we also need to save
+argument registers ~a0~ and ~a1~ to callee-saved registers ~s0~ and
+~s1~ because they are not preserved by syscalls
+[cite:@system_v_psabi_riscv].
 
-Citations:
-- Section "3.2 Calling convention" from [cite:@patterson2017]:
-  function prologue & epilogue.
-
-#+CAPTION: Subroutine ~TYPE~ dumps a memory range to ~STDOUT~ (RISC-V).
+{{{wtable_begin(7)}}}
+#+CAPTION: Subroutine ~TYPE~ prints a memory range to ~STDOUT~ (RISC-V).
 #+LABEL: tbl:forth:type:rv
-#+ATTR_LATEX: :align l|ll|l|l
+#+ATTR_LATEX: :align l|ll|l|l :float nil
 | *Pseudocode*                                                          | *Instruction*            | *Encoding*                                                                                                | *&*                  | *Machine code*               |
 |-----------------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------------------------------------------+----------------------+------------------------------|
 | /# Define:/ _~TYPE~_                                                  | ---                      | ---                                                                                                       |                      | {{{define(04,54 59 50 45)}}} |
 | /# In/Out:/ ~( addr@a0 u@a1~ -- )~                                    |                          |                                                                                                           |                      |                              |
 | /#/                                                                   |                          |                                                                                                           |                      |                              |
-| /# Dump memory range ~[addr, addr+u)~./                               |                          |                                                                                                           |                      |                              |
+| /# Print memory range ~[addr, addr+u)~./                          |                          |                                                                                                           |                      |                              |
 |                                                                       |                          |                                                                                                           |                      |                              |
 | {{{i(1)}}} /# Use saved registers to preserve/                        |                          |                                                                                                           |                      |                              |
 | {{{i(1)}}} /# values of ~addr~ and ~a1~ across/                       |                          |                                                                                                           |                      |                              |
@@ -2331,17 +2378,22 @@ Citations:
 |                                                                       | *ld* ra, 16(sp)          | {{{off(0x01.0)}}}                    {{{rs1(0001.0)}}} {{{fn3(011)}}} {{{rd(0000.1)}}}  {{{op(0000011)}}} |                      | ~83 30 01 01~                |
 |                                                                       | *addi* sp, sp, 24        | {{{imm(0x01.8)}}}                    {{{rs1(0001.0)}}} {{{fn3(000)}}} {{{rd(0001.0)}}}  {{{op(0010011)}}} |                      | ~13 01 81 01~                |
 | {{{i(1)}}} ~return.~                                                  | *jalr* zero, 0(ra)       | {{{off(0x00.0)}}}                    {{{rs1(0000.1)}}} {{{fn3(000)}}} {{{rd(0000.0)}}}  {{{op(1100111)}}} |                      | ~67 80 00 00~                |
+{{{wtable_end}}}
 
-*** Subroutine ~dbg~                                               :noexport:
 
-Explain:
-- ~addr~ value of ~0x0FFFFFE0~ is chosen so that the first four words
-  on the stack (whose top is at ~0x10000000~) are printed.
-- How to print readably using ~xxd -e -g8 -u -o 0x0FFFFFE0~.
+** Debugging Utilities (RISC-V)                                    :noexport:
 
+Debugging utilities ~dbg~ and ~reg~ were ported to RISC-V in a
+straightforward manner.  Subroutine ~dbg~, shown in Table
+[[tbl:forth:dbg:rv]], only required the addition of a prologue and
+epilogue for saving and restoring the return address.  Since all
+functions that call other function require this modification in
+RISC-V, we will not mention it hereafter.
+
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~dbg~ dumps the working memory to ~STDOUT~ (RISC-V).
 #+LABEL: tbl:forth:dbg:rv
-#+ATTR_LATEX: :align l|ll|l
+#+ATTR_LATEX: :align l|ll|l :float nil
 | *Pseudocode*                  | *Instruction*        | *Encoding*                                                                                                | *Machine code*            |
 |-------------------------------+----------------------+-----------------------------------------------------------------------------------------------------------+---------------------------|
 | /# Define:/ _~dbg~_           | ---                  | ---                                                                                                       | {{{define(03,64 52 67)}}}​ |
@@ -2366,12 +2418,17 @@ Explain:
 |                               |                      |                                                                                                           |                           |
 | ~return.~                     | *jalr* zero, 0(ra)   | {{{off(0x00.0)}}}                    {{{rs1(0000.1)}}} {{{fn3(000)}}} {{{rd(0000.0)}}}  {{{op(1100111)}}} | ~67 80 00 00~             |
 |                               |                      |                                                                                                           |                           |
+{{{wtable_end}}}
 
-*** Subroutine ~reg~                                               :noexport:
+Subroutine ~reg~ in RISC-V is a direct translation of its original
+x86-64 implementation, except that it has been extended to print the
+32 general purpose registers available in the RISC-V architecture.  It
+is listed in Table [[tbl:forth:reg:rv]].
 
+{{{wtable_begin(8)}}}
 #+CAPTION: Subroutine ~reg~ dumps the registers to ~STDOUT~ (RISC-V).
 #+LABEL: tbl:forth:reg:rv
-#+ATTR_LATEX: :align l|ll|l
+#+ATTR_LATEX: :align l|ll|l :float nil
 | *Pseudocode*                           | *Instruction*        | *Encoding*                                                                                                | *Machine code*            |
 |----------------------------------------+----------------------+-----------------------------------------------------------------------------------------------------------+---------------------------|
 | /# Define:/ _~reg~_                    | ---                  | ---                                                                                                       | {{{define(03,72 65 67)}}} |
@@ -2429,10 +2486,10 @@ Explain:
 | ~restore ra;~                          | *ld* ra, 256(sp)     | {{{off(0x10.0)}}}                    {{{rs1(0001.0)}}} {{{fn3(011)}}} {{{rd(0000.1)}}}  {{{op(0000011)}}} | ~83 30 01 10~             |
 |                                        | *addi* sp, sp, 264   | {{{imm(0x10.8)}}}                    {{{rs1(0001.0)}}} {{{fn3(000)}}} {{{rd(0001.0)}}}  {{{op(0010011)}}} | ~13 01 81 10~             |
 | ~return.~                              | *jalr* zero, 0(ra)   | {{{off(0x00.0)}}}                    {{{rs1(0000.1)}}} {{{fn3(000)}}} {{{rd(0000.0)}}}  {{{op(1100111)}}} | ~67 80 00 00~             |
+{{{wtable_end}}}
 
 
-
-** Text Interpreter
+** Text Interpreter (RISC-V)
 
 # ============= TEXT INTERPRETER
 #
@@ -2447,6 +2504,8 @@ Explain:
 #     10000028 Latest   cell contains the execution token (xt) of the latest defined Forth word.
 # In Forth, to parse is to remove from the input stream. As a line is parsed, [>IN] increases from 0 to [#IN].
 # Forth's "parse area" is the part of the line not yet parsed.
+
+
 
 *** Subroutine ~REFILL~                                            :noexport:
 
@@ -3266,6 +3325,9 @@ Explain:
 
 
 * Forth in Forth
+
+TODO.
+
 
 * Analysis                                                         :noexport:
 
