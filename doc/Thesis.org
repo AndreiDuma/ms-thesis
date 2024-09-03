@@ -1,5 +1,5 @@
 #+TITLE: From x86-64 Forth to RISC-V
-#+SUBTITLE: Porting a Forth Implementation to a New Architecture
+#+SUBTITLE: Towards an Accessible RISC-V Forth Implementation
 #+DATE: September 2024
 #+AUTHOR: Andrei Dorian Duma
 #+EMAIL: andrei-dorian.duma@s.unibuc.ro
@@ -43,6 +43,7 @@
 # --- Nice author line ---
 #+LATEX_HEADER: \usepackage{authblk}
 #+LATEX_HEADER: \author[1]{Andrei Dorian Duma\thanks{andrei-dorian.duma@s.unibuc.ro}}
+#+LATEX_HEADER: \author[2]{Gianina Georgescu\thanks{gianina@fmi.unibuc.ro}}
 #+LATEX_HEADER: \affil[1]{Master of Distributed Systems}
 
 # --- Allow hiding table columns in the LaTeX export
@@ -101,9 +102,21 @@
 
 
 #+begin_abstract
-
-TODO.
-
+In this thesis we present the implementation of a usable Forth system,
+built using only RISC-V machine code and the Linux operating system as
+foundations.  We begin by justifying the need for accessible
+programming language implementations, discussing desirable features in
+educational compilers.  Having selected Forth as our language of
+choice for an educational language implementation, we review existing
+Forth systems and we motivate why creating a RISC-V port is a
+worthwhile task.  Next we thoroughly examine SmithForth, a
+high-quality Forth system for the x86-64 architecture.  After
+understanding its principles, we port it to RISC-V, adapting it to our
+purposes.  Finally, we extend this Forth system in Forth itself: we
+write a RISC-V assembler, we provide useful arithmetic and logic
+operators plus conditional and looping constructs.  We complete out
+demonstration with a Forth implementation of FizzBuzz, showing the
+usability of our system.
 #+end_abstract
 
 \clearpage
@@ -115,7 +128,7 @@ TODO.
 \clearpage
 
 
-* Introduction                                                     :noexport:
+* Introduction
 
 Modern computing relies on complex toolchains that translate
 high-level programming languages to the machine code that is run by
@@ -622,7 +635,7 @@ it respects the ELF file format.  In this chapter's first section,
 SmithForth's minimal ELF header is explored and explained.
 
 
-** The ELF Header                                                  :noexport:
+** The ELF Header
 
 A valid ELF executable respects a certain file layout, allowing the
 Linux kernel and other tools to understand its structure.  It begins
@@ -2371,6 +2384,12 @@ on the same line as the instruction.
 |                                                   |                                      |                                                                                                        | {{{addr(F0)}}} |                |
 {{{wtable_end}}}
 
+Not obvious in the SmithForth implementation is how the special
+command byte ~0x99~ was chosen.  We presume its value was selected
+because it doesn't begin any x86-64 instruction sequence used in the
+project.  Consulting the RISC-V specification shows that it's a safe
+value for our target architecture as well [cite:@riscv_spec_vol_i].
+
 *** Subroutine ~COMPL~
 
 The implementation of ~COMPL~, shown in Table [[tbl:forth:COMPL:rv]],
@@ -3636,57 +3655,85 @@ possible way to continue extending our Forth in Forth itself.
 {{{wtable_end}}}
 
 
-* Forth in Forth
+
+* Forth in Forth                                                   :noexport:
 
 TODO.
 
 
-* Analysis                                                         :noexport:
+* Conclusions
 
-| *Instruction*           | *Type* | *Encoding*                                                                                             |                                                                |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
-| ecall                   | I      | ~000000000000~                      ~00000~          {{{fn3(000)}}} ~00000~          {{{op(1110011)}}} | ~000000000000             00000  000  00000           1110011~ |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
-| slli rd, rs1, shamt     | I      | ~000000~​{{{shamt(bbbbbb)}}}         {{{rs1(rrrrr)}}} {{{fn3(001)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} | ~0000000 shamt            rs1    001  rd              0010011~ |
-| srli rd, rs1, shamt     | I      | ~000000~​{{{shamt(bbbbbb)}}}         {{{rs1(rrrrr)}}} {{{fn3(101)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} | ~0000000 shamt            rs1    101  rd              0010011~ |
-| addi rd, rs1, immediate | I      | {{{imm(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} | ~immediate[11:0]          rs1    000  rd              0010011~ |
-| andi rd, rs1, immediate | I      | {{{imm(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(111)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} | ~immediate[11:0]          rs1    111  rd              0010011~ |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
-| lb  rd, offset(rs1)     | I ?    | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    000  rd              0000011~ |
-| lw  rd, offset(rs1)     | I ?    | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(010)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    010  rd              0000011~ |
-| ld  rd, offset(rs1)     | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(011)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    011  rd              0000011~ |
-| lbu rd, offset(rs1)     | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(100)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    100  rd              0000011~ |
-| lwu rd, offset(rs1)     | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(110)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} | ~offset[11:0]             rs1    110  rd              0000011~ |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
-| jalr rd, offset(rs1)    | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(1100111)}}} | ~offset[11:0]             rs1    000  rd              1100111~ |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
-| add rd, rs1, rs2        | R      | {{{fn7(0000000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} | ~0000000           rs2    rs1    000  rd              0110011~ |
-| or  rd, rs1, rs2        | R      | {{{fn7(0000000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(110)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} | ~0000000           rs2    rs1    110  rd              0110011~ |
-| and rd, rs1, rs2        | R      | {{{fn7(0000000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(111)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} | ~0000000           rs2    rs1    111  rd              0110011~ |
-| sub rd, rs1, rs2        | R      | {{{fn7(0100000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} | ~0100000           rs2    rs1    111  rd              0110011~ |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
-| sb rs2, offset(rs1)     | S      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(0100011)}}} | ~offset[11:5]      rs2    rs1    000  offset[4:0]     0100011~ |
-| sw rs2, offset(rs1)     | S      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(010)}}} {{{off(bbbbb)}}} {{{op(0100011)}}} | ~offset[11:5]      rs2    rs1    010  offset[4:0]     0100011~ |
-| sd rs2, offset(rs1)     | S      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(011)}}} {{{off(bbbbb)}}} {{{op(0100011)}}} | ~offset[11:5]      rs2    rs1    011  offset[4:0]     0100011~ |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
-| beq rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    000  offset[4:1\vert11]  1100011~ |
-| bne rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(001)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    001  offset[4:1\vert11]  1100011~ |
-| blt rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(100)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    100  offset[4:1\vert11]  1100011~ |
-| bge rs1, rs2, offset    | B ?    | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(101)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    101  offset[4:1\vert11]  1100011~ |
-| bltu rs1, rs2, offset   | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(110)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    110  offset[4:1\vert11]  1100011~ |
-| bgeu rs1, rs2, offset   | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(111)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} | ~offset[12\vert10:5]   rs2    rs1    111  offset[4:1\vert11]  1100011~ |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
-| auipc rd, immediate     | U ?    | {{{imm(0xhhhhh)}}}                                                  {{{rd(rrrrr)}}}  {{{op(0010111)}}} | ~immediate[31:12]                     rd              0010111~ |
-| lui rd, immediate       | U      | {{{imm(0xhhhhh)}}}                                                  {{{rd(rrrrr)}}}  {{{op(0110111)}}} | ~immediate[31:12]                     rd              0110111~ |
-|-------------------------+--------+--------------------------------------------------------------------------------------------------------+----------------------------------------------------------------|
-| jal rd, offset          | J      | {{{off(bbbbbbbbbbbbbbbbbbbb)}}}                                     {{{rd(rrrrr)}}}  {{{op(1101111)}}} | ~offset[20\vert10:1\vert11\vert19:12]             rd              1101111~ |
+We have implemented a usable Forth system using only RISC-V machine
+code and the Linux operating system as foundations.  We used the
+excellent SmithForth as inspiration, created by David Smith for the
+x86-64 architecture.  We have thoroughly analyzed its machine code
+implementation, porting and adapting it to the idiosyncrasies of
+RISC-V.  We have also provided an extension of this Forth system
+written in Forth itself: we provide a RISC-V assembler, useful
+arithmetic and logic operators, conditional and looping constructs.
+We complete out demonstration with a Forth implementation of FizzBuzz,
+showing the usability of our system.
+
+In conclusion, we have shown one possible path starting from the
+extremely low-level machine code and leading towards increasing
+abstraction all the way to a powerful, extendable high-level language.
+We have used the RISC-V architecture as our host, showing it is very
+appropriate for exploring the fundamental principles of computing.
 
 
+\clearpage
 * Bibliography
 
 References:
 
 #+PRINT_BIBLIOGRAPHY:
+
+
+
+
+\clearpage
+* Appendix: RISC-V Instructions Used in Our Machine Code Implementation
+
+We thought it interesting to include as an appendix the surprinsingly
+short [[tbl:conclusions:instructions][list]] of all RISC-V instruction used in the machine code part of
+our Forth system.
+
+#+CAPTION: RISC-V instructions used in our implementation.
+#+LABEL: tbl:conclusions:instructions
+#+ATTR_LATEX: :align lll :float nil
+| *Instruction*           | *Type* | *Encoding*                                                                                             |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------|
+| ecall                   | I      | ~000000000000~                      ~00000~          {{{fn3(000)}}} ~00000~          {{{op(1110011)}}} |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------|
+| slli rd, rs1, shamt     | I      | ~000000~​{{{shamt(bbbbbb)}}}         {{{rs1(rrrrr)}}} {{{fn3(001)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} |
+| srli rd, rs1, shamt     | I      | ~000000~​{{{shamt(bbbbbb)}}}         {{{rs1(rrrrr)}}} {{{fn3(101)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} |
+| addi rd, rs1, immediate | I      | {{{imm(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} |
+| andi rd, rs1, immediate | I      | {{{imm(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(111)}}} {{{rd(rrrrr)}}}  {{{op(0010011)}}} |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------|
+| ld  rd, offset(rs1)     | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(011)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} |
+| lbu rd, offset(rs1)     | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(100)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} |
+| lwu rd, offset(rs1)     | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(110)}}} {{{rd(rrrrr)}}}  {{{op(0000011)}}} |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------|
+| jalr rd, offset(rs1)    | I      | {{{off(0xhhh)}}}                    {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(1100111)}}} |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------|
+| add rd, rs1, rs2        | R      | {{{fn7(0000000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} |
+| or  rd, rs1, rs2        | R      | {{{fn7(0000000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(110)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} |
+| and rd, rs1, rs2        | R      | {{{fn7(0000000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(111)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} |
+| sub rd, rs1, rs2        | R      | {{{fn7(0100000)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{rd(rrrrr)}}}  {{{op(0110011)}}} |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------|
+| sb rs2, offset(rs1)     | S      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(0100011)}}} |
+| sw rs2, offset(rs1)     | S      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(010)}}} {{{off(bbbbb)}}} {{{op(0100011)}}} |
+| sd rs2, offset(rs1)     | S      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(011)}}} {{{off(bbbbb)}}} {{{op(0100011)}}} |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------|
+| beq rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(000)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} |
+| bne rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(001)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} |
+| blt rs1, rs2, offset    | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(100)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} |
+| bltu rs1, rs2, offset   | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(110)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} |
+| bgeu rs1, rs2, offset   | B      | {{{off(bbbbbbb)}}} {{{rs2(rrrrr)}}} {{{rs1(rrrrr)}}} {{{fn3(111)}}} {{{off(bbbbb)}}} {{{op(1100011)}}} |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------|
+| lui rd, immediate       | U      | {{{imm(0xhhhhh)}}}                                                  {{{rd(rrrrr)}}}  {{{op(0110111)}}} |
+|-------------------------+--------+--------------------------------------------------------------------------------------------------------|
+| jal rd, offset          | J      | {{{off(bbbbbbbbbbbbbbbbbbbb)}}}                                     {{{rd(rrrrr)}}}  {{{op(1101111)}}} |
 
 
 * Notes                                                            :noexport:
