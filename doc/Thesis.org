@@ -1449,7 +1449,7 @@ the definition by enabling the ~HIDDEN~ flag on the entry.  Finally,
 colon switches to compilation mode by calling ~']'~.
 
 {{{wtable_begin(10)}}}
-#+CAPTION: Subroutine ~':'~ (colon) begins compiling a word after setting up its dictionary entry (x86-64).
+#+CAPTION: ~':'~ sets up a word's dictionary entry and begin compilation (x86-64).
 #+LABEL: tbl:forth:colon:x
 #+ATTR_LATEX: :align l|ll|lH :float nil
 | *Pseudocode*                          | *Instruction*     | *Opcode*          | *Machine code*                            | *Intention*                            |
@@ -1482,14 +1482,14 @@ colon switches to compilation mode by calling ~']'~.
 | ~return.~                             | RET               | C3                | ~C3~                                      | return                                 |
 {{{wtable_end}}}
 
-The ~';'~ (semicolon) Forth word, displayed in Table
+Forth word ~';'~ (semicolon), displayed in Table
 [[tbl:forth:semicolon:x]], finalizes a word definiton by compiling a
 return instruction.  It then ``unhides'' the word by flipping its
 ~HIDDEN~ field in the dictionary entry and switches back to
 interpreting mode.
 
 {{{wtable_begin(10)}}}
-#+CAPTION: ~';'~ (semicolon) wraps up a colon definition and goes back to interpreting (x86-64).
+#+CAPTION: ~';'~ wraps up a colon definition and goes back to interpreting (x86-64).
 #+LABEL: tbl:forth:semicolon:x
 #+ATTR_LATEX: :align l|ll|lH :float nil
 | *Pseudocode*                           | *Instruction*     | *Opcode*         | *Machine code*                                              | *Intention*          |
@@ -1507,7 +1507,7 @@ interpreting mode.
 | /# Clear the ~HIDDEN~ bit (~0x40~) on/ |                   |                  |                                                             |                      |
 | /# the dictionary entry's flag./       |                   |                  |                                                             |                      |
 | ~xt@RCX ← [LATEST];~                   | MOV r64, r/m64    | REX.W 8B /r      | ~48 8B~ {{{modrm(0C,00,001,100)}}} {{{sib(25,00,100,101)}}} | rcx = [Latest]       |
-|                                        |                   |                  | \hookrightarrow {{{c(2)}}} {{{displ(28 00 00 10)}}}         |                      |
+|                                        |                   |                  | \hookrightarrow {{{displ(28 00 00 10)}}}         |                      |
 | ~flag@RCX ← xt@RCX + 0x10;~            | ADD r/m64, /imm8/ | REX.W 83 /​0 /ib/ | ~48 83~ {{{modrm(C1,11,000,001)}}} /10/                     | rcx += 10            |
 | ~[flag@RCX] &= 0b10111111;~            | AND r/m8, /imm8/  | 80 /4 /ib/       | ~80~ {{{modrm(21,00,100,001)}}} /BF/                        | [rcx] &= BF(~HIDDEN) |
 |                                        |                   |                  |                                                             |                      |
@@ -1659,10 +1659,27 @@ instruction) and then copies the number into the slot (a pair of
 \clearpage
 
 
-*** Searching the Dictionary: ~xt=~, ~FIND~                        :noexport:
+*** Searching the Dictionary: ~xt=~, ~FIND~
+
+The next problem SmithForth solves is that of finding words by name in
+the dictionary.  This is achieved using two words, which we will
+examine in turn.
+
+Shown in Table [[tbl:forth:xt=:x]] is ~xt=~, which tests whether a word
+given by its /execution token/ (argument /xt/) has its name equal to a
+given string (arguments ~addr~ and ~u~).  A few observations are
+worthwhile.  First, the test fails if the word is hidden: this is to
+prevent colon definitions to reference themselves before they are
+complete.  Secondly, being designed for the x86-64, SmithForth uses a
+combined ~REPE CMPS~ instruction for the string comparison.  This will
+need to be replaced with an explicit loop in our RISC-V
+implementation.  Another feature specific to x86-64 is the use of the
+implicit ~RFLAGS~ to pass information between instructions (and even
+subroutines).  The ~ZF~ flags set here by SmithForth is read only in
+~FIND~.
 
 {{{wtable_begin(10)}}}
-#+CAPTION: Subroutine ~xt=~ compares an execution token's name with a given string (x86-64).
+#+CAPTION: ~xt=~ compares an execution token's name with a given string (x86-64).
 #+LABEL: tbl:forth:xt=:x
 #+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                                           | *Instruction*     | *Opcode*         | *&*            | *Machine code*                                     | *Intention*             |
@@ -1710,8 +1727,15 @@ instruction) and then copies the number into the slot (a pair of
 | {{{c(2)}}} ~return.~                                   | RET               | C3               |                | ~C3~                                               | return                  |
 {{{wtable_end}}}
 
+Subroutine ~FIND~, listed in Table [[tbl:forth:find:x]], performs a linear
+search through the dictionary using ~xt=~ as a test method.  As
+discussed above, ~FIND~ uses the ~ZF~ flag set by ~xt=~.  We would
+prefer to see explicit information passing here.  In fact, the RISC-V
+designers entirely removed the flags register, so we will find an
+alternative solution in our RISC-V implementation.
+
 {{{wtable_begin(10)}}}
-#+CAPTION: Subroutine ~FIND~ searches the dictionary for a word matching a given name (x86-64).
+#+CAPTION: ~FIND~ searches the dictionary for a word matching a given name (x86-64).
 #+LABEL: tbl:forth:find:x
 #+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                               | *Instruction*  | *Opcode*    | *&*            | *Machine code*                                              | *Intention*      |
@@ -1728,7 +1752,7 @@ instruction) and then copies the number into the slot (a pair of
 |                                            |                |             |                |                                                             |                  |
 | {{{c(2)}}} /# Begin search at ~LATEST~./   |                |             |                |                                                             |                  |
 | {{{c(2)}}} ~xt@RBX ← [LATEST];~            | MOV r64, r/m64 | REX.W 8B /r |                | ~48 8B~ {{{modrm(1C,00,011,100)}}} {{{sib(25,00,100,101)}}} | rbx = [Latest]   |
-|                                            |                |             |                | \hookrightarrow {{{c(2)}}} {{{displ(28 00 00 10)}}}         |                  |
+|                                            |                |             |                | \hookrightarrow {{{displ(28 00 00 10)}}}                    |                  |
 | ~_begin:~                                  |                |             | {{{addr(00)}}} |                                                             | # _beg:          |
 | {{{c(2)}}} ~call FIND();~                  | CALL _rel32_   | E8 _cd_     |                | ~E8~ {{{offset(03 00 00 00,05-02)}}}                        | +call (FIND)     |
 | {{{c(2)}}} ~if !ZF:~                       |                |             | {{{addr(05)}}} |                                                             |                  |
@@ -1754,10 +1778,18 @@ instruction) and then copies the number into the slot (a pair of
 \clearpage
 
 
-*** Handling Numbers: ~Num~, ~miss~                                :noexport:
+*** Handling Numbers: ~Num~, ~miss~
+
+When a token is not found in the Forth dictionary, it is assumed to be
+a number which is either compiled or executed, depending on whether it
+occurs in a colon definition or not.  To enable this behavior
+SmithForth implements ~Num~, which converts a string to a number and
+places it on the data stack.  The implementation, shown in Table
+[[tbl:forth:num:x]], is straightforward.  Note that SmithForth expects
+numbers to be given in uppercase hexadecimal notation.
 
 {{{wtable_begin(10)}}}
-#+CAPTION: Subroutine ~Num~ parses a character string as a number and pushes it on the stack (x86-64).
+#+CAPTION: ~Num~ parses a token as a number and pushes it on the stack (x86-64).
 #+LABEL: tbl:forth:num:x
 #+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                             | *Instruction*     | *Opcode*         | *&*            | *Machine code*                            | *Intention*        |
@@ -1800,8 +1832,16 @@ instruction) and then copies the number into the slot (a pair of
 | {{{c(2)}}} ~return.~                     | RET               | C3               |                | ~C3~                                      | return             |
 {{{wtable_end}}}
 
+The next word, ~miss~, works in tandem with ~hit~, defined later.
+Together, they handle both the case when a token is found in the
+dictionary and the case when it is not.  Shown in Table
+[[tbl:forth:miss:x]], ~miss~ handles the latter.  Note that in compilation
+mode the number is passed to ~LIT~ to be compiled in the current
+definition.  Otherwise it is left on the stack, which conforms to the
+interpretation semantics for numbers.
+
 {{{wtable_begin(10)}}}
-#+CAPTION: Subroutine ~miss~ attempts parsing a word as a number, optionally compiling it as a literal (x86-64).
+#+CAPTION: ~miss~ treats a token as a number, possibly compiling it as a literal (x86-64).
 #+LABEL: tbl:forth:miss:x
 #+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                           | *Instruction*     | *Opcode*    | *&*            | *Machine code*                                           | *Intention*           |
@@ -1842,7 +1882,22 @@ instruction) and then copies the number into the slot (a pair of
 \clearpage
 
 
-*** Compile or Execute: ~EXEC~, ~exec~, ~compl~, ~hit~             :noexport:
+*** Compile or Execute: ~EXEC~, ~exec~, ~compl~, ~hit~
+
+While ~miss~ and ~Num~ handle tokens not found in the dictionary, it
+is the job of ~hit~ and several helper words to either compile or
+execute an execution token retrieved from the dictionary.  We will
+begin with the explanation of the helper words.
+
+~EXEC~, listen in Table [[tbl:forth:EXEC:x]], receives an execution token
+and executes the code associated with it immediately.  It does this in
+a complicated fashion whose purpose we didn't fully understand (it is
+actually the only point of confusion we had in the excellent machine
+code implementation of SmithForth): it uses a ~COMPL~ to compile a
+~CALL~ instruction at a remote memory address; to that it appends a
+~RET~ instruction; finally it calls into that remote location, thus
+performing two jumps for what could have been a simple indirect call.
+In the our RISC-V implementation a simple ~jalr~ worked equally well.
 
 {{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~EXEC~ executes a Forth word (x86-64).
@@ -1877,6 +1932,16 @@ instruction) and then copies the number into the slot (a pair of
 | ~return.~                          | RET              | C3         | ~C3~                            | return       |
 {{{wtable_end}}}
 
+Subroutines ~exec~ and ~compl~ in Tables [[tbl:forth:exec:x]] and
+[[tbl:forth:compl:x]] work similarly to ~miss~ and ~exec~, but at a
+different level.  Chain-called one after the other, they receive an
+word's execution token and handle four different cases, depending
+on 1) whether the word is immediate, and 2) which mode is currently
+active (compilation or interpretation).  If interpreting or the word
+is immediate, ~exec~ passes the word to ~EXEC~ for execution,
+otherwise ~compl~ passes the word to ~COMPL~ to be compiled into the
+current definition.
+
 {{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~exec~ executes a word if it's immediate or if  (x86-64).
 #+LABEL: tbl:forth:exec:x
@@ -1902,7 +1967,7 @@ instruction) and then copies the number into the slot (a pair of
 {{{wtable_end}}}
 
 {{{wtable_begin(10)}}}
-#+CAPTION: Subroutine ~compl~ compiles a word in compiling state if it's not immediate (x86-64).
+#+CAPTION: ~compl~ compiles a word in compiling mode if it's not immediate (x86-64).
 #+LABEL: tbl:forth:compl:x
 #+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                                | *Instruction*  | *Opcode*   | *&*            | *Machine code*                  | *Intention*         |
@@ -1925,8 +1990,13 @@ instruction) and then copies the number into the slot (a pair of
 | {{{c(2)}}} ~return.~                        | RET            | C3         |                | ~C3~                            | return              |
 {{{wtable_end}}}
 
+Finally, ~hit~ combines ~compl~ and ~exec~ by chaining them together.
+It computes the ~imm+state~ flag that is used by the two words to
+dispatch on the four cases discussed above.  The code is shown in
+Table [[tbl:forth:hit:x]].
+
 {{{wtable_begin(10)}}}
-#+CAPTION: Subroutine ~hit~ either compiles or executes a word found in the dictionary (x86-64).
+#+CAPTION: ~hit~ compiles or executes a word found in the dictionary (x86-64).
 #+LABEL: tbl:forth:hit:x
 #+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                                      | *Instruction*   | *Opcode*    | *&*            | *Machine code*                                           | *Intention*         |
@@ -1959,10 +2029,21 @@ instruction) and then copies the number into the slot (a pair of
 \clearpage
 
 
-*** Bringing Everything Together: ~SVAL~, ~ti~                     :noexport:
+*** Bringing Everything Together: ~SVAL~, ~ti~
 
-{{{wtable_begin(10)}}}
-#+CAPTION: Subroutine ~SVAL~ evaluates a line of Forth code (x86-64).
+We have arrived nearly at the end of our journey through SmithForth's
+machine code.  Here two final words combine words from the five
+categories we have discussed to create an interpreting loop that
+consumes tokens from ~INPUT~, attempts to find them as words in the
+dictionary and either compiles or executes them according to their
+nature.
+
+Subroutine ~SVAL~, shown in Table [[tbl:forth:SVAL:x]], chains ~pname~,
+~FIND~, ~miss~ and ~hit~ to parse and act on a token.  It does so as
+long as there are characters left in the current parse area.
+
+{{{wtable_begin(9)}}}
+#+CAPTION: ~SVAL~ evaluates a line of Forth code (x86-64).
 #+LABEL: tbl:forth:SVAL:x
 #+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                                      | *Instruction*  | *Opcode*    | *&*            | *Machine code*                                              | *Intention*     |
@@ -1995,8 +2076,23 @@ instruction) and then copies the number into the slot (a pair of
 | {{{c(2)}}} ~return.~                              | RET            | C3          |                | ~C3~                                                        | return          |
 {{{wtable_end}}}
 
+Table [[tbl:forth:ti:x][tbl:forth:ti:x]] showcases ~ti~, the word which, in Forth fashion,
+brings everything together.  It first sets up the data stack right
+below the global variables.  This very interesting in practice,
+because any accidental data stack underflow might corrupt the global
+variables, which hold parsing and dictionary state.  Most underflow
+errors result therefore in crashes or infinite loops.  SmithForth
+makes no attempt to protect against stack underflow, which would be
+mandatory in a Forth system intended for production use.
+
+Next, ~TBI~ is set to point in memory just after the machine code
+section of the executable.  In effect, any text following the last
+~RET~ instruction in ~ti~ will be interpreted as Forth code.  This
+allows SmithForth to continue building on top of the current Forth
+system in Forth instead of machine code.  A victory in bootstrapping!
+
 {{{wtable_begin(10)}}}
-#+CAPTION: Subroutine ~ti~ brings everything together, reading and evaluating Forth in a loop (x86-64).
+#+CAPTION: Finally, subroutine ~ti~ reads and evaluates Forth in a loop (x86-64).
 #+LABEL: tbl:forth:ti:x
 #+ATTR_LATEX: :align l|ll|l|lH :float nil
 | *Pseudocode*                                       | *Instruction*      | *Opcode*         | *&*            | *Machine code*                                     | *Intention*           |
@@ -2008,7 +2104,8 @@ instruction) and then copies the number into the slot (a pair of
 | /# input, then repeatedly refill/                  |                    |                  |                |                                                    |                       |
 | /# lines and evaluate them./                       |                    |                  |                |                                                    |                       |
 |                                                    |                    |                  |                |                                                    |                       |
-| {{{c(2)}}} ~STACK@R15 ← 0x10000000;~               | MOV r/m64, /imm32/ | REX.W C7 /​0 /id/ |                | ~49 C7~ {{{modrm(C7,11,000,111)}}} /~00 00 00 10~/ | r15(stack) = 10000000 |
+| {{{c(2)}}} ~STACK@R15 ← 0x10000000;~               | MOV r/m64, /imm32/ | REX.W C7 /​0 /id/ |                | ~49 C7~ {{{modrm(C7,11,000,111)}}}                 | r15(stack) = 10000000 |
+|                                                    |                    |                  |                | \hookrightarrow /~00 00 00 10~/                    |                       |
 | {{{c(2)}}} ~[TIB] ← INPUT@RSI;~                    | MOV r/m64, r64     | REX.W 89 /r      |                | ~49 89~ {{{modrm(77,01,110,111)}}} {{{displ(08)}}} | [TIB] = rsi           |
 | {{{c(2)}}} ~call [;~  /# Compiled./                | ---                | ---              |                | {{{compile(5B,[)}}}                                | Call [                |
 | ~_begin:~                                          |                    |                  | {{{addr(00)}}} |                                                    | # _beg:               |
@@ -2884,8 +2981,8 @@ is listed in Table [[tbl:forth:reg:rv]].
 | /# – enc.:/ {{{off(0000000)}}} {{{rs2(00001)}}} {{{rs1(00010)}}}                      |                    |                                                                                                        |                     |
 | /#/{{{i(3.5)}}} \(\hookrightarrow\) {{{fn3(011)}}} {{{off(00000)}}} {{{op(0100011)}}} |                    |                                                                                                        |                     |
 | /# Thus we generate code as follows:/                                                 |                    |                                                                                                        |                     |
-| /#/{{{c(2)}}}​~13·01·81·FF~                                                              |                    |                                                                                                        |                     |
-| /#/{{{c(2)}}}​~23·30·11·00~                                                               |                    |                                                                                                        |                     |
+| /#/{{{c(2)}}}​~13·01·81·FF~                                                            |                    |                                                                                                        |                     |
+| /#/{{{c(2)}}}​~23·30·11·00~                                                            |                    |                                                                                                        |                     |
 |                                                                                       |                    |                                                                                                        |                     |
 | /# 1. Assemble and write ~addi~./                                                     |                    |                                                                                                        |                     |
 | ~t0 ← 0xFF810113;~                                                                    | lui t0, 0xFF810    | {{{imm(0xFF810)}}}                                                  {{{rd(00101)}}}  {{{op(0110111)}}} | ~B7 02 81 FF~       |
