@@ -13,9 +13,9 @@
 
 #+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:{} arch:headline
 #+OPTIONS: author:nil broken-links:nil c:nil creator:nil
-#+OPTIONS: d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t num:t
+#+OPTIONS: d:(not "LOGBOOK") date:nil e:t email:nil f:t inline:t num:t
 #+OPTIONS: p:nil pri:nil prop:nil stat:t tags:t tasks:t tex:t
-#+OPTIONS: timestamp:t title:t toc:nil todo:t |:t
+#+OPTIONS: timestamp:t title:nil toc:nil todo:t |:t
 
 #+STARTUP: logdrawer
 
@@ -30,7 +30,7 @@
 
 # --- Document margins.
 #+LATEX_HEADER: \usepackage{geometry}
-#+LATEX_HEADER: \newgeometry{left=2.5cm, right=2.5cm}
+#+LATEX_HEADER: \newgeometry{left=2.5cm, right=2.5cm, top=3.2cm, bottom=3.5cm}
 #+LATEX_HEADER: \restoregeometry
 
 # --- Line spacing.
@@ -42,13 +42,15 @@
 
 # --- Nice author line ---
 #+LATEX_HEADER: \usepackage{authblk}
-#+LATEX_HEADER: \author[1]{Andrei Dorian Duma\thanks{andrei-dorian.duma@s.unibuc.ro}}
-#+LATEX_HEADER: \author[2]{Gianina Georgescu\thanks{gianina@fmi.unibuc.ro}}
-#+LATEX_HEADER: \affil[1]{Master of Distributed Systems}
+#+LATEX_HEADER: \author{\vspace{1cm} \textbf{Author:} Andrei Dorian Duma \\\vspace{0.1cm} \textbf{Coordinator:} Lect.\hspace{0.18cm}dr.\hspace{0.18cm}Gianina Georgescu \vspace{5cm}}
+#+LATEX_HEADER: \affil{Master of Distributed Systems \\\vspace{0.3cm} September 2024}
 
 # --- Allow hiding table columns in the LaTeX export
 #+LATEX_HEADER: \usepackage{array}
 #+LATEX_HEADER: \newcolumntype{H}{>{\setbox0=\hbox\bgroup}c<{\egroup}@{}}
+
+# --- Fix page numbering.
+#+LATEX_HEADER: \pagenumbering{gobble}
 
 # --- Font size macros.
 #+MACRO: fontset      (eval (format "\\fontsize{%spt}{%fpt}\\selectfont" $1 (* 1.2 (string-to-number $1))))
@@ -102,7 +104,41 @@
 
 # Additional options are set in `.dir-locals.el`.
 
+\begin{figure}[!htb]
+    \centering
+    \vspace{3cm}
+    \begin{minipage}{0.16\textwidth}
+        \includegraphics[width=\linewidth]{img/logo-ub.png}
+    \end{minipage}
+    \begin{minipage}{0.6\textwidth}
+        \large
+        % \vspace{0.2cm}
+        \begin{center}
+            \textbf{
+                \textsc{
+                    \hspace{0.015cm} University of Bucharest}}
+        \end{center}
+        % \vspace{0.05cm}
+        \begin{center}
+            \textbf{
+                \textsc{
+                Faculty of Mathematics \\
+                \hspace{0.45cm} and Informatics}}
+        \end{center}
+    \end{minipage}
+    \begin{minipage}{0.175\textwidth}
+        \includegraphics[width=\linewidth]{img/logo-fmi.png}
+    \end{minipage}
 
+    \vspace{4cm} % space between logo and title
+    \maketitle
+\end{figure}
+\clearpage
+
+
+\vspace*{\fill}
+
+\renewcommand{\abstractname}{Abstract}
 #+begin_abstract
 In this thesis we present the implementation of a usable Forth system,
 built using only RISC-V machine code and the Linux operating system as
@@ -121,6 +157,27 @@ demonstration with a Forth implementation of FizzBuzz, showing the
 usability of the system.
 #+end_abstract
 
+\vspace{0.7cm}
+
+\renewcommand{\abstractname}{Rezumat}
+#+begin_abstract
+În această lucrare prezentăm implementarea unui sistem Forth scris
+direct în cod mașină pentru architectura RISC-V și sistemul de operare
+Linux.  Începem prin a justifica necesitatea implementărilor
+accesibile de limbaje de programare și discutăm caracteristicile de
+dorit într-un compilator didactic.  Propunem realizarea unui nou
+sistem Forth pentru architectura RISC-V, cu pornire de la nivelul cel
+mai scăzut al codului mașină.  În continuare, examinăm în detaliu
+SmithForth, un sistem Forth excelent dezvoltat pentru arhitectura
+x86-64.  După înțelegerea principiilor sale, îl portăm la RISC-V,
+adaptându-l scopurilor noastre.  În final, extindem sistemul Forth
+rezultat chiar în Forth: scriem un asamblor pentru RISC-V, implementăm
+operatori aritmetici și logici și structuri condiționale și de
+ciclare.  Încheiem cu o rezolvare în Forth a problemei FizzBuzz,
+demonstrând utilizabilitatea sistemului nostru.
+#+end_abstract
+
+\vspace*{\fill}
 \clearpage
 
 
@@ -128,7 +185,8 @@ usability of the system.
 #+TOC: headlines 3
 
 \clearpage
-
+\pagenumbering{arabic}
+\setcounter{page}{4}
 
 * Introduction
 
@@ -929,6 +987,7 @@ binary interpreter loop by the word name's first character only, a
 limitation that has to be taken into account when defining new words:
 they must not begin with the same ASCII character.  This limitation is
 lifted in the next stage, once ~FIND~ is implemented.
+\pagebreak
 
 *** Subroutine ~COMPL~
 
@@ -1554,6 +1613,7 @@ subroutines, listed in tables [[tbl:forth:lbracket:x]] and
 | ~return.~                         | RET           | C3       | ~C3~                                                                              | return               |
 {{{wtable_end}}}
 
+\pagebreak
 {{{wtable_begin(10)}}}
 #+CAPTION: Subroutine ~']'~ changes Forth's ~STATE~ to compiling (x86-64).
 #+LABEL: tbl:forth:rbracket:x
@@ -2252,8 +2312,8 @@ sets for x86-64 (field ~p_align~).
 In RISC-V the allocation of registers and memory locations for global
 variables, shown in Table [[tbl:globals:rv]], is similar to SmithForth's.
 Note that for the first four variables we used ``saved registers'',
-designated as callee-saved registers by RISC-V's software calling
-convention [cite:@riscv_spec_vol_i].
+designated as callee-saved by RISC-V's software calling convention
+[cite:@riscv_spec_vol_i].
 
 {{{wtable_begin(10)}}}
 #+CAPTION: Global variables in SmithForth (RISC-V).
@@ -2279,8 +2339,7 @@ more verbose due to RISC-V's splitting of immediate loads in 20-bit
 [cite:@riscv_spec_vol_i; @patterson2017].  We have chosen to represent
 the sub-byte encoding scheme used by RISC-V in the `Encoding' column,
 highlighting source and destination registers, immediates and offsets.
-The encoding process of the first =lui= instruction is explained in
-detail.
+The encoding of the first =lui= instruction is explained in detail.
 
 {{{wtable_begin(9)}}}
 #+CAPTION: Initialize global variables =INPUT=, =OUTPUT= and =VARS= (RISC-V).
@@ -2466,6 +2525,7 @@ Forth word.
 | ~return.~  /# To interpreter loop./                                                            | *jalr* zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                 | ~67 80 00 00~                   |
 |                                                                                                |                      |                                                                                                        | {{{addr(140)}}} |                                 |
 {{{wtable_end}}}
+\pagebreak
 
 *** Subroutine ~Head~
 
@@ -2775,7 +2835,7 @@ has payed off in this group of routines, as we were able to indirectly
 reference variables ~TIB~, ~#IN~ and ~>IN~ without mentioning their
 addresses.  This technique, useful in many applications where shared
 global state is accessed independently from different routines, is
-made easy by RISC-V large number of callee-saved registers.
+made easy by RISC-V's large number of callee-saved registers.
 
 {{{wtable_begin(7)}}}
 #+CAPTION: ~REFILL~ replenishes the /parse area/ by advancing ~TIB~ and ~#IN~ (RISC-V).
@@ -2986,9 +3046,9 @@ explicitly through registers.
 {{{wtable_end}}}
 
 There is not much to comment on the other parsing routines, as they
-were straightforward to translate to RISC-V.
+were straightforward to translate.
 
-*** Defining New Forth Words: ~:~, ~;~, ~[~, ~]~, ~.~, ~LIT~
+*** Defining New Forth Words: ~:~, ~;~, ~[~, ~]~, ~.~, ~LIT~ (RISC-V)
 
 The word-defining words are more interesting.  When we analyzed
 ~COMPL~ in SmithForth, we explained how RISC-V is different in the way
@@ -2996,8 +3056,8 @@ it doesn't save return addresses when performing function calls with
 ~jalr~.  Return addresses have to be saved and restored around call
 sites or in function prologues and epilogues.  In order to keep colon
 definitions small, we chose to implement the latter option.  It is
-here, in ~':'~, where we have to install a prologue before a allowing
-a Forth definition to proceed.
+here, in ~':'~, where we have to install a prologue before allowing a
+Forth definition to proceed.
 
 Shown in Table [[tbl:forth:colon:rv]], in addition to the responsibilities
 inherited from the original SmithForth, subroutine ~':'~ compiles two
@@ -3271,7 +3331,7 @@ embedding the byte in the flow of instructions as in x86-64.
 | ~return.~                                                                                         | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} | ~67 80 00 00~             |
 {{{wtable_end}}}
 
-*** Searching the Dictionary: ~xt=~, ~FIND~
+*** Searching the Dictionary: ~xt=~, ~FIND~ (RISC-V)
 
 The subroutine used to test dictionary entries for a matching name,
 ~xt=~, is given in Table [[tbl:forth:xt=:rv]].  In contrast to its x86-64
@@ -3378,7 +3438,7 @@ information instead of using the ~FLAGS~ register.
 | {{{c(2)}}} ~return.~                       | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 {{{wtable_end}}}
 
-*** Handling Numbers: ~Num~, ~miss~
+*** Handling Numbers: ~Num~, ~miss~ (RISC-V)
 
 The porting of words ~Num~ and ~miss~, shown in Tables
 [[tbl:forth:num:rv]] and [[tbl:forth:miss:rv]], was straightforward, almost
@@ -3464,8 +3524,9 @@ line-by-line.
 | {{{c(2)}}}                             | addi sp, sp, 8     | {{{imm(0x008)}}}                    {{{rs1(00010)}}} {{{fn3(000)}}} {{{rd(00010)}}}  {{{op(0010011)}}} |                | ~13 01 81 00~                |
 | {{{c(2)}}} ~return.~                   | jalr zero, 0(ra)   | {{{off(0x000)}}}                    {{{rs1(00001)}}} {{{fn3(000)}}} {{{rd(00000)}}}  {{{op(1100111)}}} |                | ~67 80 00 00~                |
 {{{wtable_end}}}
+\pagebreak
 
-*** Compile or Execute: ~EXEC~, ~exec~, ~compl~, ~hit~
+*** Compile or Execute: ~EXEC~, ~exec~, ~compl~, ~hit~ (RISC-V)
 
 The RISC-V ~EXEC~, listed in Table [[tbl:forth:EXEC:rv]], is likely the
 only translation significantly shorter than the original.  As
@@ -3592,7 +3653,7 @@ We make no further comments on the other subroutines ported in this
 section, as they are very similar to their x86-64 original source
 code.
 
-*** Bringing Everything Together: ~SVAL~, ~ti~
+*** Bringing Everything Together: ~SVAL~, ~ti~ (RISC-V)
 
 We have almost reached the end of our efforts to port SmithForth to
 RISC-V.  In the final two translated subroutines, displayed in Tables
@@ -3660,28 +3721,38 @@ possible way to continue extending our Forth in Forth itself.
 
 * Forth in Forth
 
+In this chapter we continue building on top of the basic Forth system
+that we bootstrapped in Chapter [[*Porting SmithForth to RISC-V]].  Since
+the text interpreter can now execute Forth, we can use the existing
+routines to extend the available functionality by defining additional
+Forth words.
+
+As a challenge, we set to develop enough Forth utilities to solve the
+classical FizzBuzz problem by the end of the chapter
+[cite:@fizz_buzz].  This requires at least arithmetic, conditional
+execution, loops and the ability to print numbers and strings to the
+terminal.
+
 ** A Few Basic Utilities
+
+Subroutine ~'.'~ defined in machine code allows us to embed further
+machine code in Forth definitions.  Here we define a few simple
+primitive helpers for navigating the stack and for transferring data
+between the data stack and registers ~t0~ and ~t1~.  Note that words
+=^=, =v= and =%= move only the stack pointer; care must be taken to
+not accidentally overwrite stack data:
 
 {{{ffontset(9)}}}
 #+begin_src forth
   \ Load current stack item into register `t0` or `t1`.
-  : >t0 ( x -- x )
-    83 . B2 . 09 . 00 . ;                       \ t0 = [s3]               ld t0, 0(s3)
-  : >t1 ( x -- x )
-    03 . B3 . 09 . 00 . ;                       \ t1 = [s3]               ld t1, 0(s3)
-
+  : >t0 ( x -- x )   83 . B2 . 09 . 00 . ;                       \ t0 = [s3]      ld t0, 0(s3)
+  : >t1 ( x -- x )   03 . B3 . 09 . 00 . ;                       \ t1 = [s3]      ld t1, 0(s3)
   \ Store register `t0` or `t1` over current stack item.
-  : t0> ( ? -- x )
-    23 . B0 . 59 . 00 . ;                       \ [s3] = t0               sd t0, 0(s3)
-  : t1> ( ? -- x )
-    23 . B0 . 69 . 00 . ;                       \ [s3] = t1               sd t1, 0(s3)
-
+  : t0> ( ? -- x )   23 . B0 . 59 . 00 . ;                       \ [s3] = t0      sd t0, 0(s3)
+  : t1> ( ? -- x )   23 . B0 . 69 . 00 . ;                       \ [s3] = t1      sd t1, 0(s3)
   \ Navigate the stack.
-  : ^ ( x -- .. )
-    93 . 89 . 89 . 00 . ;                       \ s3 += 8                 addi s3, s3, 8
-  : v ( .. -- x )
-    93 . 89 . 89 . FF . ;                       \ s3 -= 8                 addi s3, s3, -8
-
+  : ^ ( x -- .. )    93 . 89 . 89 . 00 . ;                       \ s3 += 8        addi s3, s3, 8
+  : v ( .. -- x )    93 . 89 . 89 . FF . ;                       \ s3 -= 8        addi s3, s3, -8
   \ "Float" current stack item "up" the stack, exchanging with item
   \ above.  Stack pointer follows the item.
   : % ( x1 x2 -- x2 .. )
@@ -3689,6 +3760,9 @@ possible way to continue extending our Forth in Forth itself.
     t0> ^  t1> ;
 #+end_src
 {{{ffontreset}}}
+
+Using these helpers we now define the classic Forth words for stack
+manipulation [cite:@brodie1981_starting]:
 
 {{{ffontset(9)}}}
 #+begin_src forth
@@ -3707,50 +3781,57 @@ possible way to continue extending our Forth in Forth itself.
 
 ** A RISC-V Assembler in Forth
 
+By now we have written enough machine code by hand.  Since we have
+Forth at our disposal, we can write an assembler (or at least an
+instruction encoder) for RISC-V.  Several bit twiddling utilities are
+defined first:
+
 {{{ffontset(9)}}}
 #+begin_src forth
-  \ --- RISC-V Assembler --- \
-
-  : << ( n u -- n' )
-    [ >t1 ^ >t0 ]
-    [ B3 . 92 . 62 . 00 . ]		\ sll t0, t0, t1
-    [       t0> ] ;
-
-  : | ( u1 u2 -- u )
-    [ >t1 ^ >t0 ]
-    [ B3 . E2 . 62 . 00 . ]		\ or t0, t0, t1
-    [       t0> ] ;
-
-  : & ( u1 u2 -- u )
-    [ >t1 ^ >t0 ]
-    [ B3 . F2 . 62 . 00 . ]		\ and t0, t0, t1
-    [       t0> ] ;
-
-  : - ( n1 n2 -- n )
-    [ >t1 ^ >t0 ]
-    [ B3 . 82 . 62 . 40 . ]		\ sub t0, t0, t1
-    [       t0> ] ;
+  \ Left shift, OR, AND, Minus.
+  : << ( n u -- n' )   [ >t1 ^ >t0 ] [ B3 . 92 . 62 . 00 . ] [ t0> ] ;        \ sll t0, t0, t1
+  : | ( u1 u2 -- u )   [ >t1 ^ >t0 ] [ B3 . E2 . 62 . 00 . ] [ t0> ] ;        \ or  t0, t0, t1
+  : & ( u1 u2 -- u )   [ >t1 ^ >t0 ] [ B3 . F2 . 62 . 00 . ] [ t0> ] ;        \ and t0, t0, t1
+  : - ( n1 n2 -- n )   [ >t1 ^ >t0 ] [ B3 . 82 . 62 . 40 . ] [ t0> ] ;        \ sub t0, t0, t1
 
   \ Pick bits `i` (high) through `j` (low) from `n`.
   : [:] ( u i j -- u' )
-    [ >t1 ]		      \ t1 = j
-    [ ^ ^ >t0 ]		      \ t0 = u                   ( -- u .. )
-    [ B3 . D2 . 62 . 00 . ]     \ srl t0, t0, t1
-    [ t0> v v ]		      \ v = t0                   ( -- v i j )
-    1 -  -		      \ len = i - (j - 1)        ( -- v len )
-    1 SWAP <<  1 -	      \ mask = (1 << len) - 1    ( -- v mask )
-    & ;			      \ u' = v & mask            ( -- u' )
+    [ >t1 ]                   \ t1 = j
+    [ ^ ^ >t0 ]               \ t0 = u                   ( -- u .. )
+    [ B3 . D2 . 62 . 00 . ]   \ t0 <<= t1                srl t0, t0, t1
+    [ t0> v v ]               \ v = t0                   ( -- v i j )
+    1 -  -                    \ len = i - (j - 1)        ( -- v len )
+    1 SWAP <<  1 -            \ mask = (1 << len) - 1    ( -- v mask )
+    & ;                       \ u' = v & mask            ( -- u' )
+#+end_src
+{{{ffontreset}}}
 
-  \ Compile a 32-bit instruction (in the form of a 32-bit unsigned
-  \ integer) to `OUTPUT`, ensuring correct endianness.
+Using the bit selection word ~[:]~ we can now define ~`~ (backtick),
+an improved version of ~'.'~​.  Instead of operating on bytes, it
+writes entire 32-bit instructions at ~OUTPUT~, respecting the correct
+endianness:
+
+{{{ffontset(9)}}}
+#+begin_src forth
+
+  \ Compile a 32-bit instruction (in the form of a 32-bit
+  \ unsigned integer) to `OUTPUT`, ensuring correct endianness.
   : ` ( u -- )
     DUP 1F 18 [:] SWAP  ( -- u[31:24] u )
     DUP 17 10 [:] SWAP  ( -- u[31:24] u[23:16] u )
     DUP 0F 08 [:] SWAP  ( -- u[31:24] u[23:16] u[15:8] u )
-    07 00 [:]       ( -- u[31:24] u[23:16] u[15:8] u[7:0] )
+    07 00 [:]           ( -- u[31:24] u[23:16] u[15:8] u[7:0] )
     . . . . ;
 #+end_src
 {{{ffontreset}}}
+
+As discussed in a previous chapter, all RISC-V instructions belong to
+one of six types and are encoded to binary accordingly.  Some of the
+six formats have a shared structure; this is the case for types =R=,
+=S= and =B=.  Below we create a generic, shared encoding word for
+these types, which we then use to define the format for type =R=.
+Finally we specify all instructions belonging to type =R=, including
+the ones added by the 64-bit extension:
 
 {{{ffontset(9)}}}
 #+begin_src forth
@@ -3782,6 +3863,8 @@ possible way to continue extending our Forth in Forth itself.
 #+end_src
 {{{ffontreset}}}
 
+Next are defined all =I=-type instructions:
+
 {{{ffontset(9)}}}
 #+begin_src forth
   \ I-type instructions.
@@ -3790,9 +3873,9 @@ possible way to continue extending our Forth in Forth itself.
     [ % %         v v ]  ( -- op rd fn3 rs1 imm )
     5 << | 3 << | 5 << | 7 << | ` ;
   : `instr/i/shift ( rd rs1 shamt fn7 fn3 op -- )
-    2SWAP		 ( -- rd rs1 fn3 op shamt fn7 )
-    5 << |	 ( -- rd rs1 fn3 op imm )
-    ROT ROT	 ( -- rd rs1 imm fn3 op )
+    2SWAP          ( -- rd rs1 fn3 op shamt fn7 )
+    5 << |         ( -- rd rs1 fn3 op imm )
+    ROT ROT        ( -- rd rs1 imm fn3 op )
     `instr/i ;
   : `ecall ( -- )                0 0 000 0 73 `instr/i ;
   : `jalr  ( rd rs1 imm   -- )           0 67 `instr/i ;
@@ -3820,6 +3903,8 @@ possible way to continue extending our Forth in Forth itself.
 #+end_src
 {{{ffontreset}}}
 
+Instructions of type =S= ``inherit'' from =instr/rsb=, as do =B=-type instructions:
+
 {{{ffontset(9)}}}
 #+begin_src forth
   \ S-type instructions.
@@ -3835,11 +3920,7 @@ possible way to continue extending our Forth in Forth itself.
   : `sh  ( rs2 rs1 offset -- )   1 23 `instr/s ;
   : `sw  ( rs2 rs1 offset -- )   2 23 `instr/s ;
   : `sd  ( rs2 rs1 offset -- )   3 23 `instr/s ;
-#+end_src
-{{{ffontreset}}}
 
-{{{ffontset(9)}}}
-#+begin_src forth
   \ B-type instructions.
   : `instr/b ( rs1 rs2 offset fn3 op -- )
     [ % % % % v v v v ]   ( -- op rs1 rs2 offset fn3 )
@@ -3847,7 +3928,7 @@ possible way to continue extending our Forth in Forth itself.
     DUP DUP  4 1 [:]      ( -- op fn3 rs1 rs2 offset offset offset[4:1] )
     1 << SWAP  B B [:] |  ( -- op fn3 rs1 rs2 offset imm5 )
     [ % % % % v v v v ]   ( -- op imm5 fn3 rs1 rs2 offset )
-    DUP  C C [:]		( -- op imm5 fn3 rs1 rs2 offset offset[12] )
+    DUP  C C [:]          ( -- op imm5 fn3 rs1 rs2 offset offset[12] )
     6 << SWAP  A 5 [:] |  ( -- op imm5 fn3 rs1 rs2 imm7 )
     `instr/rsb ;
   : `beq  ( rs1 rs2 offset -- )   0 63 `instr/b ;
@@ -3858,6 +3939,8 @@ possible way to continue extending our Forth in Forth itself.
   : `bgeu ( rs1 rs2 offset -- )   7 63 `instr/b ;
 #+end_src
 {{{ffontreset}}}
+
+Instructions of types =U= and =J= also use a shared structure:
 
 {{{ffontset(9)}}}
 #+begin_src forth
@@ -3877,12 +3960,14 @@ possible way to continue extending our Forth in Forth itself.
     DUP 13 0C [:] SWAP    ( -- op rd offset[19:12] offset )
     DUP 0B 0B [:] SWAP    ( -- op rd offset[19:12] offset[11] offset )
     DUP 0A 01 [:] SWAP    ( -- op rd offset[19:12] offset[11] offset[10:1] offset )
-	14 14 [:]		( -- op rd offset[19:12] offset[11] offset[10:1] offset[20] )
+        14 14 [:]         ( -- op rd offset[19:12] offset[11] offset[10:1] offset[20] )
     A << | 1 << | 8 << |  ( -- op rd imm20 )
     `instr/uj ;
   : `jal ( rd offset -- )  6F `instr/j ;
 #+end_src
 {{{ffontreset}}}
+
+Finally, we give aliases to registers according to their ABI names:
 
 {{{ffontset(9)}}}
 #+begin_src forth
@@ -3898,48 +3983,57 @@ possible way to continue extending our Forth in Forth itself.
 #+end_src
 {{{ffontreset}}}
 
+The assembler is complete in less than 200 lines.  One can now
+assemble instructions to ~OUTPUT~ using a syntax very similar to
+conventional assembly.  For example ~t0 s2 4 `lb~ loads a byte from
+memory location ~s2 + 4~ into register ~t0~.
+
 
 ** Arithmetic, Logic and Comparison Operators
+
+This section defines common arithmetic, logic and comparison
+operators.  Notably, we do not include any multiplication and division
+operators, since it would require the ~RV32M~ and/or ~RV64M~ RISC-V
+extensions and we purposely set out to only work with ~RV64I~.
 
 {{{ffontset(9)}}}
 #+begin_src forth
   \ Arithmetic operators.
   : NEGATE ( n -- n' )      [ >t0 ]       [ t0 zero t0 `sub ] [ t0> ] ;
   : +      ( n1 n2 -- n )   [ >t1 ^ >t0 ] [ t0   t0 t1 `add ] [ t0> ] ;
-  : *      ( n1 n2 -- n )           ;
-  : /MOD   ( n1 n2 -- rem quot )    ;
-  : /      ( n1 n2 -- quot )        ;
-  : MOD    ( n1 n2 -- rem )         ;
-  : */     ( n1 n2 n3 -- n )        ;
-  : */MOD  ( n1 n2 n3 -- rem quot ) ;
-  : 1+     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `addi ] [ t0> ] ;
-  : 1-     ( n -- n' )     [ >t0 ]       [ t0 t0 FFF `addi ] [ t0> ] ;
-  : LSHIFT ( n u -- n' )   [ >t1 ^ >t0 ] [ t0 t0  t1 `sll  ] [ t0> ] ;
-  : RSHIFT ( n u -- n' )   [ >t1 ^ >t0 ] [ t0 t0  t1 `srl  ] [ t0> ] ;
-  : 2*     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `slli ] [ t0> ] ;
-  : 2/     ( n -- n' )     [ >t0 ]       [ t0 t0   1 `srai ] [ t0> ] ;
-  : ABS    ( n -- n' )     [ >t0   >t1 ] [ t1 t1  3F `srai ]            \ mask@t1 >>= 63
-					 [ t0 t0  t1 `xor  ]            \ t0 = t0 xor mask@t1
-					 [ t0 t0  t1 `sub  ] [ t0> ] ;  \ t0 -= mask@t1
-  : MIN    ( n1 n2 -- nmin )   2DUP -          ( -- n1 n2 n1-n2 )
-			       DUP ABS         ( -- n1 n2 n1-n2 |n1-n2| )
-			       - 2/ +          ( -- n1 nmin )
-			       SWAP DROP ;     ( -- nmin )
+  : 1+     ( n -- n' )      [ >t0 ]       [ t0 t0   1 `addi ] [ t0> ] ;
+  : 1-     ( n -- n' )      [ >t0 ]       [ t0 t0 FFF `addi ] [ t0> ] ;
+  : LSHIFT ( n u -- n' )    [ >t1 ^ >t0 ] [ t0 t0  t1 `sll  ] [ t0> ] ;
+  : RSHIFT ( n u -- n' )    [ >t1 ^ >t0 ] [ t0 t0  t1 `srl  ] [ t0> ] ;
+  : 2*     ( n -- n' )      [ >t0 ]       [ t0 t0   1 `slli ] [ t0> ] ;
+  : 2/     ( n -- n' )      [ >t0 ]       [ t0 t0   1 `srai ] [ t0> ] ;
+  : ABS    ( n -- n' )      [ >t0   >t1 ] [ t1 t1  3F `srai ]            \ mask@t1 >>= 63
+                                          [ t0 t0  t1 `xor  ]            \ t0 = t0 xor mask@t1
+                                          [ t0 t0  t1 `sub  ] [ t0> ] ;  \ t0 -= mask@t1
+  : MIN    ( n1 n2 -- nmin )   2DUP -        ( -- n1 n2 n1-n2 )
+                               DUP ABS       ( -- n1 n2 n1-n2 |n1-n2| )
+                               - 2/ +        ( -- n1 nmin )
+                               SWAP DROP ;   ( -- nmin )
   : MAX    ( n1 n2 -- n )   2DUP -  DUP ABS  + 2/ +  SWAP DROP ;
 #+end_src
 {{{ffontreset}}}
 
+Note how Forth uses ~-1~ (all bits set to ~1~) as the /true/ value:
+
 {{{ffontset(9)}}}
 #+begin_src forth
   \ Logic (bitwise) operators.
-  : FALSE ( -- false )    0 ;
-  : TRUE  ( -- true )     [ t0 zero FFF `addi ] [ v t0> ] ;
-  : AND ( x1 x2 -- x )    & ;
-  : OR  ( x1 x2 -- x )    | ;
-  : XOR ( x1 x2 -- x )    [ >t1 ^ >t0 ] [ t0 t0  t1 `xor  ] [ t0> ] ;
-  : INVERT ( x -- x' )    [ >t0 ]       [ t0 t0 FFF `xori ] [ t0> ] ;
+  : FALSE  ( -- false )     0 ;
+  : TRUE   ( -- true )      [ t0 zero FFF `addi ] [ v t0> ] ;
+  : AND    ( x1 x2 -- x )   & ;
+  : OR     ( x1 x2 -- x )   | ;
+  : XOR    ( x1 x2 -- x )   [ >t1 ^ >t0 ] [ t0 t0  t1 `xor  ] [ t0> ] ;
+  : INVERT ( x -- x' )      [ >t0 ]       [ t0 t0 FFF `xori ] [ t0> ] ;
 #+end_src
 {{{ffontreset}}}
+
+The comparison operators defined below will be especially useful once
+we introduce conditional execution through ~IF..ELSE..THEN~:
 
 {{{ffontset(9)}}}
 #+begin_src forth
@@ -3963,6 +4057,8 @@ possible way to continue extending our Forth in Forth itself.
 
 ** Accessing Memory and Defining Words
 
+Below are defined the standard memory access words:
+
 {{{ffontset(9)}}}
 #+begin_src forth
   \ Memory access.
@@ -3976,24 +4072,27 @@ possible way to continue extending our Forth in Forth itself.
 #+end_src
 {{{ffontreset}}}
 
+We also give access to some of the global variables:
+
 {{{ffontset(9)}}}
 #+begin_src forth
-  \ --- Global variables --- \
-
-  : STATE ( -- addr )    [ t0 s2 20 `ld ] [ v t0> ] ;
+  : STATE  ( -- addr )   [ t0 s2 20 `ld ] [ v t0> ] ;
   : LATEST ( -- addr )   [ t0 s2 28 `ld ] [ v t0> ] ;
 #+end_src
 {{{ffontreset}}}
 
+Here we give standard words for working with the /data space/.  In
+conjunction with ~CREATE~, also defined soon, they make it possible to
+create arbitrary named data structures.  One first ~CREATE~​s a name in
+the dictionary and then allocates memory with ~ALLOT~ or writes it
+directly with ~,~ or ~C,~:
 
 {{{ffontset(9)}}}
 #+begin_src forth
-  \ --- Data space --- \
-
   : HERE   ( -- addr )   [ t0 s1  0 `addi ] [ v t0> ] ;
   : HERE!  ( addr -- )   [ >t0 ^ ] [ s1 t0  0 `addi ] ;
 
-  : ALLOT ( n -- )   [ >t0 ^ ] [ s1 s1 t0 `add ] ;
+  : ALLOT ( n -- )      [ >t0 ^ ] [ s1 s1 t0 `add ] ;
   : CHARS ( n -- n' )            ;
   : CELLS ( n -- n' )   3 LSHIFT ;
 
@@ -4004,30 +4103,42 @@ possible way to continue extending our Forth in Forth itself.
 #+end_src
 {{{ffontreset}}}
 
+Below we define ~IMMEDIATE~, which enables the /immediate/ flag on the
+most recent dictionary word.  ~LITERAL~ reimplements ~LIT~ in Forth.
+
 {{{ffontset(9)}}}
 #+begin_src forth
-  \ --- Defining words --- \
-
-  : IMMEDIATE ( -- )
-    LATEST 10 +			( -- flag-addr )
-    DUP C@  80 |			( -- flag-addr flag' )
+  : IMMEDIATE ( -- ) 
+    LATEST 10 +                        ( -- flag-addr )
+    DUP C@  80 |                       ( -- flag-addr flag' )
     SWAP C! ;
 
   : LITERAL ( C: x -- ) ( -- x )
     \ Compile "lui t0, 0xHHHHH[+1]".
     DUP  ( mask: ) FF 4 LSHIFT F |  &  ( -- n low )
-    DUP B RSHIFT ROT		     ( -- low sign n )
-    C RSHIFT +  t0 SWAP  `lui	     ( -- low )
+    DUP B RSHIFT ROT                   ( -- low sign n )
+    C RSHIFT +  t0 SWAP  `lui          ( -- low )
     \ Compile "addi t0, 0xLLL".
     t0 t0 ROT  `addi                   ( -- )
     \ Compile a sequence that pushes `t0` on the stack.
     v t0> ;
+#+end_src
+{{{ffontreset}}}
+
+~CREATE~, mentioned above, calls ~pname~ and ~Head~ to create a
+dictionary entry for the next word at input.  Related are ~VARIABLE~
+and ~CONSTANT~, which allow creating variables and constants,
+respectively.  When executed, a variable pushes its own address on the
+stack while a constant pushes its own value.
+
+{{{ffontset(9)}}}
+#+begin_src forth
 
   : create ( "<spaces>name" -- )
     pname
-    [ v ] [ s0 s3  0 `sd   ]	   \ save INPUT@s0
-	  [ s0 a0  0 `addi ]	   \ INPUT@s0 = addr@a0
-	  [ a0 s2 28 `ld   ]	   \ latest@a0 = [LATEST] (as required by Head)
+    [ v ] [ s0 s3  0 `sd   ]         \ save INPUT@s0
+          [ s0 a0  0 `addi ]         \ INPUT@s0 = addr@a0
+          [ a0 s2 28 `ld   ]         \ latest@a0 = [LATEST] (as required by Head)
     Head  [ s0 s3  0 `ld   ] [ ^ ] ; \ restore INPUT@s0
 
   : CREATE ( "<spaces>name" -- ) ( -- addr )
@@ -4048,10 +4159,16 @@ possible way to continue extending our Forth in Forth itself.
 
 ** Control Flow
 
+We are finally ready add control flow constructs to our language.
+First we give Forth direct access to the return stack, called the
+/control stack/ in Forth.  Note the special definition of ~>R~, ~R>~
+and ~R@~: since they operate on the return stack, the prologue and
+epilogue installed by ~':'~ and ~';'~ must not be used.  We ~ALLOT~
+with a negative amount to overwrite the prologue and we explicitly
+encode an early return to shortcircuit the epilogue.
+
 {{{ffontset(9)}}}
 #+begin_src forth
-  \ --- Return stack management --- \
-
   : >>t0 ( R: n -- n )    t0   sp 0        `ld   ;
   : t0>> ( R: ? -- n )    t0   sp 0        `sd   ;
   : ^^   ( R: n -- .. )   sp   sp 8        `addi ;
@@ -4064,22 +4181,22 @@ possible way to continue extending our Forth in Forth itself.
 #+end_src
 {{{ffontreset}}}
 
+Below we define the ~IF..ELSE..THEN~ ``syntactical construct''.  We
+use the quotes because in Forth there's no rigid syntactical
+structure.  The semantics of the whole is simply derived from the
+semantics of the parts:
+
 {{{ffontset(9)}}}
 #+begin_src forth
-  \ --- Control flow --- \
-
-  \ IF ... ELSE ... THEN
   : IF ( C: -- orig ) ( flag -- )
-    \ Syntax: flag IF ... ELSE ... THEN
-
     \ Run-time:
     \ - pop a flag off the stack into a register:
     \   -> ">t0 ^"
     \ - branch based on the register value (offset currently unknown):
     \   -> "beq t0, zero, +???"
-    >t0 ^				 \ t0 = flag                       ( -- )
-    t0 zero 0 `beq		 \ if flag@t0 = 0:
-				   \   goto +???.                    \ To be backpatched by ELSE/THEN.
+    >t0 ^                          \ t0 = flag                       ( -- )
+    t0 zero 0 `beq                 \ if flag@t0 = 0:
+                                   \   goto +???.                    \ To be backpatched by ELSE/THEN.
     \ Compilation:
     \ - push address of the branch instruction on the stack;
     \   - this address is backpatched by the corresponding ELSE/THEN.
@@ -4104,8 +4221,7 @@ possible way to continue extending our Forth in Forth itself.
     \   -> "beq t0, zero, +???"
     t0 zero 0 `addi                \ t0 = 0
     t0 zero 0 `beq                 \ if t0 = 0:  \ Always true!
-				   \   goto +???.                    \ To be backpatched by THEN.
-
+                                   \   goto +???.                    \ To be backpatched by THEN.
     \ Compilation:
     \ - backpatch branch instr. at `orig` to jump HERE (same as THEN);
     \ - push address of the (unconditionalized) branch on the stack;
@@ -4120,6 +4236,9 @@ possible way to continue extending our Forth in Forth itself.
 #+end_src
 {{{ffontreset}}}
 
+With ~resolve~ already in place, defining ~BEGIN..WHILE..REPEAT~
+becomes almost trivial:
+
 {{{ffontset(9)}}}
 #+begin_src forth
 \ BEGIN ... WHILE ... REPEAT
@@ -4131,14 +4250,14 @@ possible way to continue extending our Forth in Forth itself.
   \ Append run-time semantics to current definition:
   >t0
   ^
-  t0 zero BAD `beq
+  t0 zero BAD `beq              \ Will be backpatched by REPEAT.
 
   \ Compilation:
   HERE 4 - SWAP ; IMMEDIATE
 
 : REPEAT ( C: orig dest -- ) ( -- )
   \ Run-time:
-  HERE -  			( C: orig offset )
+  HERE -                        ( C: orig offset )
   zero SWAP  `jal
 
   \ Compilation:
@@ -4149,16 +4268,24 @@ possible way to continue extending our Forth in Forth itself.
 
 ** I/O and a FizzBuzz Demonstration
 
+One last thing is required before we can attempt to solve the FizzBuzz
+problem: I/O.  Below we implement several printing routines, all built
+around the machine-coded ~TYPE~.  Note how ~TYPE~ in Forth wraps
+machine-coded ~TYPE~ without triggering any recursion; this is
+possible because incomplete words are marked as hidden in the
+dictionary and thus cannot be found and compiled inside themselves.
+
+The number printing word, called ~'.'~ (dot), is standard in Forth, as
+are most words defined in this chapter.
+
 {{{ffontset(9)}}}
 #+begin_src forth
-  \ --- I/O --- \
-
   : TYPE ( c-addr u -- )
     [ a1 s3 0 `ld ] [ ^ ]
     [ a0 s3 0 `ld ] [ ^ ]
     TYPE ;
   : EMIT ( c -- )
-    [ t0 s3 0 `addi ] [ v t0> ]	( -- c c-addr )
+    [ t0 s3 0 `addi ] [ v t0> ] ( -- c c-addr )
     1 TYPE  DROP ;
   : CR ( -- )       0A EMIT ;
   : SPACE  ( -- )   20 EMIT ;
@@ -4168,26 +4295,35 @@ possible way to continue extending our Forth in Forth itself.
       1-
     REPEAT ;
   : . ( n -- )
-    0 >R  >R			( -- ) ( R: -- count n )
-    BEGIN				( -- digit* )
-      R@ F AND			( -- digit* digit )
-      R> 4 RSHIFT			( -- digit* digit n' ) ( R: -- count )
-      R> 1+ >R			( -- digit* digit n' ) ( R: -- count' )
-      DUP >R			( -- digit* digit n' ) ( R: -- count' n' )
-      0 U>			( -- digit* digit flag )
-    WHILE REPEAT			( -- digit* digit ) ( R: -- count' n' )
-    R> DROP 			( R: -- count )
-    BEGIN				( -- digit* digit ) ( R: -- count )
-      DUP  9 > IF			( -- digit* digit letter? )
-	7 +
-      THEN  30 +			( -- digit* char )
-      EMIT			( -- digit* )
-      R> 1- DUP >R		( -- digit* count' ) ( R: -- count' )
-      0>				( -- digit* flag )
-    WHILE REPEAT			( -- digit* ) ( R: -- count' )
-    R> DROP  SPACE ;		( R: -- )
+    0 >R  >R                    ( -- ) ( R: -- count n )
+    BEGIN                       ( -- digit* )
+      R@ F AND                  ( -- digit* digit )
+      R> 4 RSHIFT               ( -- digit* digit n' ) ( R: -- count )
+      R> 1+ >R                  ( -- digit* digit n' ) ( R: -- count' )
+      DUP >R                    ( -- digit* digit n' ) ( R: -- count' n' )
+      0 U>                      ( -- digit* digit flag )
+    WHILE REPEAT                ( -- digit* digit ) ( R: -- count' n' )
+    R> DROP                     ( R: -- count )
+    BEGIN                       ( -- digit* digit ) ( R: -- count )
+      DUP  9 > IF               ( -- digit* digit letter? )
+        7 +
+      THEN  30 +                ( -- digit* char )
+      EMIT                      ( -- digit* )
+      R> 1- DUP >R              ( -- digit* count' ) ( R: -- count' )
+      0>                        ( -- digit* flag )
+    WHILE REPEAT                ( -- digit* ) ( R: -- count' )
+    R> DROP  SPACE ;            ( R: -- )
 #+end_src
 {{{ffontreset}}}
+
+Now we can solve FizzBuzz!  We can allocate strings ~"Fizz"~ and
+~"Buzz"~, we can iterate and execute code conditionally, and we can
+print to the ~STDOUT~.  We have come a long way from our first
+hand-written machine instructions.
+
+Note that in the absence of standard multiplication and division
+words, we implemented a simple ~MOD~ algorithm that calculates
+remainders by successive subtractions:
 
 {{{ffontset(9)}}}
 #+begin_src forth
@@ -4195,42 +4331,46 @@ possible way to continue extending our Forth in Forth itself.
   CREATE Buzz   42 C, 75 C, 7A C, 7A C,
 
   : MOD ( n1 n2 -- n )
-    SWAP				( -- n2 n1 )
-    BEGIN 2DUP -			( -- n2 n1 diff )
-	  DUP 0<			( -- n2 n1 diff flag1 )
-	  SWAP 0=			( -- n2 n1 flag1 flag2 )
-	  OR			( -- n2 n1 flag )
-    WHILE				( -- n2 n1 )
-      OVER -			( -- n2 n1' )
+    SWAP                        ( -- n2 n1 )
+    BEGIN 2DUP -                ( -- n2 n1 diff )
+          DUP 0<                ( -- n2 n1 diff flag1 )
+          SWAP 0=               ( -- n2 n1 flag1 flag2 )
+          OR                    ( -- n2 n1 flag )
+    WHILE                       ( -- n2 n1 )
+      OVER -                    ( -- n2 n1' )
     REPEAT
-    SWAP DROP ;          		( -- n1' )
+    SWAP DROP ;                 ( -- n1' )
 
   : FizzBuzz
-    64 0 BEGIN			( -- limit i )
-      2DUP >			( -- limit i flag )
-    WHILE				( -- .. i )
-      1+  FALSE			( -- .. i' flag )
-      OVER  3 MOD 0=		( -- .. i' flag flag/3 )
+    64 0 BEGIN                  ( -- limit i )
+      2DUP >                    ( -- limit i flag )
+    WHILE                       ( -- .. i )
+      1+  FALSE                 ( -- .. i' flag )
+      OVER  3 MOD 0=            ( -- .. i' flag flag/3 )
       DUP IF
-	Fizz 4 TYPE		\ Print "Fizz".
-      THEN OR			( -- .. i' flag' )
-      OVER  5 MOD 0=		( -- .. i' flag' flag/5 )
+        Fizz 4 TYPE             \ Print "Fizz".
+      THEN OR                   ( -- .. i' flag' )
+      OVER  5 MOD 0=            ( -- .. i' flag' flag/5 )
       DUP IF
-	Buzz 4 TYPE		\ Print "Buzz".
-      THEN OR			( -- .. i' flag'' )
-      0= IF			( -- .. i' )
-	DUP .			\ Otherwise print the number.
-      THEN 			( -- .. i' )
-      CR				\ Print newline.
+        Buzz 4 TYPE             \ Print "Buzz".
+      THEN OR                   ( -- .. i' flag'' )
+      0= IF                     ( -- .. i' )
+        DUP .                   \ Otherwise print the number.
+      THEN                      ( -- .. i' )
+      CR                        \ Print newline.
     REPEAT ;
 #+end_src
 {{{ffontreset}}}
+
+Finally, we invoke our program:
 
 {{{ffontset(9)}}}
 #+begin_src forth
   FizzBuzz BYE
 #+end_src
 {{{ffontreset}}}
+
+Success!
 \pagebreak
 
 
@@ -4244,14 +4384,15 @@ implementation, porting and adapting it to the idiosyncrasies of
 RISC-V.  We have also provided an extension of this Forth system
 written in Forth itself: we provide a RISC-V assembler, useful
 arithmetic and logic operators, conditional and looping constructs.
-We complete out demonstration with a Forth implementation of FizzBuzz,
-showing the usability of our system.
+We complete our demonstration with a Forth implementation of FizzBuzz,
+showing the usability of the system.
 
 In conclusion, we have shown one possible path starting from the
 extremely low-level machine code and leading towards increasing
 abstraction all the way to a powerful, extendable high-level language.
-We have used the RISC-V architecture as our host, showing it is very
-appropriate for exploring the fundamental principles of computing.
+We have used the RISC-V architecture as our host, showing that it is
+very appropriate for exploring the fundamental principles of
+computing.
 \clearpage
 
 
@@ -4261,17 +4402,18 @@ References:
 
 #+PRINT_BIBLIOGRAPHY:
 \clearpage
+\appendix
 
 
-* Appendix: RISC-V Instructions Used in Our Machine Code Implementation
+* Appendix: A Short List of RISC-V Instructions
 
 We thought it interesting to include as an appendix the surprinsingly
-short list of all RISC-V instruction used in the machine code part of
+short list of all RISC-V instructions used in the machine code part of
 our Forth system.  It is displayed in Table
 [[tbl:conclusions:instructions]].
 
 {{{wtable_begin(10)}}}
-#+CAPTION: RISC-V instructions used in our implementation.
+#+CAPTION: All RISC-V instructions used in our machine code implementation.
 #+LABEL: tbl:conclusions:instructions
 #+ATTR_LATEX: :align lll :float nil :float nil
 | *Instruction*           | *Type* | *Encoding*                                                                                             |
