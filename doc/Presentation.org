@@ -17,7 +17,7 @@
 #+OPTIONS: author:t broken-links:nil c:nil creator:nil
 #+OPTIONS: d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t num:t
 #+OPTIONS: p:nil pri:nil prop:nil stat:t tags:t tasks:t tex:t
-#+OPTIONS: timestamp:t title:t toc:2 todo:t |:t
+#+OPTIONS: timestamp:t title:nil toc:nil todo:t |:t
 
 #+STARTUP: beamer
 
@@ -37,17 +37,42 @@
 # #+LATEX_HEADER: \mode<beamer>{\usetheme{Madrid}}
 
 # --- Table of contents for each section --- #
-# #+LATEX_HEADER: \AtBeginSection[]{\begin{frame}<beamer>\frametitle{Topic}\tableofcontents[currentsection]\end{frame}}
+# #+LATEX_HEADER:
+# \AtBeginSection[]{\begin{frame}<beamer>\frametitle{Topic}\tableofcontents[currentsection]\end{frame}}
+
+# --- Format authors --- #
+# #+LATEX_HEADER: \author{\textbf{Author:} Andrei Dorian Duma \\\vspace{0.1cm} \textbf{Coordinator:} Lect.\hspace{0.18cm}dr.\hspace{0.18cm}Gianina Georgescu \\\vspace{0.1cm} Master of Distributed Systems }
+#+BEGIN_EXPORT beamer
+\author{
+  \\\vspace{0.4cm}
+  \small \textbf{Author:} Andrei Dorian Duma \\
+         \textbf{Coordinator:} Lect.\hspace{0.05cm}dr.\hspace{0.12cm}Gianina Georgescu
+  \\\vspace{1.2cm}
+  \smaller Master of Distributed Systems \\
+           September 2024
+}
+#+END_EXPORT
+\maketitle
+#+BEGIN_EXPORT beamer
+\author{Andrei Dorian Duma}
+#+END_EXPORT
+
+
+** Outline                                                          :B_frame:
+:PROPERTIES:
+:BEAMER_env: frame
+:END:
+#+TOC: headlines
 
 
 * Introduction
 
-** Slide..
+** A Slide..
 
-Bla.
+TODO.
 
 
-* SmithForth: Annotation & Analysis
+* SmithForth: Annotation and Analysis
 
 ** A slide
 TODO.

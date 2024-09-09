@@ -40,7 +40,7 @@
 # --- Allow different margins mid-document.
 #+LATEX_HEADER: \usepackage{changepage}
 
-# --- Nice author line ---
+# --- Nice author line.
 #+LATEX_HEADER: \usepackage{authblk}
 #+LATEX_HEADER: \author{\vspace{1cm} \textbf{Author:} Andrei Dorian Duma \\\vspace{0.1cm} \textbf{Coordinator:} Lect.\hspace{0.18cm}dr.\hspace{0.18cm}Gianina Georgescu \vspace{5cm}}
 #+LATEX_HEADER: \affil{Master of Distributed Systems \\\vspace{0.3cm} September 2024}
