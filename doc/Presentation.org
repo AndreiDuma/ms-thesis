@@ -1,0 +1,74 @@
+#+TITLE: From x86-64 Forth to RISC-V
+#+SUBTITLE: Towards an Accessible RISC-V Forth Implementation
+#+DATE: September 2024
+#+AUTHOR: Andrei Dorian Duma
+#+EMAIL: andrei-dorian.duma@s.unibuc.ro
+#+DESCRIPTION:
+#+KEYWORDS:
+#+LANGUAGE: en
+#+SELECT_TAGS: export
+#+EXCLUDE_TAGS: noexport
+#+CREATOR: Emacs 29.2 (Org mode 9.6.15)
+
+#+BIBLIOGRAPHY: References.bib
+#+CITE_EXPORT: csl csl/ieee-with-url.csl
+
+#+OPTIONS: ':nil *:t -:t ::t <:t H:2 \n:nil ^:{} arch:headline
+#+OPTIONS: author:t broken-links:nil c:nil creator:nil
+#+OPTIONS: d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t num:t
+#+OPTIONS: p:nil pri:nil prop:nil stat:t tags:t tasks:t tex:t
+#+OPTIONS: timestamp:t title:t toc:2 todo:t |:t
+
+#+STARTUP: beamer
+
+#+BEAMER_THEME: Madrid
+#+BEAMER_FONT_THEME:
+#+BEAMER_INNER_THEME:
+#+BEAMER_OUTER_THEME:
+#+BEAMER_HEADER:
+
+#+LATEX_CLASS: beamer
+#+LATEX_CLASS_OPTIONS: [presentation, bigger]
+#+LATEX_HEADER_EXTRA:
+#+LATEX_COMPILER: pdflatex
+#+LATEX_ENGRAVED_THEME:
+
+# --- Beamer theme --- #
+# #+LATEX_HEADER: \mode<beamer>{\usetheme{Madrid}}
+
+# --- Table of contents for each section --- #
+# #+LATEX_HEADER: \AtBeginSection[]{\begin{frame}<beamer>\frametitle{Topic}\tableofcontents[currentsection]\end{frame}}
+
+
+* Introduction
+
+** Slide..
+
+Bla.
+
+
+* SmithForth: Annotation & Analysis
+
+** A slide
+TODO.
+
+
+* Porting SmithForth to RISC-V
+
+** A slide
+TODO.
+
+
+* Forth in Forth
+
+** A slide
+TODO.
+
+
+* Conclusions
+
+** A slide
+TODO.
+
+
+* Bibliography ???

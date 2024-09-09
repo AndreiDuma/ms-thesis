@@ -104,6 +104,7 @@
 
 # Additional options are set in `.dir-locals.el`.
 
+# Title page.
 \begin{figure}[!htb]
     \centering
     \vspace{3cm}
@@ -136,6 +137,7 @@
 \clearpage
 
 
+# Abstract page.
 \vspace*{\fill}
 
 \renewcommand{\abstractname}{Abstract}
@@ -185,8 +187,11 @@ demonstrând utilizabilitatea sistemului nostru.
 #+TOC: headlines 3
 
 \clearpage
+
+# Start showing page numbers.
 \pagenumbering{arabic}
 \setcounter{page}{4}
+
 
 * Introduction
 
