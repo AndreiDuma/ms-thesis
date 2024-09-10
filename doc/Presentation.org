@@ -30,35 +30,132 @@
 #+LATEX_CLASS: beamer
 #+LATEX_CLASS_OPTIONS: [presentation, bigger]
 #+LATEX_HEADER_EXTRA:
-#+LATEX_COMPILER: pdflatex
+#+LATEX_COMPILER:
 #+LATEX_ENGRAVED_THEME:
 
-# --- Beamer theme --- #
-# #+LATEX_HEADER: \mode<beamer>{\usetheme{Madrid}}
+# --- Elipses. --- #
+#+LATEX_HEADER: \usepackage{csquotes}
+
+# --- Beamer customization --- #
+#+LATEX_HEADER: \setbeamertemplate{caption}[numbered]
 
 # --- Table of contents for each section --- #
 # #+LATEX_HEADER:
 # \AtBeginSection[]{\begin{frame}<beamer>\frametitle{Topic}\tableofcontents[currentsection]\end{frame}}
+# --- Font size macros.
+#+MACRO: fontset      (eval (format "\\fontsize{%spt}{%fpt}\\selectfont" $1 (* 1.2 (string-to-number $1))))
+#+MACRO: fontreset    \normalsize
+#+MACRO: ffontset     (eval (format "\\fontsize{%spt}{%fpt}\\selectfont" $1 (* 1.0 (string-to-number $1))))
+#+MACRO: ffontreset   \normalsize
+
+# --- Table macros.
+#+MACRO: table_begin   \small
+#+MACRO: table_end     \normalsize
+# TODO: remove?
+#+MACRO: wtable_begin   (eval (format "\\begin{table}[!htbp] \\begin{adjustwidth}{-1cm}{-1cm} \\fontsize{%s}{%f}\\selectfont" $1 (* 1.2 (string-to-number $1))))
+#+MACRO: wtable_end     \normalsize \end{adjustwidth} \end{table} \vspace{0}
+
+# --- Indentation macros.
+#+MACRO: t      \hspace{1em}  # TODO: rewrite this one to use {{{c(x)}}}.
+#+MACRO: i      (eval (format "\\hspace{%sem}" $1))
+#+MACRO: c      (eval (format "\\hspace{%fem}" (* 0.5265 (string-to-number $1))))
+#+MACRO: b      (eval (format "\\hspace{%fem}" (* 3 0.5265 (string-to-number $1))))
+#+MACRO: io     \hspace{4.9em}
+#+MACRO: io--   \hspace{3.35em}
+
+# --- Byte interpreter macros.
+#+MACRO: define  ~[99~ $^{d}$​~$1~ _~$2~_​~]~
+#+MACRO: compile ~[99~ $^{c}$​~$1~​$_{$2}$​~]~
+#+MACRO: execute ~[99~ $^{e}$​~$1~​$_{$2}$​~]~
+
+# --- Byte annotation macros (x86-64).
+#+MACRO: modrm    ~$1~​$^{\text{\tiny ModR/M}}_{\text{\tiny $2·$3·$4}}$
+#+MACRO:   sib    ~$1~​$^{\text{\tiny    SIB}}_{\text{\tiny $1·$2·$3}}$
+#+MACRO: offset   _~$1~_​$_{\text{\tiny $2}}$
+#+MACRO: displ    $^{\text{\tiny +}}$​_~$1~_
+
+# --- Byte annotation macros (RISC-V).
+#+MACRO: padding   ~[$1~​$^{pad}$​~]~
+
+# --- Encoding annotation macros (RISC-V).
+#+MACRO: imm     /~$1~/
+#+MACRO: off     _~$1~_
+#+MACRO: shamt   /~$1~/​$^{sh}$
+#+MACRO: rd      ~$1~​$^{d}$
+#+MACRO: rs1     ~$1~​$^{s_{1}}$
+#+MACRO: rs2     ~$1~​$^{s_{2}}$
+#+MACRO: fn7     ~$1~
+#+MACRO: fn3     ~$1~
+#+MACRO: op      ~$1~
+
+# -- Other annotation macros.
+#+MACRO: addr     (eval (if (string-equal $1 "00") (format "$\\overline{\\texttt{%s}}$" $1) (format "\\texttt{%s}" $1)))
+#+MACRO: unsigned $^{u}$
+
 
 # --- Format authors --- #
 # #+LATEX_HEADER: \author{\textbf{Author:} Andrei Dorian Duma \\\vspace{0.1cm} \textbf{Coordinator:} Lect.\hspace{0.18cm}dr.\hspace{0.18cm}Gianina Georgescu \\\vspace{0.1cm} Master of Distributed Systems }
+# #+BEGIN_EXPORT beamer
+# \author{
+#   \\\vspace{0.4cm}
+#   \small \textbf{Author:} Andrei Dorian Duma \\
+#          \textbf{Coordinator:} Lect.\hspace{0.05cm}dr.\hspace{0.12cm}Gianina Georgescu
+#   \\\vspace{1.2cm}
+#   \smaller Master of Distributed Systems \\
+#            September 2024
+# }
+# #+END_EXPORT
+
 #+BEGIN_EXPORT beamer
-\author{
-  \\\vspace{0.4cm}
-  \small \textbf{Author:} Andrei Dorian Duma \\
-         \textbf{Coordinator:} Lect.\hspace{0.05cm}dr.\hspace{0.12cm}Gianina Georgescu
-  \\\vspace{1.2cm}
-  \smaller Master of Distributed Systems \\
-           September 2024
+\setbeamertemplate{title page}  % Customized Madrid title page.
+{
+  \vbox{}
+
+  \vspace{-10pt}
+  \begin{figure}[!htb]
+    \centering
+    \begin{minipage}{0.08\textwidth}\end{minipage}
+    \begin{minipage}{0.16\textwidth}
+      \includegraphics[width=\linewidth]{img/logo-ub.png}
+    \end{minipage}
+    \begin{minipage}{0.55\textwidth}
+      \centering
+      \textbf{University of Bucharest}\par
+      \vspace{5pt}
+      Faculty of Mathematics\\and Informatics
+    \end{minipage}
+    \begin{minipage}{0.175\textwidth}
+      \includegraphics[width=\linewidth]{img/logo-fmi.png}
+    \end{minipage}
+    \begin{minipage}{0.08\textwidth}\end{minipage}
+  \end{figure}
+  
+  \vfill
+  \begin{centering}
+    \begin{beamercolorbox}[sep=8pt,center]{title}
+      \usebeamerfont{title}\inserttitle\par
+      \ifx\insertsubtitle\@empty\else\usebeamerfont{subtitle}\insertsubtitle\par\fi%
+    \end{beamercolorbox}%
+    \vskip1em\par
+    \begin{beamercolorbox}[sep=8pt,center]{author}
+      Author: \usebeamerfont{author}\insertauthor\par
+      Coordinator: \usebeamerfont{author}Lect.\hspace{0.06cm}dr.\hspace{0.12cm}Gianina Georgescu
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[sep=8pt,center]{institute}
+      \usebeamerfont{institute}Master of Distributed Systems
+    \end{beamercolorbox}
+    \begin{beamercolorbox}[sep=8pt,center]{date}
+      \usebeamerfont{date}\insertdate
+    \end{beamercolorbox}\vskip0.5em
+  \end{centering}
+  \vfill
 }
 #+END_EXPORT
+
 \maketitle
-#+BEGIN_EXPORT beamer
-\author{Andrei Dorian Duma}
-#+END_EXPORT
 
 
-** Outline                                                          :B_frame:
+** Contents                                                         :B_frame:
 :PROPERTIES:
 :BEAMER_env: frame
 :END:
@@ -67,9 +164,133 @@
 
 * Introduction
 
-** A Slide..
+** Individual Motivation
 
-TODO.
+- Fascinated by programming languages, but chronically intimidated by
+  their implementation.
+
+\pause
+
+- Solution: Implement a language and explain the process!
+
+** Compilers are Scary
+
+#+BEGIN_QUOTE
+Compilers are perceived to be magical artifacts, carefully crafted by
+the wizards, and unfathomable by the mere mortals. --- Abdulaziz
+Ghuloum
+#+END_QUOTE
+
+\pause
+
+#+BEGIN_EXPORT beamer
+\begin{figure}
+  \centering
+  \begin{minipage}[t]{0.22\textwidth}
+    \includegraphics[width=\textwidth]{img/presentation/dragon-book.jpg}
+  \end{minipage}
+  \hspace{5pt}
+  \begin{minipage}[t]{0.2022\textwidth}
+    \includegraphics[width=\textwidth]{img/presentation/sicp-book.jpg}
+  \end{minipage}
+  \label{fig:magic-books}
+  \caption{Two classic works in the programming languages literature.}
+\end{figure}
+#+END_EXPORT
+
+** Compilers are Indeed Complicated
+
+A modern compiler toolchain might be composed of:
+- a compiler /frontend:/
+  - lexical, syntactic and semantic analysis
+  - IR code generation
+- a compiler /backend:/
+  - optimization passes on the IR
+  - target code generation
+  - optimization passes on the target code
+- an assembler
+- a linker
+
+\pause
+
+\dots with each stage having seen decades of research & development!
+
+** Accessible Compilers
+
+#+BEGIN_QUOTE
+Real-life compilers are too complex to serve as an educational
+tool. --- Abdulaziz Ghuloum
+#+END_QUOTE
+
+\pause
+
+- We need easy to understand, educational compilers. \pause
+- Many exist, with various goals and approaches. Distinctions include:
+  - Source language: high-level or low-level, existing or devised etc.
+  - Target language: bytecode, assembly etc.
+  - Implementation language: usually a high-level language (\ge C).
+  - Focus: parsing, code generation, optimizations etc. \pause
+- Where should our approach be?
+
+** Our Approach
+
+- Goal: Show the whole process of implementing a programming language
+  (within reason). \pause
+- Approach:
+  - Source language: \pause Forth. \pause
+  - Target language: \pause machine code. \pause
+  - Implementation language: \pause machine code! \pause
+  - Focus: interfacing with the OS, minimal parsing, code generation,
+    compiler bootstrapping, extension of the system in the source
+    language itself etc.
+
+** What is Forth?
+
+- Concatenative, ``stack-oriented'' programming language.
+  - Data is passed implicitly via the data stack.
+  - Reverse Polish notation.
+  - Minimalist syntax.
+- Another language's ~println(25 * 10 + 50)~ becomes:
+  #+begin_src forth
+    25 10 * 50 + . CR
+  #+end_src
+- ``Word'' extension via colon-definitions:
+  #+begin_src forth
+    : SQUARE ( n -- n' )   DUP * ;
+  #+end_src
+- Suprising expressivity through mixing compile-time and run-time
+  effects; similar to Lisp macros.
+
+** SmithForth
+
+- Many existing Forth implementations. \pause
+- Our favorite: SmithForth[fn:1]. \pause
+  - Written in machine-code and Forth (once bootstrapped).
+  - Targets the x86-64 architecture.
+  - Relies on Linux system calls.
+- Idea: port SmithForth to a different architecture! \pause
+  - Explore two ``competing'' architectures. \pause
+  - Learn some low-level Linux interfaces. \pause
+  - Deeply understand how a real language is implemented.
+
+** From x86-64 Forth to RISC-V
+
+- RISC-V chosen as porting target.
+  - Modern, simple, elegant, ``up-and-coming'' ISA.
+  - Modular design: ISA = base-ISA + extensions.
+  - We only use the 64-bit base ISA with no extensions.
+
+** The Plan
+
+1. Understand and annotate SmithForth's machine code:
+   - Create detailed pseudocode showing how it works.
+   - Make x86-64 instruction encodings explicit.
+2. Port SmithForth's machine code to RISC-V.
+   - Follow the pseudocode produced in the previous step.
+   - Adapt to RISC-V's idiosyncrasies.
+3. We now have a basic Forth system.
+   - Extend it further in Forth itself!
+   - Prove that we have a usable system.
 
 
 * SmithForth: Annotation and Analysis
@@ -97,3 +318,7 @@ TODO.
 
 
 * Bibliography ???
+
+* Footnotes                                                        :noexport:
+
+[fn:1] David Smith, 2022 
