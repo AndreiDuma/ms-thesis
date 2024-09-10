@@ -104,7 +104,9 @@
 
 # Additional options are set in `.dir-locals.el`.
 
+
 # Title page.
+#+BEGIN_EXPORT latex
 \begin{figure}[!htb]
     \centering
     \vspace{3cm}
@@ -134,14 +136,62 @@
     \vspace{4cm} % space between logo and title
     \maketitle
 \end{figure}
-\clearpage
+
+\clearpage \ \clearpage
+#+END_EXPORT
+
+
+# Declaration of authenticity.
+#+BEGIN_EXPORT latex
+\vspace*{\fill}
+
+\subsubsection*{Declaration of Authenticity}
+I, Andrei Dorian Duma, candidate for the dissertation exam in the
+September 2024 session at the Faculty of Mathematics and Computer
+Science, in the “Distributed Systems” study program, hereby declare
+that the present work is the result of my own effort, based on my
+research and information obtained from sources that have been cited
+and indicated, in accordance with ethical standards, in footnotes and
+the bibliography. I declare that I have not tacitly or illegally used
+the work of others, and that no part of this thesis infringes on the
+intellectual property rights of any other individual or legal
+entity. I declare that this work has not been previously submitted in
+this form to any higher education institution for the purpose of
+obtaining a scientific or academic degree.
+
+\vspace{1cm}
+
+\subsubsection*{Declarație de Autenticitate}
+Subsemnatul Andrei Dorian Duma, candidat la examenul de disertație,
+sesiunea Septembrie 2024, la Facultatea de Matematică și Informatică,
+programul de studii „Sisteme Distribuite”, declar pe propria
+răspundere că lucrarea de față este rezultatul muncii mele, pe baza
+cercetărilor mele și pe baza informațiilor obținute din surse care au
+fost citate și indicate, conform normelor etice, în note și în
+bibliografie. Declar că nu am folosit în mod tacit sau ilegal munca
+altora și că nicio parte din teză nu încalcă drepturile de
+proprietate intelectuală ale altcuiva, persoană fizică sau
+juridică. Declar că lucrarea nu a mai fost prezentată sub această
+formă vreunei instituții de învățământ superior în vederea obținerii
+unui grad sau titlu științific ori didactic.
+
+\vspace{2cm}
+
+\noindent
+September 2024 \hfill{} Andrei Dorian Duma
+
+\vspace{3cm}
+
+\vspace*{\fill}
+\clearpage \ \clearpage
+#+END_EXPORT
 
 
 # Abstract page.
-\vspace*{\fill}
+#+LATEX: \vspace*{\fill}
 
-\renewcommand{\abstractname}{Abstract}
-#+begin_abstract
+#+LATEX: \renewcommand{\abstractname}{Abstract}
+#+BEGIN_ABSTRACT
 In this thesis we present the implementation of a usable Forth system,
 built using only RISC-V machine code and the Linux operating system as
 foundations.  We begin by justifying the need for accessible
@@ -159,10 +209,10 @@ demonstration with a Forth implementation of FizzBuzz, showing the
 usability of the system.
 #+end_abstract
 
-\vspace{0.7cm}
+#+LATEX: \vspace{0.7cm}
 
-\renewcommand{\abstractname}{Rezumat}
-#+begin_abstract
+#+LATEX: \renewcommand{\abstractname}{Rezumat}
+#+BEGIN_ABSTRACT
 În această lucrare prezentăm implementarea unui sistem Forth scris
 direct în cod mașină pentru architectura RISC-V și sistemul de operare
 Linux.  Începem prin a justifica necesitatea implementărilor
@@ -177,20 +227,40 @@ rezultat chiar în Forth: scriem un asamblor pentru RISC-V, implementăm
 operatori aritmetici și logici și structuri condiționale și de
 ciclare.  Încheiem cu o rezolvare în Forth a problemei FizzBuzz,
 demonstrând utilizabilitatea sistemului nostru.
-#+end_abstract
+#+END_ABSTRACT
 
+#+LATEX: \vspace{1cm}
+#+LATEX: \vspace*{\fill}
+#+LATEX: \clearpage \ \clearpage
+
+
+# Acknowledgements.
+#+BEGIN_EXPORT latex
 \vspace*{\fill}
-\clearpage
+
+\subsubsection*{Acknowledgements}
+I would like to thank my partner, Iulia, for her support and
+encouragement throughout the development of this project.  Our
+clarifying conversations and her insightful suggestions have greatly
+improved the quality of this work.
+
+I am also deeply grateful to my parents for instilling in me a sense
+of curiosity that has guided me throughout both my academic and
+personal journeys.
+
+\vspace{4cm}
+\vspace*{\fill}
+\clearpage \ \clearpage
+#+END_EXPORT
 
 
 # Table of contents.
 #+TOC: headlines 3
-
-\clearpage
+#+LATEX: \clearpage
 
 # Start showing page numbers.
-\pagenumbering{arabic}
-\setcounter{page}{4}
+#+LATEX: \pagenumbering{arabic}
+#+LATEX: \setcounter{page}{11}
 
 
 * Introduction
@@ -675,9 +745,6 @@ In the next chapter we will examine SmithForth's machine code
 implementation, annotating it extensively with commented pseudocode.
 This inline code documentation will be used in Chapter [[*Porting
 SmithForth to RISC-V]] for porting SmithForth to RISC-V.
-
-\clearpage
-
 
 
 * Understanding and Annotating SmithForth
