@@ -191,7 +191,7 @@ September 2024 \hfill{} Andrei Dorian Duma
 #+LATEX: \vspace*{\fill}
 
 #+LATEX: \renewcommand{\abstractname}{Abstract}
-#+BEGIN_ABSTRACT
+#+begin_abstract
 In this thesis we present the implementation of a usable Forth system,
 built using only RISC-V machine code and the Linux operating system as
 foundations.  We begin by justifying the need for accessible
@@ -212,7 +212,7 @@ usability of the system.
 #+LATEX: \vspace{0.7cm}
 
 #+LATEX: \renewcommand{\abstractname}{Rezumat}
-#+BEGIN_ABSTRACT
+#+begin_abstract
 În această lucrare prezentăm implementarea unui sistem Forth scris
 direct în cod mașină pentru architectura RISC-V și sistemul de operare
 Linux.  Începem prin a justifica necesitatea implementărilor
@@ -227,7 +227,7 @@ rezultat chiar în Forth: scriem un asamblor pentru RISC-V, implementăm
 operatori aritmetici și logici și structuri condiționale și de
 ciclare.  Încheiem cu o rezolvare în Forth a problemei FizzBuzz,
 demonstrând utilizabilitatea sistemului nostru.
-#+END_ABSTRACT
+#+end_abstract
 
 #+LATEX: \vspace{1cm}
 #+LATEX: \vspace*{\fill}
