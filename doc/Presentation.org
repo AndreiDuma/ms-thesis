@@ -195,7 +195,7 @@ Ghuloum
     \includegraphics[width=\textwidth]{img/presentation/intro-sicp-book.jpg}
   \end{minipage}
   \label{fig:magic-books}
-  \caption{Two classic works in the programming languages literature.}
+  \caption{Two classic books in compiler literature.}
 \end{figure}
 #+END_EXPORT
 
