@@ -51,9 +51,10 @@
 # --- Table macros.
 #+MACRO: table_begin   \small
 #+MACRO: table_end     \normalsize
-# TODO: remove?
 #+MACRO: wtable_begin   (eval (format "\\begin{table}[!htbp] \\begin{adjustwidth}{-1cm}{-1cm} \\fontsize{%s}{%f}\\selectfont" $1 (* 1.2 (string-to-number $1))))
 #+MACRO: wtable_end     \normalsize \end{adjustwidth} \end{table} \vspace{0}
+#+MACRO: btable_begin   (eval (format "\\begin{table}[!htbp] \\fontsize{%s}{%f}\\selectfont" $1 (* 1.2 (string-to-number $1))))
+#+MACRO: btable_end     \normalsize \end{table} \vspace{0}
 
 # --- Indentation macros.
 #+MACRO: t      \hspace{1em}  # TODO: rewrite this one to use {{{c(x)}}}.
@@ -187,11 +188,11 @@ Ghuloum
 \begin{figure}
   \centering
   \begin{minipage}[t]{0.22\textwidth}
-    \includegraphics[width=\textwidth]{img/presentation/dragon-book.jpg}
+    \includegraphics[width=\textwidth]{img/presentation/intro-dragon-book.jpg}
   \end{minipage}
   \hspace{5pt}
   \begin{minipage}[t]{0.2022\textwidth}
-    \includegraphics[width=\textwidth]{img/presentation/sicp-book.jpg}
+    \includegraphics[width=\textwidth]{img/presentation/intro-sicp-book.jpg}
   \end{minipage}
   \label{fig:magic-books}
   \caption{Two classic works in the programming languages literature.}
@@ -230,9 +231,9 @@ tool. --- Abdulaziz Ghuloum
   - Target language: bytecode, assembly etc.
   - Implementation language: usually a high-level language (\ge C).
   - Focus: parsing, code generation, optimizations etc. \pause
-- Where should our approach be?
+- What should our approach be?
 
-** Our Approach
+** Goal and Approach
 
 - Goal: Show the whole process of implementing a programming language
   (within reason). \pause
@@ -249,25 +250,27 @@ tool. --- Abdulaziz Ghuloum
 - Concatenative, ``stack-oriented'' programming language.
   - Data is passed implicitly via the data stack.
   - Reverse Polish notation.
-  - Minimalist syntax.
+  - Minimalist syntax. \pause
 - Another language's ~println(25 * 10 + 50)~ becomes:
   #+begin_src forth
     25 10 * 50 + . CR
   #+end_src
-- ``Word'' extension via colon-definitions:
+  \pause
+- /Word/ extension via colon-definitions:
   #+begin_src forth
     : SQUARE ( n -- n' )   DUP * ;
   #+end_src
+  \pause
 - Suprising expressivity through mixing compile-time and run-time
   effects; similar to Lisp macros.
 
 ** SmithForth
 
-- Many existing Forth implementations. \pause
+- Many existing Forth implementations\dots
 - Our favorite: SmithForth[fn:1]. \pause
   - Written in machine-code and Forth (once bootstrapped).
   - Targets the x86-64 architecture.
-  - Relies on Linux system calls.
+  - Relies on Linux system calls. \pause
 - Idea: port SmithForth to a different architecture! \pause
   - Explore two ``competing'' architectures. \pause
   - Learn some low-level Linux interfaces. \pause
@@ -284,10 +287,10 @@ tool. --- Abdulaziz Ghuloum
 
 1. Understand and annotate SmithForth's machine code:
    - Create detailed pseudocode showing how it works.
-   - Make x86-64 instruction encodings explicit.
+   - Make x86-64 instruction encodings explicit. \pause
 2. Port SmithForth's machine code to RISC-V.
    - Follow the pseudocode produced in the previous step.
-   - Adapt to RISC-V's idiosyncrasies.
+   - Adapt to RISC-V's idiosyncrasies. \pause
 3. We now have a basic Forth system.
    - Extend it further in Forth itself!
    - Prove that we have a usable system.
@@ -295,29 +298,85 @@ tool. --- Abdulaziz Ghuloum
 
 * SmithForth: Annotation and Analysis
 
-** A slide
-TODO.
+** Showcase: Handwritten ELF Header
 
+#+CAPTION: The beginning of SmithForth's handmade executable.
+#+ATTR_LATEX: :width 0.98\textwidth
+[[file:img/presentation/elf-header.png]]
+
+** Showcase: Subroutine ~PARSE~ -- Before
+
+{{{fontset(7pt)}}}
+#+CAPTION: Machine code definition of ~PARSE~ (original SmithForth).
+#+begin_src fundamental
+  99 05 50 41 52 53 45 ## PARSE ( cl dl "ccc<char>" -- rbp=addr rax=u )
+  49 C7 C1 00 00 00 10  # r9 = VAR              mov r/m64, imm32   REX.W C7 /0 id   11 000 001
+  49 8B 69 10           # rbp = [>IN]           mov r64, r/m64     REX.W 8B /r      01 101 001
+  99 73                 # Call seek				        		      
+  49 8B 41 10           # rax = [>IN]           mov r64, r/m64     REX.W 8B /r      01 000 001
+  73 04                 #+jump _end if U>=   00 jae rel8           73 cb	      
+  49 FF 41 10           # [>IN]++               inc r/m64          REX.W FF /0      01 000 001
+  # _end:               #                    04		        		      
+  48 29 E8              # rax -= rbp            sub r/m64, r64     REX.W 29 /r      11 101 000
+  49 03 69 08           # rbp += [TIB]          add r64, r/m64     REX.W 03 /r      01 101 001
+  C3                    # return                ret                C3    
+#+end_src
+{{{fontreset}}}
+
+** Showcase: Subroutine ~PARSE~ -- After
+
+#+CAPTION: Machine code definition of ~PARSE~ (annotated SmithForth).
+#+ATTR_LATEX: :width 0.70\textwidth
+[[file:img/presentation/PARSE-annotated.png]]
 
 * Porting SmithForth to RISC-V
 
-** A slide
-TODO.
+** Showcase: Subroutine ~PARSE~ -- RISC-V
+
+#+CAPTION: Machine code definition of ~PARSE~ (RISC-V port).
+#+ATTR_LATEX: :width 0.87\textwidth
+[[file:img/presentation/PARSE-riscv.png]]
 
 
 * Forth in Forth
 
-** A slide
-TODO.
+** Showcase: A RISC-V Assembler in Forth
+
+#+CAPTION: Defining RV32I R-type instructions in Forth.
+#+ATTR_LATEX: :width 0.61\textwidth
+[[file:img/presentation/forth-assembler.png]]
+
+** Showcase: Forth's Arithmetic Operators
+
+#+CAPTION: Defining Forth's basic arithmetic operators using the assembler.
+#+ATTR_LATEX: :width 0.95\textwidth
+[[file:img/presentation/forth-arithmetic.png]]
+
+** Showcase: Usable enough for FizzBuzz
+
+#+CAPTION: Solving FizzBuzz in Forth.
+#+ATTR_LATEX: :width 0.60\textwidth
+[[file:img/presentation/forth-fizz-buzz.png]]
 
 
 * Conclusions
 
-** A slide
-TODO.
+** Summary & Conclusions
 
+- We implemented a basic Forth system ``from scratch'', using only
+  handwritten RISC-V machine code and several Linux system calls.  We
+  used the excellent SmithForth x86-64 implementation as reference and
+  inspiration. \pause
+- We extended the Forth system in Forth itself, implementing basic
+  primitives, a RISC-V assembler, common arithmetic, logic &
+  comparison operators, control flow constructs and, finally, a
+  solution to the FizzBuzz problem to prove the usability of our
+  system. \pause
+- Both process and code were clearly explained and annotated.  Our
+  accessible Forth implementation illustrates how abstraction builds
+  upon abstraction along the path from elementary processor
+  instructions to powerful high-level languages.
 
-* Bibliography ???
 
 * Footnotes                                                        :noexport:
 

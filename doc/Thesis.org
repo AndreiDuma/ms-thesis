@@ -4080,12 +4080,12 @@ extensions and we purposely set out to only work with ~RV64I~.
   : 2*     ( n -- n' )      [ >t0 ]       [ t0 t0   1 `slli ] [ t0> ] ;
   : 2/     ( n -- n' )      [ >t0 ]       [ t0 t0   1 `srai ] [ t0> ] ;
   : ABS    ( n -- n' )      [ >t0   >t1 ] [ t1 t1  3F `srai ]            \ mask@t1 >>= 63
-                                          [ t0 t0  t1 `xor  ]            \ t0 = t0 xor mask@t1
-                                          [ t0 t0  t1 `sub  ] [ t0> ] ;  \ t0 -= mask@t1
+					  [ t0 t0  t1 `xor  ]            \ t0 = t0 xor mask@t1
+					  [ t0 t0  t1 `sub  ] [ t0> ] ;  \ t0 -= mask@t1
   : MIN    ( n1 n2 -- nmin )   2DUP -        ( -- n1 n2 n1-n2 )
-                               DUP ABS       ( -- n1 n2 n1-n2 |n1-n2| )
-                               - 2/ +        ( -- n1 nmin )
-                               SWAP DROP ;   ( -- nmin )
+			       DUP ABS       ( -- n1 n2 n1-n2 |n1-n2| )
+			       - 2/ +        ( -- n1 nmin )
+			       SWAP DROP ;   ( -- nmin )
   : MAX    ( n1 n2 -- n )   2DUP -  DUP ABS  + 2/ +  SWAP DROP ;
 #+end_src
 {{{ffontreset}}}
@@ -4405,9 +4405,9 @@ remainders by successive subtractions:
   : MOD ( n1 n2 -- n )
     SWAP                        ( -- n2 n1 )
     BEGIN 2DUP -                ( -- n2 n1 diff )
-          DUP 0<                ( -- n2 n1 diff flag1 )
-          SWAP 0=               ( -- n2 n1 flag1 flag2 )
-          OR                    ( -- n2 n1 flag )
+	  DUP 0<                ( -- n2 n1 diff flag1 )
+	  SWAP 0=               ( -- n2 n1 flag1 flag2 )
+	  OR                    ( -- n2 n1 flag )
     WHILE                       ( -- n2 n1 )
       OVER -                    ( -- n2 n1' )
     REPEAT
@@ -4420,14 +4420,14 @@ remainders by successive subtractions:
       1+  FALSE                 ( -- .. i' flag )
       OVER  3 MOD 0=            ( -- .. i' flag flag/3 )
       DUP IF
-        Fizz 4 TYPE             \ Print "Fizz".
+	Fizz 4 TYPE             \ Print "Fizz".
       THEN OR                   ( -- .. i' flag' )
       OVER  5 MOD 0=            ( -- .. i' flag' flag/5 )
       DUP IF
-        Buzz 4 TYPE             \ Print "Buzz".
+	Buzz 4 TYPE             \ Print "Buzz".
       THEN OR                   ( -- .. i' flag'' )
       0= IF                     ( -- .. i' )
-        DUP .                   \ Otherwise print the number.
+	DUP .                   \ Otherwise print the number.
       THEN                      ( -- .. i' )
       CR                        \ Print newline.
     REPEAT ;
