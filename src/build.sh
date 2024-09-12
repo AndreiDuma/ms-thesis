@@ -12,7 +12,7 @@ bytes() { # little-endian base sixteen
 }
 
 replace() {
-    sed "/${1}.*make.sh/ s/^\S\S \S\S \S\S \S\S/${2}/"
+    sed "/${1}.*build.sh/ s/^\S\S \S\S \S\S \S\S/${2}/"
 }
 
 cat ${F}.dmp | compile >${F}0

@@ -1,8 +1,9 @@
-* Thesis notes
+** TODO
 
-** TODOs
-- [ ] Add all references here to the .bib file
-
+- [ ] Remove binary files included by mistake in the repo.
+- [ ] Move Forth sources to separate repo.
+  - [ ] Make that repo public.
+  - [ ] Include the thesis document in that repo.
 
 ** What?!
 

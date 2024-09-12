@@ -40,7 +40,7 @@
 00 00 00 00 00 00 00 00     # p_offset: file offset where segment begins
 00 00 00 00 00 00 00 00     # p_vaddr: virtual address of segment in memory (amd64: 00400000)
 00 00 00 00 00 00 00 00     # p_paddr: physical address of segment, unspecified by 386 supplement
-02 1E 01 00 00 00 00 00 ##### p_filesz: size in bytes of the segment in the file image (see make.sh)
+02 1E 01 00 00 00 00 00 ##### p_filesz: size in bytes of the segment in the file image (see build.sh)
 00 00 C0 7F 00 00 00 00     # p_memsz: (>= filesz) size in bytes of the segment in memory
 00 10 00 00 00 00 00 00     # p_align: 1000 for x86
 
